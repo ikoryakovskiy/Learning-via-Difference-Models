@@ -1,0 +1,58 @@
+experiment: 
+  type: experiment/online_learning
+  runs: 1
+  trials: 0
+  steps: 210000
+  rate: 0
+  test_interval: 10
+  output: rbdl-test-with-diff
+  environment: 
+    type: environment/sandbox
+    model: 
+      type: sandbox_model/leo_walk
+      control_step: 0.0003
+      integration_steps: 1
+      dynamics: 
+        type: dynamics/rbdl
+        file: leo_ff_dl.lua
+        points: tip_left, tip_right, heel_left, heel_right
+        auxiliary: com
+      target_dof: 9
+      animation: nope
+      condition: [0.01, 0.01]
+      mode: vc
+      sub_state_drl: 
+        type: signal/vector
+    task: 
+      type: task/leo_walking
+      timeout: 20
+      randomize: 0
+      measurement_noise: 0
+  agent: 
+    type: agent/zmq_action_state
+    communicator: 
+      type: communicator/zeromq/request_reply
+      pattern: ZMQ_REQ
+      sync: 0
+      addr: tcp://localhost:5555
+    observation_dims: experiment/environment/task/observation_dims
+    action_dims: experiment/environment/task/action_dims
+    action_min: experiment/environment/task/action_min
+    action_max: experiment/environment/task/action_max
+    test: 0
+    pub_state_drl: experiment/environment/model/sub_state_drl
+  test_agent: 
+    type: agent/zmq_action_state
+    communicator: 
+      type: communicator/zeromq/request_reply
+      pattern: ZMQ_REQ
+      sync: 0
+      addr: tcp://localhost:5555
+    observation_dims: experiment/environment/task/observation_dims
+    action_dims: experiment/environment/task/action_dims
+    action_min: experiment/environment/task/action_min
+    action_max: experiment/environment/task/action_max
+    test: 1
+    pub_state_drl: experiment/environment/model/sub_state_drl
+  load_file: model-leo-rbdl-PoolWorker-1
+  save_every: run
