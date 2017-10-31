@@ -48,7 +48,7 @@ RUN pip --no-cache-dir install \
         pandas \
         scipy \
         sklearn \
-        tensorflow \
+        tensorflow-gpu \
         tflearn \
         pyyaml \
         && \
@@ -68,7 +68,7 @@ RUN git clone https://github.com/ikoryakovskiy/grl.git -b master; \
     mkdir qt-build; \
     cd qt-build; \
     cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..; \
-    make -j32
+    make -j5
 
 # Update CFG source
 ADD https://api.github.com/repos/ikoryakovskiy/grlcfg/git/refs/heads/master version.json

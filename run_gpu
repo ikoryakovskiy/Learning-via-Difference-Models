@@ -1,0 +1,4 @@
+#!/bin/bash
+
+docker run -it --rm -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -u $(id -u $USER):$(id -g $USER) -v /home/ivan/work/Project/Software/drl/:/drl dbl/tfgrl_gpu:latest /bin/bash
+

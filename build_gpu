@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker build -f Dockerfile_gpu -t dbl/tfgrl_gpu .

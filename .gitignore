@@ -1,0 +1,52 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.pdf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# temporary and export files
+*.yaml
+*.csv
+*.meta
+*.index
+*.data-*
+*.txt
+db_trajectories
+checkpoint
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Python
+*.state
+*.pyc
+*.c.*
+*.bin
+bayes
+bayes.c
+cython_debug/
+
+# Temporary
+*~
