@@ -1,0 +1,90 @@
+FROM ubuntu:16.04
+
+LABEL maintainer="Ivan Koryakovskiy <i.koryakovskiy@tudelft.nl>"
+
+# Pick up some TF dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        libfreetype6-dev \
+        libpng12-dev \
+        libzmq3-dev \
+        pkg-config \
+        python \
+        python-dev \
+        rsync \
+        software-properties-common \
+        unzip \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
+    python get-pip.py && \
+    rm get-pip.py
+
+RUN pip --no-cache-dir install \
+        Pillow \
+        h5py \
+        ipykernel \
+        jupyter \
+        matplotlib \
+        numpy \
+        pandas \
+        scipy \
+        sklearn \
+        && \
+    python -m ipykernel.kernelspec
+
+# --- DO NOT EDIT OR DELETE BETWEEN THE LINES --- #
+# These lines will be edited automatically by parameterized_docker_build.sh. #
+# COPY _PIP_FILE_ /
+# RUN pip --no-cache-dir install /_PIP_FILE_
+# RUN rm -f /_PIP_FILE_
+
+# Install TensorFlow CPU version from central repo
+#RUN pip --no-cache-dir install \
+#    https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.12.1-cp27-none-linux_x86_64.whl
+    # https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-0.12.1-cp27-none-linux_x86_64.whl
+
+# --- ~ DO NOT EDIT OR DELETE BETWEEN THE LINES --- #
+
+RUN apt-get update && apt-get install -y \
+    python-pip
+RUN pip install python
+RUN pip install tensorflow
+RUN pip install tflearn
+RUN pip install pyyaml
+#GRL config
+
+RUN apt-get update && apt-get install -y g++ cmake git
+
+RUN apt-get update && apt-get install -y \
+    libeigen3-dev \
+    libgl1-mesa-dev \
+    freeglut3-dev \
+    libz-dev \
+    libqt4-opengl-dev \
+    libtinyxml-dev \
+    libmuparser-dev \
+    libode-dev \
+    liblua5.1-dev \
+    libprotoc-dev \
+    protobuf-compiler
+
+ADD https://api.github.com/repos/ikoryakovskiy/grl/git/refs/heads/master version.json
+RUN git clone https://github.com/ikoryakovskiy/grl.git -b master; \
+    cd grl; \
+    mkdir qt-build; \
+    cd qt-build; \
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..; \
+    make -j5
+
+ADD https://api.github.com/repos/ikoryakovskiy/grlcfg/git/refs/heads/master version.json
+RUN cd /grl/qt-build; \
+    git clone https://github.com/ikoryakovskiy/grlcfg.git -b master cfg/
+
+WORKDIR /drl
+
+
+

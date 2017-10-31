@@ -34,7 +34,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = 2
+    runs = 1
 
     # Main
     # rl_run(args, ["leo/ou_test/leosim_sarsa_walk_ou2.yaml"], range(runs))

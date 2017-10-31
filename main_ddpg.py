@@ -21,12 +21,16 @@ from subprocess import Popen
 import signal
 import global_params
 import multiprocessing
+import pdb
 
 from replaybuffer_ddpg import ReplayBuffer
 from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
 from difference_model import DifferenceModel
+
+# Path to grl executable
+GRL_PATH = '../grl/qt-build/grld'
 
 # ==========================
 #   Training Parameters
@@ -100,6 +104,7 @@ def check_for_policy_load(sess, config):
         load_file = "{}/{}".format(path,load_file)
         meta_file = "{}.meta".format(load_file)
         print meta_file
+        #pdb.set_trace()
         if os.path.isfile(meta_file):
             saver = tf.train.Saver()
             saver.restore(sess, load_file)
@@ -163,7 +168,6 @@ def get_address(config):
     address = config['experiment']['agent']['communicator']['addr']
     address = address.split(':')[-1]
     address = "tcp://*:{}".format(address)
-
     return address
 
 
@@ -210,7 +214,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
             # saver.save(diff_sess, "difference-model-{}".format(counter))
         with tf.Session(graph=ddpg,config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             # Start the GRL code
-            code = Popen(['../../grl/build/grld', args])
+            code = Popen([GRL_PATH, args]) #, '-vv'])
 
             # Parse the configuration file
             config = open_config_file(args)
@@ -220,10 +224,10 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
 
             # Check if a policy needs to be saved
             save_counter, randomize = check_for_policy_save(config)
-            # print save_counter
-            # print "Noise sigma:", global_params.ou_sigma
-            # print "Actor learning rate", global_params.actor_learning_rate
-            # print "Critic learning rate", global_params.critic_learning_rate
+            print "Save counter:", save_counter
+            print "Noise sigma:", global_params.ou_sigma
+            print "Actor learning rate", global_params.actor_learning_rate
+            print "Critic learning rate", global_params.critic_learning_rate
             # Initialize target network weights
             actor.update_target_network(sess)
             critic.update_target_network(sess)
@@ -286,7 +290,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         episode_start = True
                         episode_count += 1
                         noise = np.zeros(actor.a_dim)
-                    else:
+                    elif len_incoming_message == (STATE_DIMS + 3) * 8:
                         a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
                         test_agent = a[0]
                         state = a[1: STATE_DIMS + 1]
@@ -294,6 +298,8 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         reward = a[STATE_DIMS + 1]
                         terminal_grl = a[STATE_DIMS + 2]
                         episode_start = False
+                    else:
+                        raise ValueError('DDPG Incomming Zeromq message has a wrong length')
 
                     # Call to see if the difference model should be used to obtain the true state
                     if model and not episode_start:
@@ -405,7 +411,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                             test_reward += reward
 
                     if episode_start and episode_count != 1:
-                        print "Episode Ended:", ep_reward, episode_count, test_reward
+                        print "Episode ended (return, episode_counter, test_return, max_test_return) = ({:>11.3f}, {:>11}, {:>11.3f}, {:>11.3f})".format(ep_reward, episode_count, test_reward, max_test_reward)
                         # if test_reward > 1600:
                         if global_params.test_run_on_model:
                             if test_reward > 1000:
@@ -419,6 +425,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                                 if model:
                                     saver.save(sess, "model-leo-rbdl-with-diff-{}.ckpt".format(counter))
                                 else:
+                                    pdb.set_trace()
                                     saver.save(sess, "model-leo-rbdl-{}.ckpt".format(1))
                         test_reward = 0
                         break
