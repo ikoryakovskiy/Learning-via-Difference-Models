@@ -1,11 +1,15 @@
-FROM ubuntu:16.04
+FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
 
 LABEL maintainer="Ivan Koryakovskiy <i.koryakovskiy@tudelft.nl>"
+
+# supress keybord question by nvidia-cuda-dev: https://stackoverflow.com/questions/38165407/installing-lightdm-in-dockerfile-raises-interactive-keyboard-layout-menu
+#COPY ./keyboard /etc/default/keyboard
 
 # Pick up dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         curl \
+	nano \
         libfreetype6-dev \
         libpng12-dev \
         libzmq3-dev \
@@ -54,13 +58,6 @@ RUN pip --no-cache-dir install \
         && \
     python -m ipykernel.kernelspec
 
-
-
-#RUN pip install python
-#RUN pip install tensorflow
-#RUN pip install tflearn
-#RUN pip install pyyaml
-
 # Update GRL source
 ADD https://api.github.com/repos/ikoryakovskiy/grl/git/refs/heads/master version.json
 RUN git clone https://github.com/ikoryakovskiy/grl.git -b master; \
@@ -77,6 +74,3 @@ RUN cd /grl/qt-build; \
 
 # Jump to default folder
 WORKDIR /drl
-
-
-
