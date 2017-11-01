@@ -104,7 +104,6 @@ def check_for_policy_load(sess, config):
         load_file = "{}/{}".format(path,load_file)
         meta_file = "{}.meta".format(load_file)
         print meta_file
-        #pdb.set_trace()
         if os.path.isfile(meta_file):
             saver = tf.train.Saver()
             saver.restore(sess, load_file)
@@ -425,7 +424,6 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                                 if model:
                                     saver.save(sess, "model-leo-rbdl-with-diff-{}.ckpt".format(counter))
                                 else:
-                                    pdb.set_trace()
                                     saver.save(sess, "model-leo-rbdl-{}.ckpt".format(1))
                         test_reward = 0
                         break
