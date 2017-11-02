@@ -213,7 +213,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
             # saver.save(diff_sess, "difference-model-{}".format(counter))
         with tf.Session(graph=ddpg,config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             # Start the GRL code
-            code = Popen([GRL_PATH, args]) #, '-vv'])
+            #code = Popen([GRL_PATH, args]) #, '-vv'])
 
             # Parse the configuration file
             config = open_config_file(args)
