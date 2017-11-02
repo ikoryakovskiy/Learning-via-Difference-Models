@@ -72,8 +72,6 @@ class ReplayBuffer(object):
         return self.replay_buffer_count
 
     def sample_batch(self, batch_size):
-        batch = []
-
         if self.replay_buffer_count < batch_size:
             batch = random.sample(self.replay_buffer, self.replay_buffer_count)
         else:
@@ -95,6 +93,7 @@ class ReplayBuffer(object):
     def read_cfg(self, cfg):
         path = os.path.dirname(os.path.abspath(__file__))
         yfile = '{}/{}'.format(path,cfg)
+        print ("Loading Transitions and Replay Buffer from", yfile)
         if not os.path.isfile(yfile):
             print ("File %s not found" % yfile)
         else:
@@ -111,8 +110,8 @@ class ReplayBuffer(object):
                 self.buffer_size_file = conf['replay_buffer']['buffer_size']
 
             self.diff = int(conf['difference_model'])
-            print ("Transitions:", self.transitions_save, self.transitions_load, self.diff)
-            print ("Replay_Buffer:", self.buffer_save, self.buffer_load, self.diff)
+            print("Transitions save = {}, load = {}, diff = {}".format(self.transitions_save, self.transitions_load, self.diff))
+            print("Replay Buffer save = {}, load = {}, diff = {}".format(self.buffer_save, self.buffer_load, self.diff))
 
             if self.transitions_save == 1:
                 self.save_filename = conf['transitions']['save_filename']

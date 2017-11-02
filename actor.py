@@ -52,7 +52,7 @@ class ActorNetwork(object):
         self.actor_gradients = tf.gradients(self.scaled_out, self.network_params, -self.action_gradient)
 
         # Optimization Op
-        self.optimize = tf.train.AdamOptimizer(self.learning_rate). \
+        self.optimizer = tf.train.AdamOptimizer(self.learning_rate). \
             apply_gradients(zip(self.actor_gradients, self.network_params))
 
         self.num_trainable_vars = len(self.network_params) + len(self.target_network_params)
@@ -63,17 +63,18 @@ class ActorNetwork(object):
                                                weights_init=tflearn.initializations.uniform(
                                                    minval=-1 / math.sqrt(self.s_dim), maxval=1 / math.sqrt(self.s_dim)))
         actor_layer2 = tflearn.fully_connected(actor_layer1, 300, activation='relu', name="actorLayer2",
-                                               weights_init=tflearn.initializations.uniform(minval=-1 / math.sqrt(400),
-                                                                                            maxval=1 / math.sqrt(400)))
+                                               weights_init=tflearn.initializations.uniform(
+                                                   minval=-1 / math.sqrt(400), maxval=1 / math.sqrt(400)))
+                                                   
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        actor_output = tflearn.fully_connected(actor_layer2, self.a_dim, activation='tanh', weights_init=w_init,
-                                               name="actorOutput")
+        actor_output = tflearn.fully_connected(actor_layer2, self.a_dim, activation='tanh', name="actorOutput",
+                                               weights_init=tflearn.initializations.uniform(minval=-0.003, maxval=0.003))
+                                               
         scaled_output = tf.multiply(actor_output, self.action_bound)  # Scale output to -action_bound to action_bound
         return inputs, actor_output, scaled_output
 
     def train(self, sess, inputs, a_gradient):
-        sess.run(self.optimize, feed_dict={
+        sess.run(self.optimizer, feed_dict={
             self.inputs: inputs,
             self.action_gradient: a_gradient
         })

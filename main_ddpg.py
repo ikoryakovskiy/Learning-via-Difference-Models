@@ -3,25 +3,17 @@
 """
 Created on Mon Jan 16 17:49:02 2017
 
-@author: divyam
+@author: divyam, ikoryakovskiy
 """
 
 import tensorflow as tf
 import numpy as np
-import tflearn
 import yaml
 import zmq
-import time
 import struct
-import random
-import math
 import os.path
-import sys
 from subprocess import Popen
 import signal
-import global_params
-import multiprocessing
-import pdb
 
 from replaybuffer_ddpg import ReplayBuffer
 from ExplorationNoise import ExplorationNoise
@@ -35,8 +27,6 @@ GRL_PATH = '../grl/qt-build/grld'
 # ==========================
 #   Training Parameters
 # ==========================
-# Max training steps
-# MAX_EPISODES = 50000
 # Max episode length
 MAX_STEPS_EPISODE = 1010
 # Base learning rate for the Actor network
@@ -78,22 +68,24 @@ OU_MU = 0
 OU_SIGMA = 0.2
 
 
+# ===========================
+# ZeroMQ timeout handler
+# ===========================
 class TimeoutException(Exception):
     pass
 
 
-def timeout_handler(signum, frame):
+def timeout_handler():
     raise TimeoutException
 
 
 # ===========================
 # Policy saving and loading
 # ===========================
-
-
 def open_config_file(conf):
     with open(conf, 'r') as f:
         config = yaml.load(f)
+        print("Loaded configuration from {}".format(conf))
     return config
 
 
@@ -101,15 +93,15 @@ def check_for_policy_load(sess, config):
     if "load_file" in config["experiment"]:
         load_file = config["experiment"]["load_file"]
         path = os.path.dirname(os.path.abspath(__file__))
-        load_file = "{}/{}".format(path,load_file)
+        load_file = "{}/{}".format(path, load_file)
         meta_file = "{}.meta".format(load_file)
-        print meta_file
+        print("Loading meta file {}".format(meta_file))
         if os.path.isfile(meta_file):
             saver = tf.train.Saver()
             saver.restore(sess, load_file)
-            print "Model Restored"
+            print("Model Restored")
         else:
-            print "Not a valid path"
+            print("Not a valid path")
             sess.run(tf.global_variables_initializer())
     else:
         sess.run(tf.global_variables_initializer())
@@ -135,29 +127,25 @@ def check_for_policy_save(config):
 def compute_action(sess, test_agent, randomize, actor, mod_state, noise):
     if test_agent and not randomize:
         action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim)))
-        # time.sleep(0.05)
     else:
         action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim))) + noise
-
     action = np.reshape(action, (ACTION_DIMS,))
-
     action = np.clip(action, -1, 1)
-
     return action
 
 
-def compute_diff_state_dropout(diff_sess, model, input):
+def compute_diff_state_dropout(diff_sess, model, v):
     probs = []
     l = 10
-    N = 8000
+    n = 8000
     p = 0.01
     decay = 0.001
-    for _ in xrange(1):
-        probs += [model.predict(diff_sess, input)]
-    predictive_mean = np.reshape(model.predict(diff_sess, input, 1), (STATE_DIMS,))
+    for _ in range(1):
+        probs += [model.predict(diff_sess, v)]
+    predictive_mean = np.reshape(model.predict(diff_sess, v, 1), (STATE_DIMS,))
 
     predictive_variance = np.reshape(np.var(probs, axis=0), (STATE_DIMS,))
-    tau = l ** 2 * (1 - p) / (2 * N * decay)
+    tau = l ** 2 * (1 - p) / (2 * n * decay)
     predictive_variance += tau ** -1
     # print predictive_variance
     return predictive_mean, predictive_variance
@@ -170,7 +158,7 @@ def get_address(config):
     return address
 
 
-def invert(state):
+def observe(state):
     obs = np.zeros(OBSERVATION_DIMS)
     count = 0
     for i in range(2, STATE_DIMS / 2):
@@ -185,35 +173,21 @@ def calculate_new_reward(state, reward):
     return reward
 
 
-def calculate_new_terminal(state):
-
-    torsoConstraint = 1
-    stanceConstraint = 0.36 * math.pi
-    torsoHeightConstraint = -0.15
-
-    if ((abs(state[2]) > torsoConstraint) or (abs(state[8]) > stanceConstraint) or (abs(state[7]) > stanceConstraint)
-            or (state[1] < torsoHeightConstraint) or (state[6] > 0) or (state[5] > 0)):
-        return 2
-    else:
-        return 0
-
 # ===========================
 #   Agent Training
 # ===========================
-
-
-def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
+def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=None, model=None):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
-    with tf.Session(graph=diff_model,config=tf.ConfigProto(gpu_options=gpu_options)) as diff_sess:
+    with tf.Session(graph=diff_model, config=tf.ConfigProto(gpu_options=gpu_options)) as diff_sess:
         if model:
             saver = tf.train.Saver()
             saver.restore(diff_sess, "./difference-model")
             saver.save(diff_sess, "difference-model-{}".format(counter))
-            print "Difference model restored"
+            print("Difference model restored")
             # saver.save(diff_sess, "difference-model-{}".format(counter))
-        with tf.Session(graph=ddpg,config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+        with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             # Start the GRL code
-            #code = Popen([GRL_PATH, args]) #, '-vv'])
+            code = Popen([GRL_PATH, args])
 
             # Parse the configuration file
             config = open_config_file(args)
@@ -223,10 +197,11 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
 
             # Check if a policy needs to be saved
             save_counter, randomize = check_for_policy_save(config)
-            print "Save counter:", save_counter
-            print "Noise sigma:", global_params.ou_sigma
-            print "Actor learning rate", global_params.actor_learning_rate
-            print "Critic learning rate", global_params.critic_learning_rate
+            print("Save counter:", save_counter)
+            print("Noise sigma:", learning_param.ou_sigma)
+            print("Actor learning rate", learning_param.actor_learning_rate)
+            print("Critic learning rate", learning_param.critic_learning_rate)
+
             # Initialize target network weights
             actor.update_target_network(sess)
             critic.update_target_network(sess)
@@ -240,10 +215,9 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
 
             # Initialize constants for exploration noise
             episode_count = 0
-            ou_sigma = global_params.ou_sigma
-            ou_theta = global_params.ou_theta
+            ou_sigma = learning_param.ou_sigma
+            ou_theta = learning_param.ou_theta
             ou_mu = OU_MU
-            successful_episodes = 0
             test_reward = 0
             max_test_reward = 0
 
@@ -256,19 +230,17 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
             state_old = np.zeros(STATE_DIMS)
             computed_action = np.zeros(ACTION_DIMS)
             check = False
+            diff_obs = None
 
             while True:
-
                 ep_reward = 0
                 terminal = 0
                 terminal_grl = 0
                 terminal_true = 0
 
                 while True:
-
-                    OriginalHandler = signal.signal(signal.SIGALRM, timeout_handler)
-
-                    # Receive the state from zeromq, the current state
+                    # Receive the current state from zeromq within 3000 seconds
+                    signal.signal(signal.SIGALRM, timeout_handler)
                     signal.alarm(3000)
                     try:
                         incoming_message = server.recv()
@@ -276,71 +248,73 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         print ("No state received from GRL")
                         code.kill()
                         return
+                    finally:
+                        signal.alarm(0)
 
                     # Get the length of the message
                     len_incoming_message = len(incoming_message)
 
                     # Decide which method sent the message and extract the message in a numpy array
                     if len_incoming_message == (STATE_DIMS + 1) * 8:
+                        # Message at the beginning of the trial, reward and terminal are missing.
                         a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
                         test_agent = a[0]
                         state = a[1: STATE_DIMS + 1]
-                        obs = invert(state)
                         episode_start = True
                         episode_count += 1
                         noise = np.zeros(actor.a_dim)
                     elif len_incoming_message == (STATE_DIMS + 3) * 8:
+                        # Normal message until the end of the trial
                         a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
                         test_agent = a[0]
                         state = a[1: STATE_DIMS + 1]
-                        obs = invert(state)
                         reward = a[STATE_DIMS + 1]
-                        terminal_grl = a[STATE_DIMS + 2]
+                        terminal = a[STATE_DIMS + 2]
                         episode_start = False
                     else:
-                        raise ValueError('DDPG Incomming Zeromq message has a wrong length')
+                        raise ValueError('DDPG Incoming zeromq message has a wrong length')
 
                     # Call to see if the difference model should be used to obtain the true state
                     if model and not episode_start:
                         diff_state, diff_state_variance = compute_diff_state_dropout(diff_sess, model, np.reshape(
-                            np.concatenate((np.zeros(1),state_old[1:STATE_DIMS],computed_action)),(1, STATE_DIMS+ACTION_DIMS)))
-                    else:
-                        diff_state = np.zeros(STATE_DIMS)
-                        diff_state_variance = np.zeros(STATE_DIMS)
-                    state += diff_state
+                            np.concatenate((np.zeros(1), state_old[1:STATE_DIMS], computed_action)),
+                            (1, STATE_DIMS + ACTION_DIMS)))
+                        state += diff_state
+                        diff_obs = observe(diff_state)
 
-                    if model and not episode_start:
-                        terminal = calculate_new_terminal(state)
-                        if terminal and not terminal_grl:
-                            reward += -125
-                        if terminal_grl and not terminal:
-                            reward += 125
-                        terminal_grl = terminal
+                    # obtain observation of a state
+                    obs = observe(state)
 
-                    obs = invert(state)
-                    diff_obs = invert(diff_state)
                     # Add the transition to replay buffer
                     if not episode_start:
                         if test_agent:
-                            if terminal_grl == 2:
+                            if terminal == 2:
                                 check = replay_buffer.transitions_buffer_add(np.reshape(state_old, (STATE_DIMS,)),
-                                                               np.reshape(computed_action, (actor.a_dim,)),
-                                                               reward, True, np.reshape(state, (STATE_DIMS,)), diff_state)
+                                                                             np.reshape(computed_action,
+                                                                                        (actor.a_dim,)),
+                                                                             reward, True,
+                                                                             np.reshape(state, (STATE_DIMS,)),
+                                                                             diff_state)
                             else:
                                 check = replay_buffer.transitions_buffer_add(np.reshape(state_old, (STATE_DIMS,)),
-                                                               np.reshape(computed_action, (actor.a_dim,)),
-                                                               reward, False, np.reshape(state, (STATE_DIMS,)), diff_state)
+                                                                             np.reshape(computed_action,
+                                                                                        (actor.a_dim,)),
+                                                                             reward, False,
+                                                                             np.reshape(state, (STATE_DIMS,)),
+                                                                             diff_state)
                         elif terminal_true == 0:
-                            if terminal_grl == 2:
+                            if terminal == 2:
                                 check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
                                                                         np.reshape(computed_action, (actor.a_dim,)),
-                                                                        reward, True, np.reshape(obs, (actor.s_dim,)), diff_obs)
+                                                                        reward, True, np.reshape(obs, (actor.s_dim,)),
+                                                                        diff_obs)
                             else:
                                 check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
                                                                         np.reshape(computed_action, (actor.a_dim,)),
-                                                                        reward, False, np.reshape(obs, (actor.s_dim,)), diff_obs)
+                                                                        reward, False, np.reshape(obs, (actor.s_dim,)),
+                                                                        diff_obs)
                     if check:
-                        print "Transitions saved"
+                        print("Transitions saved")
                         code.kill()
                         return
 
@@ -350,10 +324,8 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                     # Compute action
                     computed_action = compute_action(sess, test_agent, randomize, actor, obs, noise)
 
-                    state, computed_action = replay_buffer.sample_state_action(state, computed_action, test_agent, episode_start)
-
-                    # Convert state to obs
-                    # state = invert(state)
+                    state, computed_action = replay_buffer.sample_state_action(state, computed_action, test_agent,
+                                                                               episode_start)
 
                     # Get state and action from replay buffer to send to GRL
                     scaled_action = computed_action * ACTION_BOUND_REAL
@@ -379,14 +351,15 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                             target_q = critic.predict_target(sess, s2_batch, actor.predict_target(sess, s2_batch))
 
                             y_i = []
-                            for k in xrange(MINIBATCH_SIZE):
+                            for k in range(MINIBATCH_SIZE):
                                 if t_batch[k]:
                                     y_i.append(r_batch[k])
                                 else:
                                     y_i.append(r_batch[k] + GAMMA * target_q[k])
 
                             # Update the critic given the targets
-                            predicted_q_value, _ = critic.train(sess, s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                            predicted_q_value, _ = critic.train(sess, s_batch, a_batch,
+                                                                np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
                             # Update the actor policy using the sampled gradient
                             a_outs = actor.predict(sess, s_batch)
@@ -397,12 +370,9 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                             actor.update_target_network(sess)
                             critic.update_target_network(sess)
 
-                    # old_state = state
-
                     obs_old = obs
                     state_old = state
                     terminal_true = terminal_grl
-
 
                     if not episode_start:
                         ep_reward += reward
@@ -410,14 +380,16 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                             test_reward += reward
 
                     if episode_start and episode_count != 1:
-                        print "Episode ended (return, episode_counter, test_return, max_test_return) = ({:>11.3f}, {:>11}, {:>11.3f}, {:>11.3f})".format(ep_reward, episode_count, test_reward, max_test_reward)
+                        print("Episode ended (return, episode_counter, test_return, max_test_return) = "
+                              "({:>11.3f}, {:>11}, {:>11.3f}, {:>11.3f})"
+                              .format(ep_reward, episode_count, test_reward, max_test_reward))
+
                         # if test_reward > 1600:
-                        if global_params.test_run_on_model:
+                        if learning_param.test_run_on_model:
                             if test_reward > 1000:
-                                global_params.learning_success = 1
-                               
+                                learning_param.learning_success = 1
+
                         if save_counter != 0:
-                        #        successful_episodes += 1
                             if test_reward > max_test_reward:
                                 max_test_reward = test_reward
                                 saver = tf.train.Saver()
@@ -428,27 +400,23 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         test_reward = 0
                         break
 
-                if global_params.test_run_on_model:
-                    print "Run terminated"
+                if learning_param.test_run_on_model:
+                    print("Run terminated")
                     code.kill()
                     break
 
 
-def start(args, counter=None):
-
+def start(args, learning_param, counter=None):
     # Initialize the actor, critic and difference networks
 
     with tf.Graph().as_default() as ddpg:
         actor = ActorNetwork(OBSERVATION_DIMS, ACTION_DIMS, 1,
-                             global_params.actor_learning_rate, TAU)
-        critic = CriticNetwork(OBSERVATION_DIMS, ACTION_DIMS, global_params.critic_learning_rate, TAU,
+                             learning_param.actor_learning_rate, TAU)
+        critic = CriticNetwork(OBSERVATION_DIMS, ACTION_DIMS, learning_param.critic_learning_rate, TAU,
                                actor.get_num_trainable_vars())
     if counter:
         with tf.Graph().as_default() as diff_model:
-            model = DifferenceModel(STATE_DIMS+ACTION_DIMS, STATE_DIMS)
-            train(args, ddpg, actor, critic, counter=counter, diff_model=diff_model, model=model)
+            model = DifferenceModel(STATE_DIMS + ACTION_DIMS, STATE_DIMS)
+            train(args, ddpg, actor, critic, learning_param, counter=counter, diff_model=diff_model, model=model)
     else:
-        train(args, ddpg, actor, critic)
-
-
-
+        train(args, ddpg, actor, critic, learning_param)

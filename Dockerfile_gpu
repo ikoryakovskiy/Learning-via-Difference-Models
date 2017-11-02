@@ -6,7 +6,7 @@ LABEL maintainer="Ivan Koryakovskiy <i.koryakovskiy@tudelft.nl>"
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         curl \
-	nano \
+        nano \
         libfreetype6-dev \
         libpng12-dev \
         libzmq3-dev \

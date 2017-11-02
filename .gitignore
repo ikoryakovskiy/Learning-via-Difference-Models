@@ -48,6 +48,7 @@ checkpoint
 bayes
 bayes.c
 cython_debug/
+.idea/
 
 # Temporary
 *~
