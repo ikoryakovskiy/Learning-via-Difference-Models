@@ -25,6 +25,7 @@
 *.index
 *.data-*
 *.txt
+*.tar.bz2
 db_trajectories
 checkpoint
 
