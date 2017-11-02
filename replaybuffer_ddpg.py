@@ -13,7 +13,7 @@ import pickle
 from train_model import prediction
 
 class ReplayBuffer(object):
-    def __init__(self, buffer_size, random_seed, diff_sess = None):
+    def __init__(self, buffer_size, random_seed, diff_sess = None, ddpg_cfg = 'config.yaml'):
         """
         The right side of the deque contains the most recent experiences 
         """
@@ -36,7 +36,7 @@ class ReplayBuffer(object):
         self.model_filename = None
         self.sess = diff_sess
         random.seed(random_seed)
-        self.read_cfg('config.yaml')
+        self.read_cfg(ddpg_cfg)
 
     def replay_buffer_add(self, s, a, r, t, s2, sd):
         experience = (s, a, r, t, s2, sd)
@@ -98,7 +98,7 @@ class ReplayBuffer(object):
             print ("File %s not found" % yfile)
         else:
             # open configuration
-            stream = file(yfile, 'r')
+            stream = open(yfile, 'r')
             conf = yaml.load(stream)
             if 'transitions' in conf:
                 self.transitions_save = int(conf['transitions']['save'])

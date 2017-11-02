@@ -110,18 +110,19 @@ def check_for_policy_load(sess, config):
 
 
 def check_for_policy_save(config):
+    output = config["experiment"]["output"] # filename to save neural network
     save_every = config["experiment"]["save_every"]
     randomize = config["experiment"]["environment"]["task"]["randomize"]
 
-    if save_every == "never":
-        save_counter = 0
-    elif save_every == "trail":
-        save_counter = 1
-    elif save_every == "test":
-        save_counter = config["experiment"]["test_interval"] + 1
-    else:
-        save_counter = 10
-    return save_counter, randomize
+    save_counter = 0
+    if output:
+        if save_every == "trail":
+            save_counter = 1
+        elif save_every == "test":
+            save_counter = config["experiment"]["test_interval"] + 1
+        else:
+            save_counter = 10
+    return output, save_counter, randomize
 
 
 def compute_action(sess, test_agent, randomize, actor, mod_state, noise):
@@ -189,18 +190,21 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
             # Start the GRL code
             code = Popen([GRL_PATH, args])
 
-            # Parse the configuration file
+            # Parse the GRL configuration file
             config = open_config_file(args)
 
             # Check if a policy needs to be loaded
             sess = check_for_policy_load(sess, config)
 
             # Check if a policy needs to be saved
-            save_counter, randomize = check_for_policy_save(config)
+            output, save_counter, randomize = check_for_policy_save(config)
             print("Save counter:", save_counter)
             print("Noise sigma:", learning_param.ou_sigma)
             print("Actor learning rate", learning_param.actor_learning_rate)
             print("Critic learning rate", learning_param.critic_learning_rate)
+
+            # Parse DDPG config
+            ddpg_cfg = "py_" + output + ".yaml"
 
             # Initialize target network weights
             actor.update_target_network(sess)
@@ -208,9 +212,9 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
 
             # Initialize replay memory
             if model:
-                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED, diff_sess)
+                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED, diff_sess, ddpg_cfg=ddpg_cfg)
             else:
-                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED, ddpg_cfg=ddpg_cfg)
             # replay_buffer_test = ReplayBuffer(TRAINING_SIZE, RANDOM_SEED)
 
             # Initialize constants for exploration noise
@@ -234,9 +238,6 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
 
             while True:
                 ep_reward = 0
-                terminal = 0
-                terminal_grl = 0
-                terminal_true = 0
 
                 while True:
                     # Receive the current state from zeromq within 3000 seconds
@@ -260,6 +261,8 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
                         a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
                         test_agent = a[0]
                         state = a[1: STATE_DIMS + 1]
+                        reward = 0
+                        terminal = 0
                         episode_start = True
                         episode_count += 1
                         noise = np.zeros(actor.a_dim)
@@ -287,32 +290,10 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
 
                     # Add the transition to replay buffer
                     if not episode_start:
-                        if test_agent:
-                            if terminal == 2:
-                                check = replay_buffer.transitions_buffer_add(np.reshape(state_old, (STATE_DIMS,)),
-                                                                             np.reshape(computed_action,
-                                                                                        (actor.a_dim,)),
-                                                                             reward, True,
-                                                                             np.reshape(state, (STATE_DIMS,)),
-                                                                             diff_state)
-                            else:
-                                check = replay_buffer.transitions_buffer_add(np.reshape(state_old, (STATE_DIMS,)),
-                                                                             np.reshape(computed_action,
-                                                                                        (actor.a_dim,)),
-                                                                             reward, False,
-                                                                             np.reshape(state, (STATE_DIMS,)),
-                                                                             diff_state)
-                        elif terminal_true == 0:
-                            if terminal == 2:
-                                check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
-                                                                        np.reshape(computed_action, (actor.a_dim,)),
-                                                                        reward, True, np.reshape(obs, (actor.s_dim,)),
-                                                                        diff_obs)
-                            else:
-                                check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
-                                                                        np.reshape(computed_action, (actor.a_dim,)),
-                                                                        reward, False, np.reshape(obs, (actor.s_dim,)),
-                                                                        diff_obs)
+                        check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
+                                                                np.reshape(computed_action, (actor.a_dim,)),
+                                                                reward, terminal == 2, np.reshape(obs, (actor.s_dim,)),
+                                                                diff_obs)
                     if check:
                         print("Transitions saved")
                         code.kill()
@@ -372,7 +353,6 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
 
                     obs_old = obs
                     state_old = state
-                    terminal_true = terminal_grl
 
                     if not episode_start:
                         ep_reward += reward
@@ -394,9 +374,9 @@ def train(args, ddpg, actor, critic, learning_param, counter=None, diff_model=No
                                 max_test_reward = test_reward
                                 saver = tf.train.Saver()
                                 if model:
-                                    saver.save(sess, "model-leo-rbdl-with-diff-{}.ckpt".format(counter))
+                                    saver.save(sess, "{}-diff-{}".format(output, counter))
                                 else:
-                                    saver.save(sess, "model-leo-rbdl-{}.ckpt".format(1))
+                                    saver.save(sess, output)
                         test_reward = 0
                         break
 
