@@ -12,7 +12,7 @@ import numpy as np
 import os.path
 import sys
 from collections import OrderedDict
-import learning_params
+import ddpg_params
 import multiprocessing
 
 from difference_model import DifferenceModel
@@ -31,12 +31,12 @@ def foo():
 
         # No of runs of one policy
         # Training the policy with the difference model included
-        learning_params.ou_sigma = 0.2
-        learning_params.ou_theta = 0.15
-        learning_params.actor_learning_rate = 0.00012
-        learning_params.critic_learning_rate = 0.0012
+        ddpg_params.ou_sigma = 0.2
+        ddpg_params.ou_theta = 0.15
+        ddpg_params.actor_learning_rate = 0.00012
+        ddpg_params.critic_learning_rate = 0.0012
         RUNS = 5
-        while learning_params.reward == 0:
+        while ddpg_params.reward == 0:
             d = {'replay_buffer': {'load': 0, 'save': 0, 'buffer_size': 20000}, 'difference_model': 0}
             with open('config.yaml', 'w') as yaml_file:
                 yaml.dump(d, yaml_file, default_flow_style=False)
@@ -49,10 +49,10 @@ def foo():
 
             # start(new_cfg, ii)
 
-        learning_params.reward = 0
+        ddpg_params.reward = 0
         time.sleep(5)
-        learning_params.test_run_on_model = 1
-	learning_params.learning_success = 0
+        ddpg_params.test_run_on_model = 1
+	ddpg_params.learning_success = 0
         # Running the learned policy on the difference model on the perturbed system to see if it works
         
 
@@ -152,7 +152,7 @@ def ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
 
 
 def main():
-    learning_params.init()
+    ddpg_params.init()
     foo()   
 
 

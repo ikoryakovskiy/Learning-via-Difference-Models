@@ -7,9 +7,11 @@ import yaml, collections
 from time import sleep
 import argparse
 import itertools
+import signal
 import random
 from datetime import datetime
-from ddpg import single_ddpg
+from main_ddpg import start
+import ddpg_params
 
 counter_lock = multiprocessing.Lock()
 cores = 0
@@ -39,10 +41,14 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(5)
+    runs = range(3)
+    gamma = [0.99, 0.97]
+    actor_learning_rate = [0.00005, 0.0001, 0.001]
+    critic_learning_rate = [0.0005, 0.001, 0.01]
+    minibatch_size = [64, 128]
 
     options = []
-    for r in itertools.product(runs): options.append(r)
+    for r in itertools.product(gamma, actor_learning_rate, critic_learning_rate, minibatch_size, runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
 
     configs = [
@@ -51,7 +57,7 @@ def main():
 
     L = rl_run_param(args, configs, options)
 
-    do_multiprocessing_pool(args, L)
+    #do_multiprocessing_pool(args, L)
 
 ######################################################################################
 def rl_run_param(args, list_of_cfgs, options):
@@ -64,12 +70,13 @@ def rl_run_param(args, list_of_cfgs, options):
     port = 5557
     for cfg in list_of_cfgs:
         conf = read_cfg(cfg)
+        conf['ddpg_param'] = ddpg_params.init() # adding DDPG configuration
 
         # after reading cfg can do anything with the name
         fname, fext = os.path.splitext( cfg.replace("/", "_") )
 
         for o in options:
-            str_o = "-".join(map(lambda x : "{:05d}".format(int(round(10000*x))), o[:-1]))  # last element in 'o' is reserved for mp
+            str_o = "-".join(map(lambda x : "{:06d}".format(int(round(100000*x))), o[:-1]))  # last element in 'o' is reserved for mp
             if not str_o:
                 str_o += "mp{}".format(o[-1])
             else:
@@ -82,6 +89,12 @@ def rl_run_param(args, list_of_cfgs, options):
             conf['experiment']['output'] = "{}-{}".format(fname, str_o)
             conf['experiment']['agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
             conf['experiment']['test_agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
+
+            conf['experiment']['environment']['task']['gamma'] = o[0]
+            conf['ddpg_param']['learning']['actor_learning_rate'] = o[1]
+            conf['ddpg_param']['learning']['critic_learning_rate'] = o[2]
+            conf['ddpg_param']['replay_buffer']['minibatch_size'] = o[3]
+            conf['ddpg_param']['replay_buffer']['max_size'] = 1000000
 
             conf = remove_viz(conf)
             write_cfg(list_of_new_cfgs[-1], conf)
@@ -103,7 +116,7 @@ def mp_run(cfg):
     sleep(wait)
     print('wait finished {0}'.format(wait))
     # Run the experiment
-    single_ddpg(cfg)
+    start(cfg)
 
 ######################################################################################
 def init(cnt, num):
@@ -119,9 +132,16 @@ def do_multiprocessing_pool(args, list_of_new_cfgs):
     counter = multiprocessing.Value('i', 0)
     cores = multiprocessing.Value('i', args.cores)
     print('cores {0}'.format(cores.value))
+    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = multiprocessing.Pool(args.cores, initializer = init, initargs = (counter, cores))
-    pool.map(mp_run, list_of_new_cfgs)
-    pool.close()
+    signal.signal(signal.SIGINT, original_sigint_handler)
+    try:
+        pool.map(mp_run, list_of_new_cfgs)
+    except KeyboardInterrupt:
+        pool.terminate()
+    else:
+        pool.close()
+    pool.join()
 ######################################################################################
 
 def prepare_multiprocessing():

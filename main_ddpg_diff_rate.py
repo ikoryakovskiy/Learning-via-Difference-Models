@@ -19,7 +19,7 @@ import os.path
 import sys
 from subprocess import Popen
 import signal
-import learning_params
+import ddpg_params
 import multiprocessing
 
 from replaybuffer_ddpg import ReplayBuffer
@@ -201,7 +201,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
             # Check if a policy needs to be saved
             save_counter, randomize = check_for_policy_save(config)
             print save_counter
-	    print "Noise sigma:", learning_params.ou_sigma
+	    print "Noise sigma:", ddpg_params.ou_sigma
 
             # Initialize target network weights
             actor.update_target_network(sess)
@@ -213,8 +213,8 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
 
             # Initialize constants for exploration noise
             episode_count = 0
-            ou_sigma = learning_params.ou_sigma
-            ou_theta = learning_params.ou_theta
+            ou_sigma = ddpg_params.ou_sigma
+            ou_theta = ddpg_params.ou_theta
 	    ou_mu = OU_MU
             successful_episodes = 0
             test_reward = 0
@@ -375,7 +375,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         if save_counter != 0:
                         #        successful_episodes += 1
                             if test_reward > max_test_reward:
-                                learning_params.reward = test_reward
+                                ddpg_params.reward = test_reward
                                 max_test_reward = test_reward
                                 saver = tf.train.Saver()
                                 if model:
@@ -385,7 +385,7 @@ def train(args, ddpg, actor, critic, counter=None, diff_model=None, model=None):
                         test_reward = 0
                         break
 
-                if learning_params.test_run_on_model:
+                if ddpg_params.test_run_on_model:
                     print "Run terminated"
                     break
 

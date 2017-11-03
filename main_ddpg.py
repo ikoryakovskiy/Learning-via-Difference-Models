@@ -59,24 +59,26 @@ def signal_handler(signal, frame):
 # ===========================
 def read_cfg(cfg):
     with open(cfg, 'r') as f:
-        ycfg = yaml.load(f)
+        conf = yaml.load(f)
         print("Loaded configuration from {}".format(cfg))
 
-        trials = ycfg["experiment"]["trials"]
-        steps = ycfg["experiment"]["steps"]
-        test_interval = ycfg["experiment"]["test_interval"]
-        output = ycfg["experiment"]["output"]
-        save_every = ycfg["experiment"]["save_every"]
-        randomize = ycfg["experiment"]["environment"]["task"]["randomize"]
-        address = ycfg['experiment']['agent']['communicator']['addr']
+        trials = conf["experiment"]["trials"]
+        steps = conf["experiment"]["steps"]
+        test_interval = conf["experiment"]["test_interval"]
+        output = conf["experiment"]["output"]
+        save_every = conf["experiment"]["save_every"]
+        randomize = conf["experiment"]["environment"]["task"]["randomize"]
+        address = conf['experiment']['agent']['communicator']['addr']
 
         load_file = None
-        if "load_file" in ycfg["experiment"]:
-            load_file = ycfg["experiment"]["load_file"]
+        if "load_file" in conf["experiment"]:
+            load_file = conf["experiment"]["load_file"]
 
         config = dict(trials=trials, steps=steps, test_interval=test_interval, output=output, save_every=save_every,
                         randomize=randomize, load_file=load_file, address=address)
-    return config
+
+        params = conf["ddpg_param"]
+    return config, params
 
 # ===========================
 # Policy saving and loading
@@ -158,7 +160,7 @@ def observe(state):
 # ===========================
 #   Agent Training
 # ===========================
-def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model=None):
+def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=None, model=None):
     global grl
     assert(actor.a_dim == ACTION_DIMS)
     signal.signal(signal.SIGALRM, timeout_handler)
@@ -176,9 +178,6 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
             # Start the GRL code
             grl = subprocess.Popen([GRL_PATH, cfg])
 
-            # Load GRL configuration file
-            config = read_cfg(cfg)
-
             # Check if a policy needs to be loaded
             sess = preload_policy(sess, config)
 
@@ -186,9 +185,10 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
             save_counter = get_policy_save_counter(config)
 
             print("Save counter: {}".format(save_counter))
-            print("Noise sigma: {}".format(params["learning"]["ou_sigma"]))
+            print("Noise: {} and {}".format(params["learning"]["ou_sigma"], params["learning"]["ou_theta"]))
             print("Actor learning rate {}".format(params["learning"]["actor_learning_rate"]))
             print("Critic learning rate {}".format(params["learning"]["critic_learning_rate"]))
+            print("Minibatch size {}".format(params["replay_buffer"]["minibatch_size"]))
 
             # Initialize target network weights
             actor.update_target_network(sess)
@@ -363,9 +363,11 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
                 grl.kill()
 
 
-def start(cfg, params, counter=None):
-    # Initialize the actor, critic and difference networks
+def start(cfg, counter=None):
+    # Load configuration file
+    config, params = read_cfg(cfg)
 
+    # Initialize the actor, critic and difference networks
     with tf.Graph().as_default() as ddpg:
         actor = ActorNetwork(OBSERVATION_DIMS, ACTION_DIMS, 1,
                              params["learning"]["actor_learning_rate"], params["learning"]["tau"])
@@ -375,6 +377,6 @@ def start(cfg, params, counter=None):
     if counter:
         with tf.Graph().as_default() as diff_model:
             model = DifferenceModel(STATE_DIMS + ACTION_DIMS, STATE_DIMS)
-            train(cfg, ddpg, actor, critic, params, counter=counter, diff_model=diff_model, model=model)
+            train(cfg, ddpg, actor, critic, config, params, counter=counter, diff_model=diff_model, model=model)
     else:
-        train(cfg, ddpg, actor, critic, params)
+        train(cfg, ddpg, actor, critic, config, params)

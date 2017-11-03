@@ -12,7 +12,7 @@ import numpy as np
 import os.path
 import sys
 from collections import OrderedDict
-import learning_params
+import ddpg_params
 import multiprocessing
 
 from difference_model import DifferenceModel
@@ -34,8 +34,8 @@ def foo():
         for i in range(1):
             #
             # Run the trained policy on a real model
-            learning_params.ou_sigma = 0.1
-            learning_params.ou_theta = 0.15
+            ddpg_params.ou_sigma = 0.1
+            ddpg_params.ou_theta = 0.15
             d = {'transitions': {'load': 0, 'save': 1, 'save_filename': 'saved_data-perturbed-{}'.format(ii), 'buffer_size': 5000},
                  'difference_model': 0}
             with open('config.yaml', 'w') as yaml_file:
@@ -73,12 +73,12 @@ def foo():
 
 
         # Training the policy with the difference model included
-        learning_params.ou_sigma = 0.12
-        learning_params.ou_theta = 0.15
-        learning_params.actor_learning_rate = 0.0001
-        learning_params.critic_learning_rate = 0.001
+        ddpg_params.ou_sigma = 0.12
+        ddpg_params.ou_theta = 0.15
+        ddpg_params.actor_learning_rate = 0.0001
+        ddpg_params.critic_learning_rate = 0.001
         iterations = 0
-        while not learning_params.learning_success and iterations != 1:
+        while not ddpg_params.learning_success and iterations != 1:
             if ii == 1:
                 d = {'replay_buffer': {'load': 0, 'save': 1, 'save_filename': 'saved_replay_buffer',
                                        'buffer_size': 100000}, 'difference_model': 0}
@@ -96,7 +96,7 @@ def foo():
             time.sleep(5)
 
             # Running the learned policy on the difference model on the perturbed system to see if it works
-            learning_params.test_run_on_model = 1
+            ddpg_params.test_run_on_model = 1
 
             d = {'replay_buffer': {'load': 0, 'save': 0, 'buffer_size': 2000}, 'difference_model': 0}
             with open('config.yaml', 'w') as yaml_file:
@@ -104,13 +104,13 @@ def foo():
             cfg = "{}/leo_rbdl_zmq_drl_real.yaml".format(path)
             new_cfg = rl_run_rbdl_agent(cfg, ii)
             start(new_cfg)
-            learning_params.test_run_on_model = 0
+            ddpg_params.test_run_on_model = 0
 
             iterations += 1
 
-        learning_params.learning_success = 0
+        ddpg_params.learning_success = 0
 
-        if learning_params.learning_success:
+        if ddpg_params.learning_success:
             print ("Entire training was successful")
             break
 
@@ -184,7 +184,7 @@ def ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
 
 
 def main():
-    learning_params.init()
+    ddpg_params.init()
     foo()
 
 
