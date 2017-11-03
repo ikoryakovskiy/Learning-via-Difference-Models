@@ -15,6 +15,7 @@ import os.path
 import subprocess
 import signal
 import time
+from datetime import datetime
 import sys
 
 from replaybuffer_ddpg import ReplayBuffer
@@ -23,53 +24,19 @@ from actor import ActorNetwork
 from critic import CriticNetwork
 from difference_model import DifferenceModel
 
-# Path to grl executable
-GRL_PATH = '../grl/qt-build/grld'
-
 # ==========================
-#   Training Parameters
+#   Environment Parameters
 # ==========================
-# Max episode length
-MAX_STEPS_EPISODE = 1010
-# Base learning rate for the Actor network
-ACTOR_LEARNING_RATE = 0.0001
-# Base learning rate for the Critic Network
-CRITIC_LEARNING_RATE = 0.001
-# Discount factor 
-GAMMA = 0.99
-# Soft target update param
-TAU = 0.001
-FACTOR = 0
-# ===========================
-#   Utility Parameters
-# ===========================
-
-# Directory for storing gym results
-MONITOR_DIR = './results/gym_ddpg'
-# Directory for storing tensorboard summary results
-SUMMARY_DIR = './results/tf_ddpg'
-RANDOM_SEED = 1234
-# Size of replay buffer
-TRAINING_SIZE = 2000
-BUFFER_SIZE = 300000
-MINIBATCH_SIZE = 64
-MIN_BUFFER_SIZE = 20000
 # Environment Parameters
 ACTION_DIMS = 6
 ACTION_DIMS_REAL = 9
 STATE_DIMS = 18
 OBSERVATION_DIMS = 14
 ACTION_BOUND = 1
-ACTION_BOUND_REAL = 8.6
-# Noise Parameters
-NOISE_MEAN = 0
-NOISE_VAR = 1
-# Ornstein-Uhlenbeck variables
-OU_THETA = 0.15
-OU_MU = 0
-OU_SIGMA = 0.2
+ACTION_BOUND_REAL = 8.6 # in voltage
 
-# global variables
+# GRL as a global variable
+GRL_PATH = '../grl/qt-build/grld'
 grl = None
 
 # ===========================
@@ -188,16 +155,12 @@ def observe(state):
     return obs
 
 
-def calculate_new_reward(state, reward):
-    reward += 300 * state[0]
-    return reward
-
-
 # ===========================
 #   Agent Training
 # ===========================
 def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model=None):
     global grl
+    assert(actor.a_dim == ACTION_DIMS)
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -233,15 +196,14 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
 
             # Initialize replay memory
             if model:
-                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED, diff_sess, params=params)
+                replay_buffer = ReplayBuffer(params["replay_buffer"]["max_size"], datetime.now(), diff_sess, params=params)
             else:
-                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED, params=params)
-            # replay_buffer_test = ReplayBuffer(TRAINING_SIZE, RANDOM_SEED)
+                replay_buffer = ReplayBuffer(params["replay_buffer"]["max_size"], datetime.now(), params=params)
 
             # Initialize constants for exploration noise
             ou_sigma = params["learning"]["ou_sigma"]
             ou_theta = params["learning"]["ou_theta"]
-            ou_mu = OU_MU
+            ou_mu = params["learning"]["ou_mu"]
             trial_return = 0
             max_trial_return = 0
 
@@ -250,10 +212,10 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
             server = context.socket(zmq.REP)
             server.bind(get_address(config["address"]))
 
-            obs_old = np.zeros(actor.s_dim)
-            state_old = np.zeros(STATE_DIMS)
-            computed_action = np.zeros(ACTION_DIMS)
-            check = False
+            obs = np.zeros(OBSERVATION_DIMS)
+            state = np.zeros(STATE_DIMS)
+            action = np.zeros(ACTION_DIMS)
+            noise = np.zeros(ACTION_DIMS)
             diff_obs = None
 
             tt = 0
@@ -283,7 +245,7 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
                     # Message at the beginning of the trial, reward and terminal are missing.
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
                     test_agent = a[0]
-                    state = a[1: STATE_DIMS + 1]
+                    next = a[1: STATE_DIMS + 1]
                     reward = 0
                     terminal = 0
                     trial_start = True
@@ -294,7 +256,7 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
                     # Normal message until the end of the trial
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
                     test_agent = a[0]
-                    state = a[1: STATE_DIMS + 1]
+                    next = a[1: STATE_DIMS + 1]
                     reward = a[STATE_DIMS + 1]
                     terminal = a[STATE_DIMS + 2]
                     trial_start = False
@@ -307,39 +269,34 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
 
                 # Call to see if the difference model should be used to obtain the true state
                 if model and not trial_start:
-                    diff_state, diff_state_variance = compute_diff_state_dropout(diff_sess, model, np.reshape(
-                        np.concatenate((np.zeros(1), state_old[1:STATE_DIMS], computed_action)),
+                    diff_next, diff_state_variance = compute_diff_state_dropout(diff_sess, model, np.reshape(
+                        np.concatenate((np.zeros(1), state[1:STATE_DIMS], action)),
                         (1, STATE_DIMS + ACTION_DIMS)))
-                    state += diff_state
-                    diff_obs = observe(diff_state)
+                    next += diff_next
+                    diff_obs = observe(diff_next)
 
                 # obtain observation of a state
-                obs = observe(state)
+                next_obs = observe(next)
 
                 # Add the transition to replay buffer
                 if not trial_start:
-                    replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
-                                                    np.reshape(computed_action, (actor.a_dim,)),
-                                                    reward, terminal == 2, np.reshape(obs, (actor.s_dim,)),
-                                                    diff_obs)
+                    replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs, diff_obs)
 
                 # Compute OU noise
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, ACTION_DIMS)
 
                 # Compute action
-                computed_action = compute_action(sess, test_agent, config["randomize"], actor, obs, noise)
-
-                state, computed_action = replay_buffer.sample_state_action(state, computed_action, test_agent,
-                                                                           trial_start)
+                next_action = compute_action(sess, test_agent, config["randomize"], actor, next_obs, noise)
+                next, next_action = replay_buffer.sample_state_action(next, next_action, test_agent, trial_start)
 
                 # Get state and action from replay buffer to send to GRL
-                scaled_action = computed_action * ACTION_BOUND_REAL
+                scaled_action = next_action * ACTION_BOUND_REAL
 
                 if ACTION_DIMS_REAL != ACTION_DIMS:
                     scaled_action = np.concatenate((np.zeros((ACTION_DIMS_REAL - ACTION_DIMS,)), scaled_action))
 
                 # Convert state and action into null terminated string
-                outgoing_array = np.concatenate((scaled_action, state))
+                outgoing_array = np.concatenate((scaled_action, next))
                 outgoing_message = struct.pack('d' * (ACTION_DIMS_REAL + STATE_DIMS), *outgoing_array)
 
                 # Sends the predicted action via zeromq
@@ -347,23 +304,23 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
 
                 # Keep adding experience to the memory until
                 # there are at least minibatch size samples
-                if not test_agent and replay_buffer.size() > MIN_BUFFER_SIZE:
-                    s_batch, a_batch, r_batch, t_batch, s2_batch = \
-                        replay_buffer.sample_batch(MINIBATCH_SIZE)
+                if not test_agent and replay_buffer.size() > params["replay_buffer"]["min_size"]:
+                    minibatch_size = params["replay_buffer"]["minibatch_size"]
+                    s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
 
                     # Calculate targets
                     target_q = critic.predict_target(sess, s2_batch, actor.predict_target(sess, s2_batch))
 
                     y_i = []
-                    for k in range(MINIBATCH_SIZE):
+                    for k in range(minibatch_size):
                         if t_batch[k]:
                             y_i.append(r_batch[k])
                         else:
-                            y_i.append(r_batch[k] + GAMMA * target_q[k])
+                            y_i.append(r_batch[k] + params["learning"]["gamma"] * target_q[k])
 
                     # Update the critic given the targets
-                    predicted_q_value, _ = critic.train(sess, s_batch, a_batch,
-                                                        np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    #predicted_q_value, _ = \
+                    critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
 
                     # Update the actor policy using the sampled gradient
                     a_outs = actor.predict(sess, s_batch)
@@ -374,8 +331,9 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
                     actor.update_target_network(sess)
                     critic.update_target_network(sess)
 
-                obs_old = obs
-                state_old = state
+                state = next
+                obs = next_obs
+                action = next_action
                 trial_return += reward
 
                 if not test and not trial_start:
@@ -410,8 +368,9 @@ def start(cfg, params, counter=None):
 
     with tf.Graph().as_default() as ddpg:
         actor = ActorNetwork(OBSERVATION_DIMS, ACTION_DIMS, 1,
-                             params["learning"]["actor_learning_rate"], TAU)
-        critic = CriticNetwork(OBSERVATION_DIMS, ACTION_DIMS, params["learning"]["critic_learning_rate"], TAU,
+                             params["learning"]["actor_learning_rate"], params["learning"]["tau"])
+        critic = CriticNetwork(OBSERVATION_DIMS, ACTION_DIMS,
+                               params["learning"]["critic_learning_rate"], params["learning"]["tau"],
                                actor.get_num_trainable_vars())
     if counter:
         with tf.Graph().as_default() as diff_model:

@@ -10,6 +10,7 @@ def single_ddpg(cfg):
 
     params = dict(
         learning=learning,
+        replay_buffer=dict(load=0, save=0, max_size=300000, min_size=20000, minibatch_size=64),
         transitions=dict(load=0, save=1, save_filename='db_trajectories', buffer_size=5000),
         difference_model=0
     )

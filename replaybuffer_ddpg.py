@@ -44,7 +44,6 @@ class ReplayBuffer(object):
         if self.replay_buffer_count < self.buffer_size:
             self.replay_buffer.append(experience)
             self.replay_buffer_count += 1
-            # print ("Buffer count:", self.buffer_count)
         else:
             self.replay_buffer.popleft()
             self.replay_buffer.append(experience)
@@ -56,7 +55,6 @@ class ReplayBuffer(object):
         return False
 
     def transitions_buffer_add(self, s, a, r, t, s2, sd):
-
         if self.transitions_save:
             experience = (s, a, r, t, s2, sd)
             self.transitions_buffer.append(experience)
@@ -98,7 +96,7 @@ class ReplayBuffer(object):
         if 'replay_buffer' in params:
             self.buffer_save = int(params['replay_buffer']['save'])
             self.buffer_load = int(params['replay_buffer']['load'])
-            self.buffer_size_file = params['replay_buffer']['buffer_size']
+            self.buffer_size_file = params['replay_buffer']['max_size']
 
         self.diff = int(params['difference_model'])
         print("Transitions save = {}, load = {}, diff = {}".format(self.transitions_save, self.transitions_load, self.diff))
@@ -156,8 +154,3 @@ class ReplayBuffer(object):
 
         for i in range(s_batch):
             self.replay_buffer.append((s_batch[i], a_batch[i], r_batch[i], t_batch[i], s2_new[i], diff_state_new[i]))
-
-
-
-
-
