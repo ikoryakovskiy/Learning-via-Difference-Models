@@ -15,6 +15,7 @@ import os.path
 import subprocess
 import signal
 import time
+import sys
 
 from replaybuffer_ddpg import ReplayBuffer
 from ExplorationNoise import ExplorationNoise
@@ -68,6 +69,9 @@ OU_THETA = 0.15
 OU_MU = 0
 OU_SIGMA = 0.2
 
+# global variables
+grl = None
+
 # ===========================
 # ZeroMQ timeout handler
 # ===========================
@@ -78,6 +82,10 @@ class TimeoutException(Exception):
 def timeout_handler():
     raise TimeoutException
 
+def signal_handler(signal, frame):
+    if grl.poll() is None:
+        grl.kill()
+    sys.exit(0)
 
 # ===========================
 # Processing YAML configuration
@@ -189,6 +197,10 @@ def calculate_new_reward(state, reward):
 #   Agent Training
 # ===========================
 def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model=None):
+    global grl
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=diff_model, config=tf.ConfigProto(gpu_options=gpu_options)) as diff_sess:
         if model:
@@ -253,7 +265,6 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
                     ((not config["trials"] or tt < config["trials"]) and (not config["steps"] or ss < config["steps"])):
 
                 # Receive the current state from zeromq within 3000 seconds
-                signal.signal(signal.SIGALRM, timeout_handler)
                 signal.alarm(3000)
                 try:
                     incoming_message = server.recv()
@@ -307,14 +318,10 @@ def train(cfg, ddpg, actor, critic, params, counter=None, diff_model=None, model
 
                 # Add the transition to replay buffer
                 if not trial_start:
-                    check = replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
-                                                            np.reshape(computed_action, (actor.a_dim,)),
-                                                            reward, terminal == 2, np.reshape(obs, (actor.s_dim,)),
-                                                            diff_obs)
-                if check:
-                    print("Transitions saved")
-                    grl.kill()
-                    return
+                    replay_buffer.replay_buffer_add(np.reshape(obs_old, (actor.s_dim,)),
+                                                    np.reshape(computed_action, (actor.a_dim,)),
+                                                    reward, terminal == 2, np.reshape(obs, (actor.s_dim,)),
+                                                    diff_obs)
 
                 # Compute OU noise
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, ACTION_DIMS)
