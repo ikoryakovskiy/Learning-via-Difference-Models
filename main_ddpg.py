@@ -351,9 +351,9 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                             max_trial_return = trial_return
                             saver = tf.train.Saver()
                             if model:
-                                saver.save(sess, "{}-diff-{}".format(config["output"], counter))
+                                saver.save(sess, ".\{}-diff-{}".format(config["output"], counter))
                             else:
-                                saver.save(sess, config["output"])
+                                saver.save(sess, ".\{}".format(config["output"]))
 
 
             # Give GRL some seconds to finish

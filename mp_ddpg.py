@@ -57,7 +57,7 @@ def main():
 
     L = rl_run_param(args, configs, options)
 
-    #do_multiprocessing_pool(args, L)
+    do_multiprocessing_pool(args, L)
 
 ######################################################################################
 def rl_run_param(args, list_of_cfgs, options):
