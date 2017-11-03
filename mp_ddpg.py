@@ -107,7 +107,7 @@ def mp_run(cfg):
 
 ######################################################################################
 def init(cnt, num):
-    ''' store the counter for later use '''
+    """ store the counter for later use """
     global counter
     global cores
     counter = cnt
@@ -134,7 +134,7 @@ def read_cfg(cfg):
     """Read configuration file"""
     # check if file exists
     yfile = '../grl/qt-build/cfg/%s' % cfg
-    if os.path.isfile(yfile) == False:
+    if not os.path.isfile(yfile):
         print('File %s not found' % yfile)
         sys.exit()
 
@@ -158,8 +158,8 @@ def remove_viz(conf):
     if "visualize" in conf['experiment']['environment']:
         conf['experiment']['environment']['visualize'] = 0
     if "target_env" in conf['experiment']['environment']:
-    	if "visualize" in conf['experiment']['environment']['target_env']:
-        	conf['experiment']['environment']['target_env']['visualize'] = 0
+        if "visualize" in conf['experiment']['environment']['target_env']:
+            conf['experiment']['environment']['target_env']['visualize'] = 0
     if "visualizer" in conf:
             del conf["visualizer"]
     if "visualization" in conf:

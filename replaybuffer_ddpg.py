@@ -13,7 +13,7 @@ import pickle
 from train_model import prediction
 
 class ReplayBuffer(object):
-    def __init__(self, buffer_size, random_seed, diff_sess = None, ddpg_cfg = 'config.yaml'):
+    def __init__(self, buffer_size, random_seed, diff_sess = None, params=None):
         """
         The right side of the deque contains the most recent experiences 
         """
@@ -36,7 +36,7 @@ class ReplayBuffer(object):
         self.model_filename = None
         self.sess = diff_sess
         random.seed(random_seed)
-        self.read_cfg(ddpg_cfg)
+        self.setup(params)
 
     def replay_buffer_add(self, s, a, r, t, s2, sd):
         experience = (s, a, r, t, s2, sd)
@@ -90,52 +90,42 @@ class ReplayBuffer(object):
         self.transitions_count = 0
         self.replay_buffer_count = 0
 
-    def read_cfg(self, cfg):
-        path = os.path.dirname(os.path.abspath(__file__))
-        yfile = '{}/{}'.format(path,cfg)
-        print ("Loading Transitions and Replay Buffer from", yfile)
-        if not os.path.isfile(yfile):
-            print ("File %s not found" % yfile)
-        else:
-            # open configuration
-            stream = open(yfile, 'r')
-            conf = yaml.load(stream)
-            if 'transitions' in conf:
-                self.transitions_save = int(conf['transitions']['save'])
-                self.transitions_load = int(conf['transitions']['load'])
-                self.transitions_size_file = conf['transitions']['buffer_size']
-            if 'replay_buffer' in conf:
-                self.buffer_save = int(conf['replay_buffer']['save'])
-                self.buffer_load = int(conf['replay_buffer']['load'])
-                self.buffer_size_file = conf['replay_buffer']['buffer_size']
+    def setup(self, params):
+        if 'transitions' in params:
+            self.transitions_save = int(params['transitions']['save'])
+            self.transitions_load = int(params['transitions']['load'])
+            self.transitions_size_file = params['transitions']['buffer_size']
+        if 'replay_buffer' in params:
+            self.buffer_save = int(params['replay_buffer']['save'])
+            self.buffer_load = int(params['replay_buffer']['load'])
+            self.buffer_size_file = params['replay_buffer']['buffer_size']
 
-            self.diff = int(conf['difference_model'])
-            print("Transitions save = {}, load = {}, diff = {}".format(self.transitions_save, self.transitions_load, self.diff))
-            print("Replay Buffer save = {}, load = {}, diff = {}".format(self.buffer_save, self.buffer_load, self.diff))
+        self.diff = int(params['difference_model'])
+        print("Transitions save = {}, load = {}, diff = {}".format(self.transitions_save, self.transitions_load, self.diff))
+        print("Replay Buffer save = {}, load = {}, diff = {}".format(self.buffer_save, self.buffer_load, self.diff))
 
-            if self.transitions_save == 1:
-                self.save_filename = conf['transitions']['save_filename']
-            elif self.buffer_save == 1:
-                self.save_filename = conf['replay_buffer']['save_filename']
+        if self.transitions_save == 1:
+            self.save_filename = params['transitions']['save_filename']
+        elif self.buffer_save == 1:
+            self.save_filename = params['replay_buffer']['save_filename']
 
-            if self.transitions_load == 1:
-                self.load_filename = conf['transitions']['load_filename']
-                with open(self.load_filename) as f:
-                    self.transitions = pickle.load(f)
-                    print (len(self.transitions))
-                    f.close()
+        if self.transitions_load == 1:
+            self.load_filename = params['transitions']['load_filename']
+            with open(self.load_filename) as f:
+                self.transitions = pickle.load(f)
+                print (len(self.transitions))
+                f.close()
 
-            if self.buffer_load == 1:
-                self.load_filename = conf['replay_buffer']['load_filename']
-                with open(self.load_filename) as f:
-                    self.replay_buffer = pickle.load(f)
-                    f.close()
-                    # self.update_replay_buffer()
-                    self.replay_buffer_count += len(self.replay_buffer)
+        if self.buffer_load == 1:
+            self.load_filename = params['replay_buffer']['load_filename']
+            with open(self.load_filename) as f:
+                self.replay_buffer = pickle.load(f)
+                f.close()
+                # self.update_replay_buffer()
+                self.replay_buffer_count += len(self.replay_buffer)
 
-            if self.diff == 1:
-                self.model_filename = conf['difference_model']['model_filename']
-            stream.close()
+        if self.diff == 1:
+            self.model_filename = params['difference_model']['model_filename']
 
     def sample_state_action(self, state, action, test, episode_start):
 

@@ -2,23 +2,25 @@
 # -*- coding: utf-8 -*-
 
 import yaml
-import global_params
+import learning_params
 from main_ddpg import start
 
-global_params.init()
-global_params.ou_sigma = 0
-global_params.theta = 1
-global_params.actor_learning_rate = 0
-global_params.critic_learning_rate = 0
+def single_ddpg_play(cfg):
+    learning = learning_params.init()
+    learning["ou_sigma"] = 0
+    learning["theta"] = 1
+    learning["actor_learning_rate"] = 0
+    learning["critic_learning_rate"] = 0
 
-d = {'transitions': {'load': 0, 'load_filename': 'db_trajectories', 
-                     'save': 0, 'save_filename': 'db_trajectories_play',
-                     'buffer_size': 5000},
-     'difference_model': 0}
-     
-with open('config.yaml', 'w') as yaml_file:
-    yaml.dump(d, yaml_file, default_flow_style=False)
+    params = dict(
+        learning=learning,
+        transitions=dict(load=0, save=1, save_filename='db_trajectories', buffer_size=5000),
+        difference_model=0
+    )
 
-# Run the transitions on the original model
-start('../grl/qt-build/cfg/leo/drl/rbdl_ddpg_play.yaml', global_params)
+    start(cfg, params)
+
+if __name__ == "__main__":
+    single_ddpg_play('../grl/qt-build/cfg/leo/drl/rbdl_ddpg_play.yaml')
+
 
