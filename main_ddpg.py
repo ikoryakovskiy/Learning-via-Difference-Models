@@ -162,7 +162,7 @@ def observe(state):
 # ===========================
 def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=None, model=None):
     global grl
-    assert(actor.a_dim == ACTION_DIMS)
+    assert actor.a_dim == ACTION_DIMS, "Failed action dim assert for config {}, {}".format(cfg, locals())
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -265,7 +265,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
 
                 # for debugging purpose
                 test = (config["test_interval"] >= 0 and tt % (config["test_interval"] + 1) == config["test_interval"])
-                assert (test_agent == test)
+                assert test_agent == test, "Failed test assert for config {}, {}".format(cfg, locals())
 
                 # Call to see if the difference model should be used to obtain the true state
                 if model and not trial_start:
