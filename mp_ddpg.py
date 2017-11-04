@@ -9,6 +9,8 @@ import argparse
 import itertools
 import signal
 import random
+import socket
+from contextlib import closing
 from datetime import datetime
 from main_ddpg import start
 import ddpg_params
@@ -86,6 +88,9 @@ def rl_run_param(args, list_of_cfgs, options):
             # create local filename
             list_of_new_cfgs.append( "{}/{}-{}{}".format(loc, fname, str_o, fext) )
 
+            # select port to use
+            port = port_select(port)
+
             conf['experiment']['output'] = "{}-{}".format(fname, str_o)
             conf['experiment']['agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
             conf['experiment']['test_agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
@@ -98,7 +103,6 @@ def rl_run_param(args, list_of_cfgs, options):
 
             conf = remove_viz(conf)
             write_cfg(list_of_new_cfgs[-1], conf)
-            port = port + 1
 
     print(list_of_new_cfgs)
 
@@ -173,6 +177,7 @@ def write_cfg(outCfg, conf):
     outfile.close()
 ######################################################################################
 
+
 def remove_viz(conf):
     """Remove everything in conf related to visualization"""
     if "visualize" in conf['experiment']['environment']:
@@ -189,12 +194,33 @@ def remove_viz(conf):
     return conf
 ######################################################################################
 
+
 def dict_representer(dumper, data):
   return dumper.represent_dict(data.iteritems())
 ######################################################################################
- 
+
+
 def dict_constructor(loader, node):
   return collections.OrderedDict(loader.construct_pairs(node))
+######################################################################################
+
+
+def socket_free(host, port):
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
+        if sock.connect_ex((host, port)) == 0:
+            return 1
+        else:
+            return 0
+
+
+def port_select(port):
+    while True:
+        if socket_free('localhost', port):
+            return port
+        else:
+            port = port+1
+
+
 ######################################################################################
 
 if __name__ == "__main__":
