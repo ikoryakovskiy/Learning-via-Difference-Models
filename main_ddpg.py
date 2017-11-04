@@ -219,6 +219,8 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             noise = np.zeros(ACTION_DIMS)
             diff_obs = None
 
+            saver = tf.train.Saver()
+
             tt = 0
             ss = 0
             terminal = 0
@@ -248,14 +250,13 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     test_agent = a[0]
                     next = a[1: STATE_DIMS + 1]
 
-                    # Save previous episode NN if it finished upon timeout
+                    # Save best-previous-episode NN if it finished upon timeout
                     if not terminal and save_counter != 0 and trial_return > max_trial_return:
                         max_trial_return = trial_return
-                        saver = tf.train.Saver()
                         if model:
-                            saver.save(sess, "./{}-diff-{}".format(config["output"], counter))
+                            saver.save(sess, "./{}-diff-{}-best".format(config["output"], counter))
                         else:
-                            saver.save(sess, "./{}".format(config["output"]))
+                            saver.save(sess, "./{}-best".format(config["output"]))
 
                     # Reset values in the beginning of each new trial
                     reward = 0
@@ -357,6 +358,12 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 obs = next_obs
                 action = next_action
                 trial_return += reward
+
+            #save the last one
+            if model:
+                saver.save(sess, "./{}-diff-{}-last".format(config["output"], counter))
+            else:
+                saver.save(sess, "./{}-last".format(config["output"]))
 
             # Give GRL some seconds to finish
             time.sleep(1)

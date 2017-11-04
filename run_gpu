@@ -1,4 +1,0 @@
-#!/bin/bash
-
-nvidia-docker run -e CUDA_VISIBLE_DEVICES=0 -it --rm -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -u $(id -u $USER):$(id -g $USER) -v /home/ikoryakovskiy/drl/:/drl -v /home/ikoryakovskiy/grl:/grl dbl/tensorflow_gpu:latest /bin/bash
-
