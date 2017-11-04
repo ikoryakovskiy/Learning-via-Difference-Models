@@ -17,6 +17,7 @@ import signal
 import time
 from datetime import datetime
 import sys
+import pdb
 
 from replaybuffer_ddpg import ReplayBuffer
 from ExplorationNoise import ExplorationNoise
@@ -246,12 +247,35 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
                     test_agent = a[0]
                     next = a[1: STATE_DIMS + 1]
+
+                    # Save previous episode NN if it finished upon timeout
+                    if not terminal and save_counter != 0 and trial_return > max_trial_return:
+                        max_trial_return = trial_return
+                        saver = tf.train.Saver()
+                        if model:
+                            saver.save(sess, "./{}-diff-{}".format(config["output"], counter))
+                        else:
+                            saver.save(sess, "./{}".format(config["output"]))
+
+                    # Reset values in the beginning of each new trial
                     reward = 0
                     terminal = 0
                     trial_start = True
-                    # Reset values in the beginning of each new trial
                     trial_return = 0
                     noise = np.zeros(actor.a_dim)
+
+                    # for debugging purpose
+                    print("Episode ended (return, max_trial_return, tt, ss, terminal) = "
+                          "({:>11.3f}, {:>11.3f}, {:>11}, {:>11}, {:>11})"
+                          .format(trial_return, max_trial_return, tt, ss, terminal))
+                    test = (config["test_interval"] >= 0 and tt % (config["test_interval"] + 1) == config["test_interval"])
+                    # assert test_agent == test, "Failed test assert for config {}, {}".format(cfg, locals())
+                    if not test_agent == test:
+                        print("Failed test assert for config {}, lhs {}, rhs {}, ss {}, tt {}".format(cfg, test_agent, test, ss, tt))
+                        pdb.set_trace()
+
+                    tt = tt + 1
+
                 elif len_incoming_message == (STATE_DIMS + 3) * 8:
                     # Normal message until the end of the trial
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
@@ -260,12 +284,10 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     reward = a[STATE_DIMS + 1]
                     terminal = a[STATE_DIMS + 2]
                     trial_start = False
+                    if not test_agent:
+                        ss = ss + 1
                 else:
                     raise ValueError('DDPG Incoming zeromq message has a wrong length')
-
-                # for debugging purpose
-                test = (config["test_interval"] >= 0 and tt % (config["test_interval"] + 1) == config["test_interval"])
-                assert test_agent == test, "Failed test assert for config {}, {}".format(cfg, locals())
 
                 # Call to see if the difference model should be used to obtain the true state
                 if model and not trial_start:
@@ -335,26 +357,6 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 obs = next_obs
                 action = next_action
                 trial_return += reward
-
-                if not test and not trial_start:
-                    ss = ss + 1
-
-                if terminal:
-                    tt = tt + 1
-
-                    print("Episode ended (return, max_trial_return, tt, ss) = "
-                          "({:>11.3f}, {:>11.3f}, {:>11}, {:>11})"
-                          .format(trial_return, max_trial_return, tt, ss))
-
-                    if save_counter != 0:
-                        if trial_return > max_trial_return:
-                            max_trial_return = trial_return
-                            saver = tf.train.Saver()
-                            if model:
-                                saver.save(sess, "./{}-diff-{}".format(config["output"], counter))
-                            else:
-                                saver.save(sess, "./{}".format(config["output"]))
-
 
             # Give GRL some seconds to finish
             time.sleep(1)
