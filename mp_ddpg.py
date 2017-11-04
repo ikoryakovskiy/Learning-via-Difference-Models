@@ -215,10 +215,9 @@ def socket_free(host, port):
 
 def port_select(port):
     while True:
+        port = port + 1
         if socket_free('localhost', port):
             return port
-        else:
-            port = port+1
 
 
 ######################################################################################
