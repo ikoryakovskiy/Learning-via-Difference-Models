@@ -40,6 +40,7 @@ if __name__ == "__main__":
         conf = yaml.load(f)
         if not "ddpg_param" in conf:
             conf['ddpg_param'] = ddpg_params.init()
+            conf['ddpg_param']['replay_buffer']['min_size'] = 1000
             with open(new_cfg, 'w') as f:
                 yaml.dump(conf, f)
 

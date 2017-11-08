@@ -5,6 +5,7 @@ Created on Mon Jan 16 17:49:02 2017
 
 @author: divyam, ikoryakovskiy
 """
+from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
@@ -17,7 +18,7 @@ import signal
 import time
 from datetime import datetime
 import sys
-from math import ceil
+import math
 import pdb
 
 from replaybuffer_ddpg import ReplayBuffer
@@ -73,7 +74,7 @@ def read_cfg(cfg):
         address = conf['experiment']['agent']['communicator']['addr']
         control_step = conf["experiment"]["environment"]["model"]["control_step"]
         timeout = conf["experiment"]["environment"]["task"]["timeout"]
-        tsteps = int(ceil(timeout / (100*control_step)))
+        tsteps = int(math.ceil(timeout / (100*control_step)))
 
         load_file = None
         if "load_file" in conf["experiment"]:
@@ -166,6 +167,16 @@ def observe(state):
         count += 1
     return obs
 
+def healthchek(sess, network):
+    W = sess.run(network.network_params)
+    #pdb.set_trace()
+    for i, w in enumerate(W):
+        if np.isnan(w).any():
+            print("Nan value encountered in network {}".format(network.network_params[i].name))
+            pdb.set_trace()
+        if (w > 1e10).any():
+            print("Suspicious groth of network weights detected in {}".format(network.network_params[i].name))
+            pdb.set_trace()
 
 # ===========================
 #   Agent Training
@@ -217,6 +228,9 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             trial_return = 0
             max_trial_return = 0
 
+            # creating logger
+            log_perf = open("{}-py.txt".format(config["output"]), 'w')
+
             # Establish the connection
             context = zmq.Context()
             server = context.socket(zmq.REP)
@@ -236,6 +250,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             tstep = 0
             ncp = 5
             cp = (config["steps"] // ncp) if ncp != 0 else 0
+            grad_norm = 0
 
             # Loop over steps and trials, but break is allowed at terminal states only
             while not terminal or \
@@ -261,25 +276,11 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
                     test = a[0]
                     next = a[1: STATE_DIMS + 1]
-
-                    # Save best-previous-episode NN if it finished upon timeout
-                    if not terminal and request_save != 0 and trial_return > max_trial_return:
-                        max_trial_return = trial_return
-                        save(sess, saver, config, type="-best")
-
-                    # for debugging purpose
-                    print("Episode ended (return, max_trial_return, tt, ss, terminal) = "
-                          "({:>11.3f}, {:>11.3f}, {:>11}, {:>11}, {:>11})"
-                          .format(trial_return, max_trial_return, tt, ss, terminal))
-
-                    # Reset values in the beginning of each new trial
                     reward = 0
                     terminal = 0
                     trial_start = True
                     trial_return = 0
                     noise = np.zeros(actor.a_dim)
-
-                    tt = tt + 1
                     tstep = 0
 
                 elif len_incoming_message == (STATE_DIMS + 3) * 8:
@@ -299,9 +300,6 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                         terminal = 1
                 else:
                     raise ValueError('DDPG Incoming zeromq message has a wrong length')
-
-                if cp and ss != 0 and ss % cp == 0:
-                    save(sess, saver, config, global_step=ss//cp)
 
                 # Call to see if the difference model should be used to obtain the true state
                 if model and not trial_start:
@@ -357,11 +355,16 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     # Update the critic given the targets
                     #predicted_q_value, _ = \
                     critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
+                    healthchek(sess, critic)
 
                     # Update the actor policy using the sampled gradient
                     a_outs = actor.predict(sess, s_batch)
-                    grads = critic.action_gradients(sess, s_batch, a_outs)
-                    actor.train(sess, s_batch, grads[0])
+                    grad = critic.action_gradients(sess, s_batch, a_outs)[0]
+                    actor.train(sess, s_batch, grad)
+                    healthchek(sess, actor)
+
+                    # Check the norm of the gradient
+                    #grad_norm = grad_norm + np.linalg.norm(grad)
 
                     # Update target networks
                     actor.update_target_network(sess)
@@ -372,9 +375,34 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 action = next_action
                 trial_return += reward
 
+                # Logging performance at the end of the testing trial
+                if terminal and test:
+                    logtt = tt+1-(tt+1)/(config["test_interval"]+1)
+                    grad_norm = grad_norm / config["test_interval"]
+                    msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11} {:>11.3f}" \
+                        .format(logtt, ss, trial_return, max_trial_return, terminal, grad_norm)
+                    print("Episode ended (tt, ss, return, max_trial_return, terminal, grad) = ({})".format(msg))
+                    print(msg, file=log_perf)
+                    log_perf.flush()
+                    grad_norm = 0
+
+                # Save NN if performance is better then before
+                if terminal == 1 and request_save != 0 and trial_return > max_trial_return:
+                    max_trial_return = trial_return
+                    save(sess, saver, config, type="-best")
+
+                # Save NN every checkpoint which happens when ss % cp == 0
+                if cp and ss != 0 and ss % cp == 0:
+                    save(sess, saver, config, global_step=ss//cp)
+
+                if terminal:
+                    tt = tt + 1
+
             #save the last one
             if request_save != 0:
                 save(sess, saver, config, type="-last")
+
+            log_perf.close()
 
             # Give GRL some seconds to finish
             time.sleep(1)
