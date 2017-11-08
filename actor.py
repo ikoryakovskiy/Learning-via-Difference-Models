@@ -59,15 +59,18 @@ class ActorNetwork(object):
 
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
-        actor_layer1 = tflearn.fully_connected(inputs, 400, activation='relu', name="actorLayer1",
-                                               weights_init=tflearn.initializations.uniform(
-                                                   minval=-1 / math.sqrt(self.s_dim), maxval=1 / math.sqrt(self.s_dim)))
-        actor_layer2 = tflearn.fully_connected(actor_layer1, 300, activation='relu', name="actorLayer2",
-                                               weights_init=tflearn.initializations.uniform(
-                                                   minval=-1 / math.sqrt(400), maxval=1 / math.sqrt(400)))
-                                                   
+        weights_init1 = tflearn.initializations.uniform(minval=-1/math.sqrt(self.s_dim), maxval=1/math.sqrt(self.s_dim))
+        actor_layer1 = tflearn.fully_connected(inputs, 400, name="actorLayer1", weights_init=weights_init1)
+        actor_layer1_norm = tflearn.layers.normalization.batch_normalization(actor_layer1, name="actorLayer1_norm")
+        actor_layer1_relu = tflearn.activations.relu(actor_layer1_norm)
+
+        weights_init2 = tflearn.initializations.uniform(minval=-1/math.sqrt(400), maxval=1/math.sqrt(400))
+        actor_layer2 = tflearn.fully_connected(actor_layer1_relu, 300, name="actorLayer2", weights_init=weights_init2)
+        actor_layer2_norm = tflearn.layers.normalization.batch_normalization(actor_layer2, name="actorLayer2_norm")
+        actor_layer2_relu = tflearn.activations.relu(actor_layer2_norm)
+
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
-        actor_output = tflearn.fully_connected(actor_layer2, self.a_dim, activation='tanh', name="actorOutput",
+        actor_output = tflearn.fully_connected(actor_layer2_relu, self.a_dim, activation='tanh', name="actorOutput",
                                                weights_init=tflearn.initializations.uniform(minval=-0.003, maxval=0.003))
                                                
         scaled_output = tf.multiply(actor_output, self.action_bound)  # Scale output to -action_bound to action_bound

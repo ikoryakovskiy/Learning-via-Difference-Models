@@ -8,7 +8,7 @@ Created on Mon Jan 16 17:49:02 2017
 
 import tensorflow as tf
 import tflearn
-import math
+from math import sqrt
 
 class CriticNetwork(object):
     """
@@ -55,23 +55,20 @@ class CriticNetwork(object):
     def create_critic_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         action = tflearn.input_data(shape=[None, self.a_dim])
-        critic_layer1 = tflearn.fully_connected(inputs, 400, activation='relu', name="criticLayer1",
-                                                weights_init=tflearn.initializations.uniform(
-                                                    minval=-1 / math.sqrt(self.s_dim),
-                                                    maxval=1 / math.sqrt(self.s_dim)))
+        weights_init1 = tflearn.initializations.uniform(minval=-1/sqrt(self.s_dim), maxval=1/sqrt(self.s_dim))
+        critic_layer1 = tflearn.fully_connected(inputs, 400, name="criticLayer1", weights_init=weights_init1)
+        critic_layer1_norm = tflearn.layers.normalization.batch_normalization(critic_layer1)
+        critic_layer1_relu = tflearn.activations.relu(critic_layer1_norm)
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
-        critic_layer2 = tflearn.fully_connected(critic_layer1, 300, name="criticLayer2",
-                                                weights_init=tflearn.initializations.uniform(
-                                                    minval=-1 / math.sqrt(400 + self.a_dim),
-                                                    maxval=1 / math.sqrt(400 + self.a_dim)))
-        critic_layer3 = tflearn.fully_connected(action, 300, name="criticLayerAction",
-                                                weights_init=tflearn.initializations.uniform(
-                                                    minval=-1 / math.sqrt(400 + self.a_dim),
-                                                    maxval=1 / math.sqrt(400 + self.a_dim)))
+        weights_init2 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
+        critic_layer2 = tflearn.fully_connected(critic_layer1_relu, 300, name="criticLayer2",weights_init=weights_init2)
 
-        net = tflearn.activation(tf.matmul(critic_layer1, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
+        weights_init3 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
+        critic_layer3 = tflearn.fully_connected(action, 300, name="criticLayerAction", weights_init=weights_init3)
+
+        net = tflearn.activation(tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
                                  critic_layer3.b, activation='relu')
 
         # linear layer connected to 1 output representing Q(s,a)
