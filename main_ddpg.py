@@ -17,6 +17,7 @@ import signal
 import time
 from datetime import datetime
 import sys
+from math import ceil
 import pdb
 
 from replaybuffer_ddpg import ReplayBuffer
@@ -70,13 +71,16 @@ def read_cfg(cfg):
         save_every = conf["experiment"]["save_every"]
         randomize = conf["experiment"]["environment"]["task"]["randomize"]
         address = conf['experiment']['agent']['communicator']['addr']
+        control_step = conf["experiment"]["environment"]["model"]["control_step"]
+        timeout = conf["experiment"]["environment"]["task"]["timeout"]
+        tsteps = int(ceil(timeout / (100*control_step)))
 
         load_file = None
         if "load_file" in conf["experiment"]:
             load_file = conf["experiment"]["load_file"]
 
         config = dict(trials=trials, steps=steps, test_interval=test_interval, output=output, save_every=save_every,
-                        randomize=randomize, load_file=load_file, address=address)
+                        randomize=randomize, load_file=load_file, address=address, tsteps=tsteps)
 
         params = conf["ddpg_param"]
     return config, params
@@ -103,16 +107,21 @@ def preload_policy(sess, config):
     return sess
 
 
-def get_policy_save_counter(config):
-    save_counter = 0
+def get_policy_save_requirement(config):
+    request_save = 0
     if config["output"]:
-        if config["save_every"] == "trail":
-            save_counter = 1
-        elif config["save_every"] == "test":
-            save_counter = config["test_interval"] + 1
+        if config["save_every"] == "never":
+            request_save = 0
         else:
-            save_counter = 10
-    return save_counter
+            request_save = 1
+    return request_save
+
+
+def save(sess, saver, config, type = "", global_step = None, model = None, counter = 0):
+    if model:
+        saver.save(sess, "./{}-diff-{}{}".format(config["output"], counter, type), global_step)
+    else:
+        saver.save(sess, "./{}{}".format(config["output"], type), global_step)
 
 
 def compute_action(sess, test_agent, randomize, actor, mod_state, noise):
@@ -183,9 +192,9 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             sess = preload_policy(sess, config)
 
             # Check if a policy needs to be saved
-            save_counter = get_policy_save_counter(config)
+            request_save = get_policy_save_requirement(config)
 
-            print("Save counter: {}".format(save_counter))
+            print("Request save: {}".format(request_save))
             print("Noise: {} and {}".format(params["learning"]["ou_sigma"], params["learning"]["ou_theta"]))
             print("Actor learning rate {}".format(params["learning"]["actor_learning_rate"]))
             print("Critic learning rate {}".format(params["learning"]["critic_learning_rate"]))
@@ -219,11 +228,14 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             noise = np.zeros(ACTION_DIMS)
             diff_obs = None
 
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(max_to_keep=0)
 
             tt = 0
             ss = 0
             terminal = 0
+            tstep = 0
+            ncp = 5
+            cp = (config["steps"] // ncp) if ncp != 0 else 0
 
             # Loop over steps and trials, but break is allowed at terminal states only
             while not terminal or \
@@ -247,16 +259,18 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 if len_incoming_message == (STATE_DIMS + 1) * 8:
                     # Message at the beginning of the trial, reward and terminal are missing.
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
-                    test_agent = a[0]
+                    test = a[0]
                     next = a[1: STATE_DIMS + 1]
 
                     # Save best-previous-episode NN if it finished upon timeout
-                    if not terminal and save_counter != 0 and trial_return > max_trial_return:
+                    if not terminal and request_save != 0 and trial_return > max_trial_return:
                         max_trial_return = trial_return
-                        if model:
-                            saver.save(sess, "./{}-diff-{}-best".format(config["output"], counter))
-                        else:
-                            saver.save(sess, "./{}-best".format(config["output"]))
+                        save(sess, saver, config, type="-best")
+
+                    # for debugging purpose
+                    print("Episode ended (return, max_trial_return, tt, ss, terminal) = "
+                          "({:>11.3f}, {:>11.3f}, {:>11}, {:>11}, {:>11})"
+                          .format(trial_return, max_trial_return, tt, ss, terminal))
 
                     # Reset values in the beginning of each new trial
                     reward = 0
@@ -265,30 +279,29 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     trial_return = 0
                     noise = np.zeros(actor.a_dim)
 
-                    # for debugging purpose
-                    print("Episode ended (return, max_trial_return, tt, ss, terminal) = "
-                          "({:>11.3f}, {:>11.3f}, {:>11}, {:>11}, {:>11})"
-                          .format(trial_return, max_trial_return, tt, ss, terminal))
-                    test = (config["test_interval"] >= 0 and tt % (config["test_interval"] + 1) == config["test_interval"])
-                    # assert test_agent == test, "Failed test assert for config {}, {}".format(cfg, locals())
-                    if not test_agent == test:
-                        print("Failed test assert for config {}, lhs {}, rhs {}, ss {}, tt {}".format(cfg, test_agent, test, ss, tt))
-                        pdb.set_trace()
-
                     tt = tt + 1
+                    tstep = 0
 
                 elif len_incoming_message == (STATE_DIMS + 3) * 8:
                     # Normal message until the end of the trial
                     a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
-                    test_agent = a[0]
+                    test = a[0]
                     next = a[1: STATE_DIMS + 1]
                     reward = a[STATE_DIMS + 1]
                     terminal = a[STATE_DIMS + 2]
                     trial_start = False
-                    if not test_agent:
+                    if not test:
                         ss = ss + 1
+
+                    # check if this is the last step in the trial, but it is not marked as terminal
+                    tstep = tstep + 1
+                    if not terminal and tstep == config["tsteps"]:
+                        terminal = 1
                 else:
                     raise ValueError('DDPG Incoming zeromq message has a wrong length')
+
+                if cp and ss != 0 and ss % cp == 0:
+                    save(sess, saver, config, global_step=ss//cp)
 
                 # Call to see if the difference model should be used to obtain the true state
                 if model and not trial_start:
@@ -309,8 +322,8 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, ACTION_DIMS)
 
                 # Compute action
-                next_action = compute_action(sess, test_agent, config["randomize"], actor, next_obs, noise)
-                next, next_action = replay_buffer.sample_state_action(next, next_action, test_agent, trial_start)
+                next_action = compute_action(sess, test, config["randomize"], actor, next_obs, noise)
+                next, next_action = replay_buffer.sample_state_action(next, next_action, test, trial_start)
 
                 # Get state and action from replay buffer to send to GRL
                 scaled_action = next_action * ACTION_BOUND_REAL
@@ -327,7 +340,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
 
                 # Keep adding experience to the memory until
                 # there are at least minibatch size samples
-                if not test_agent and replay_buffer.size() > params["replay_buffer"]["min_size"]:
+                if not test and replay_buffer.size() > params["replay_buffer"]["min_size"]:
                     minibatch_size = params["replay_buffer"]["minibatch_size"]
                     s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
 
@@ -360,10 +373,8 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 trial_return += reward
 
             #save the last one
-            if model:
-                saver.save(sess, "./{}-diff-{}-last".format(config["output"], counter))
-            else:
-                saver.save(sess, "./{}-last".format(config["output"]))
+            if request_save != 0:
+                save(sess, saver, config, type="-last")
 
             # Give GRL some seconds to finish
             time.sleep(1)
