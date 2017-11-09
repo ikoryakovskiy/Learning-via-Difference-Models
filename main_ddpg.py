@@ -125,8 +125,8 @@ def save(sess, saver, config, type = "", global_step = None, model = None, count
         saver.save(sess, "./{}{}".format(config["output"], type), global_step)
 
 
-def compute_action(sess, test_agent, randomize, actor, mod_state, noise):
-    if test_agent and not randomize:
+def compute_action(sess, test, randomize, actor, mod_state, noise):
+    if test:# and not randomize:
         action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim)))
     else:
         action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim))) + noise
@@ -248,8 +248,8 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             ss = 0
             terminal = 0
             tstep = 0
-            ncp = 5
-            cp = (config["steps"] // ncp) if ncp != 0 else 0
+            num_checkpoints = 0
+            checkpoint_every = (config["steps"] // num_checkpoints) if num_checkpoints != 0 else 0
             grad_norm = 0
 
             # Loop over steps and trials, but break is allowed at terminal states only
@@ -273,9 +273,9 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 # Decide which method sent the message and extract the message in a numpy array
                 if len_incoming_message == (STATE_DIMS + 1) * 8:
                     # Message at the beginning of the trial, reward and terminal are missing.
-                    a = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
-                    test = a[0]
-                    next = a[1: STATE_DIMS + 1]
+                    recv = np.asarray(struct.unpack('d' * (STATE_DIMS + 1), incoming_message))
+                    test = recv[0]
+                    next = recv[1: STATE_DIMS + 1]
                     reward = 0
                     terminal = 0
                     trial_start = True
@@ -285,11 +285,11 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
 
                 elif len_incoming_message == (STATE_DIMS + 3) * 8:
                     # Normal message until the end of the trial
-                    a = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
-                    test = a[0]
-                    next = a[1: STATE_DIMS + 1]
-                    reward = a[STATE_DIMS + 1]
-                    terminal = a[STATE_DIMS + 2]
+                    recv = np.asarray(struct.unpack('d' * (STATE_DIMS + 3), incoming_message))
+                    test = recv[0]
+                    next = recv[1: STATE_DIMS + 1]
+                    reward = recv[STATE_DIMS + 1]
+                    terminal = int(recv[STATE_DIMS + 2])
                     trial_start = False
                     if not test:
                         ss = ss + 1
@@ -355,13 +355,13 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     # Update the critic given the targets
                     #predicted_q_value, _ = \
                     critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
-                    healthchek(sess, critic)
+                    #healthchek(sess, critic)
 
                     # Update the actor policy using the sampled gradient
                     a_outs = actor.predict(sess, s_batch)
                     grad = critic.action_gradients(sess, s_batch, a_outs)[0]
                     actor.train(sess, s_batch, grad)
-                    healthchek(sess, actor)
+                    #healthchek(sess, actor)
 
                     # Check the norm of the gradient
                     #grad_norm = grad_norm + np.linalg.norm(grad)
@@ -378,7 +378,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 # Logging performance at the end of the testing trial
                 if terminal and test:
                     logtt = tt+1-(tt+1)/(config["test_interval"]+1)
-                    grad_norm = grad_norm / config["test_interval"]
+                    #grad_norm = grad_norm / config["test_interval"]
                     msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11} {:>11.3f}" \
                         .format(logtt, ss, trial_return, max_trial_return, terminal, grad_norm)
                     print("Episode ended (tt, ss, return, max_trial_return, terminal, grad) = ({})".format(msg))
@@ -392,8 +392,8 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                     save(sess, saver, config, type="-best")
 
                 # Save NN every checkpoint which happens when ss % cp == 0
-                if cp and ss != 0 and ss % cp == 0:
-                    save(sess, saver, config, global_step=ss//cp)
+                if checkpoint_every and ss != 0 and ss % checkpoint_every == 0:
+                    save(sess, saver, config, global_step=ss//checkpoint_every)
 
                 if terminal:
                     tt = tt + 1

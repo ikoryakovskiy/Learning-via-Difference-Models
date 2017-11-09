@@ -44,13 +44,9 @@ def main():
 
     # Parameters
     runs = range(3)
-    gamma = [0.99, 0.97]
-    actor_learning_rate = [0.00005, 0.0001, 0.001]
-    critic_learning_rate = [0.0005, 0.001, 0.01]
-    minibatch_size = [64, 128]
 
     options = []
-    for r in itertools.product(gamma, actor_learning_rate, critic_learning_rate, minibatch_size, runs): options.append(r)
+    for r in itertools.product(runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
 
     configs = [
@@ -94,12 +90,6 @@ def rl_run_param(args, list_of_cfgs, options):
             conf['experiment']['output'] = "{}-{}".format(fname, str_o)
             conf['experiment']['agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
             conf['experiment']['test_agent']['communicator']['addr'] = "tcp://localhost:{}".format(port)
-
-            conf['experiment']['environment']['task']['gamma'] = o[0]
-            conf['ddpg_param']['learning']['actor_learning_rate'] = o[1]
-            conf['ddpg_param']['learning']['critic_learning_rate'] = o[2]
-            conf['ddpg_param']['replay_buffer']['minibatch_size'] = o[3]
-            conf['ddpg_param']['replay_buffer']['max_size'] = 1000000
 
             conf = remove_viz(conf)
             write_cfg(list_of_new_cfgs[-1], conf)
