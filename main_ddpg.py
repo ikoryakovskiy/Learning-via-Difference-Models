@@ -129,7 +129,8 @@ def compute_action(sess, test, randomize, actor, mod_state, noise):
     if test:# and not randomize:
         action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim)))
     else:
-        action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim))) + noise
+        action = actor.predict(sess, np.reshape(mod_state, (1, actor.s_dim)))
+        action += noise
     action = np.reshape(action, (ACTION_DIMS,))
     action = np.clip(action, -1, 1)
     return action
@@ -240,6 +241,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
             state = np.zeros(STATE_DIMS)
             action = np.zeros(ACTION_DIMS)
             noise = np.zeros(ACTION_DIMS)
+            outgoing_dummy_message = struct.pack('d' * (ACTION_DIMS_REAL + STATE_DIMS), *[0]*(ACTION_DIMS_REAL + STATE_DIMS))
             diff_obs = None
 
             saver = tf.train.Saver(max_to_keep=0)
@@ -316,25 +318,28 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 if not trial_start:
                     replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs, diff_obs)
 
-                # Compute OU noise
-                noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, ACTION_DIMS)
+                if not terminal == 2:
+                    # Compute OU noise
+                    noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, ACTION_DIMS)
 
-                # Compute action
-                next_action = compute_action(sess, test, config["randomize"], actor, next_obs, noise)
-                next, next_action = replay_buffer.sample_state_action(next, next_action, test, trial_start)
+                    # Compute action
+                    next_action = compute_action(sess, test, config["randomize"], actor, next_obs, noise)
+                    next, next_action = replay_buffer.sample_state_action(next, next_action, test, trial_start)
 
-                # Get state and action from replay buffer to send to GRL
-                scaled_action = next_action * ACTION_BOUND_REAL
+                    # Get state and action from replay buffer to send to GRL
+                    scaled_action = next_action * ACTION_BOUND_REAL
 
-                if ACTION_DIMS_REAL != ACTION_DIMS:
-                    scaled_action = np.concatenate((np.zeros((ACTION_DIMS_REAL - ACTION_DIMS,)), scaled_action))
+                    if ACTION_DIMS_REAL != ACTION_DIMS:
+                        scaled_action = np.concatenate((np.zeros((ACTION_DIMS_REAL - ACTION_DIMS,)), scaled_action))
 
-                # Convert state and action into null terminated string
-                outgoing_array = np.concatenate((scaled_action, next))
-                outgoing_message = struct.pack('d' * (ACTION_DIMS_REAL + STATE_DIMS), *outgoing_array)
+                    # Convert state and action into null terminated string
+                    outgoing_array = np.concatenate((scaled_action, next))
+                    outgoing_message = struct.pack('d' * (ACTION_DIMS_REAL + STATE_DIMS), *outgoing_array)
 
-                # Sends the predicted action via zeromq
-                server.send(outgoing_message)
+                    # Sends the predicted action via zeromq
+                    server.send(outgoing_message)
+                else:
+                    server.send(outgoing_dummy_message)
 
                 # Keep adding experience to the memory until
                 # there are at least minibatch size samples
