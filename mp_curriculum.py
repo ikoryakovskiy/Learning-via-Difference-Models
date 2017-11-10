@@ -45,7 +45,7 @@ def main():
     port = 5557
 
     # Parameters
-    runs = range(1)
+    runs = range(10)
 
     options = []
     for r in itertools.product(runs): options.append(r)
