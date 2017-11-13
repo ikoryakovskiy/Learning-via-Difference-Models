@@ -36,7 +36,6 @@ def main():
         args.cores = min(multiprocessing.cpu_count(), 32)
     print('Using {} cores.'.format(args.cores))
 
-    prepare_multiprocessing()
     # for walking with yaml files
     _mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
     yaml.add_representer(collections.OrderedDict, dict_representer)
@@ -136,12 +135,6 @@ def do_multiprocessing_pool(args, list_of_new_cfgs):
     else:
         pool.close()
     pool.join()
-######################################################################################
-
-def prepare_multiprocessing():
-    # clean bailing.out file
-    f = open("bailing.out", "w")
-    f.close()
 ######################################################################################
 
 def read_cfg(cfg):
