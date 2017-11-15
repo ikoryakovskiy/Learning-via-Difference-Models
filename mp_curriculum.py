@@ -52,6 +52,7 @@ def main():
 
     configs = [
                 "leo/drl/rbdl_balancing.yaml"
+                "leo/drl/rbdl_balancing_hack.yaml"
               ]
     L, port = rl_run_zero_shot(args, configs, options, port)
 
@@ -66,7 +67,7 @@ def main():
               ]
     L2, port = rl_run_curriculum(args, configs, options, port)
 
-    #do_multiprocessing_pool(args, L)
+    do_multiprocessing_pool(args, L)
     #do_multiprocessing_pool(args, L1+L2)
 
 ######################################################################################
