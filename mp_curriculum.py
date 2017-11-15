@@ -66,8 +66,8 @@ def main():
               ]
     L2, port = rl_run_curriculum(args, configs, options, port)
 
-    do_multiprocessing_pool(args, L)
-    do_multiprocessing_pool(args, L1+L2)
+    #do_multiprocessing_pool(args, L)
+    #do_multiprocessing_pool(args, L1+L2)
 
 ######################################################################################
 def rl_run_zero_shot(args, list_of_cfgs, options, port):
