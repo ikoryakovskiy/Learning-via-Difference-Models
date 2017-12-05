@@ -19,8 +19,8 @@ def dict_constructor(loader, node):
 ######################################################################################
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_walking_play.yaml")
-    #parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_balancing_play.yaml")
+    #parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_walking_play.yaml")
+    parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_balancing_play.yaml")
     args = parser.parse_args()
 
     # create a copy of cfg with DDPG learning parameters in temporary location

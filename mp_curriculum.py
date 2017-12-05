@@ -44,31 +44,30 @@ def main():
     port = 5557
 
     # Parameters
-    runs = range(10)
+    runs = range(2)
 
     options = []
     for r in itertools.product(runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
 
     configs = [
-                "leo/drl/rbdl_balancing.yaml"
-                "leo/drl/rbdl_balancing_hack.yaml"
+                "leo/drl/rbdl_balancing.yaml",
               ]
     L, port = rl_run_zero_shot(args, configs, options, port)
 
     configs = [
-                "leo/drl/rbdl_walking.yaml"
+                "leo/drl/rbdl_walking.yaml",
               ]
     L1, port = rl_run_zero_shot(args, configs, options, port)
 
     configs = [
                 "leo/drl/rbdl_walking_after_balancing.yaml",
-                "leo/drl/rbdl_curriculum_after_balancing.yaml"
+#                "leo/drl/rbdl_curriculum_after_balancing.yaml",
               ]
     L2, port = rl_run_curriculum(args, configs, options, port)
 
     do_multiprocessing_pool(args, L)
-    #do_multiprocessing_pool(args, L1+L2)
+    do_multiprocessing_pool(args, L1+L2)
 
 ######################################################################################
 def rl_run_zero_shot(args, list_of_cfgs, options, port):
