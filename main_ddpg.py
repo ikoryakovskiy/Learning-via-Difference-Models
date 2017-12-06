@@ -315,7 +315,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
                 next_obs = observe(next)
 
                 # Add the transition to replay buffer
-                if not trial_start:
+                if not trial_start and not test:
                     replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs, diff_obs)
 
                 if not terminal == 2:
