@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import yaml, collections
@@ -8,7 +8,7 @@ import ddpg_params
 from main_ddpg import start
 
 def dict_representer(dumper, data):
-    return dumper.represent_dict(data.iteritems())
+    return dumper.represent_dict(data.items())
 
 
 ######################################################################################
@@ -20,8 +20,8 @@ def dict_constructor(loader, node):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    #parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_walking.yaml")
-    parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_balancing.yaml")
+    parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_walking.yaml")
+    #parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_balancing.yaml")
     args = parser.parse_args()
 
     # create a copy of cfg with DDPG learning parameters in temporary location

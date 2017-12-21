@@ -35,7 +35,7 @@ class ActorNetwork(object):
         self.network_params = tf.trainable_variables()
 
         # Target Network
-        self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
+        self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network(prefix='target_')
 
         self.target_network_params = tf.trainable_variables()[len(self.network_params):]
 
@@ -57,22 +57,22 @@ class ActorNetwork(object):
 
         self.num_trainable_vars = len(self.network_params) + len(self.target_network_params)
 
-    def create_actor_network(self):
+    def create_actor_network(self, prefix=''):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         weights_init1 = tflearn.initializations.uniform(minval=-1/math.sqrt(self.s_dim), maxval=1/math.sqrt(self.s_dim))
-        actor_layer1 = tflearn.fully_connected(inputs, 400, name="actorLayer1", weights_init=weights_init1)
-        actor_layer1_norm = tflearn.layers.normalization.batch_normalization(actor_layer1, name="actorLayer1_norm")
+        actor_layer1 = tflearn.fully_connected(inputs, 400, name="{}actorLayer1".format(prefix), weights_init=weights_init1)
+        actor_layer1_norm = tflearn.layers.normalization.batch_normalization(actor_layer1, name="{}actorLayer1_norm".format(prefix))
         actor_layer1_relu = tflearn.activations.relu(actor_layer1_norm)
 
         weights_init2 = tflearn.initializations.uniform(minval=-1/math.sqrt(400), maxval=1/math.sqrt(400))
-        actor_layer2 = tflearn.fully_connected(actor_layer1_relu, 300, name="actorLayer2", weights_init=weights_init2)
-        actor_layer2_norm = tflearn.layers.normalization.batch_normalization(actor_layer2, name="actorLayer2_norm")
+        actor_layer2 = tflearn.fully_connected(actor_layer1_relu, 300, name="{}actorLayer2".format(prefix), weights_init=weights_init2)
+        actor_layer2_norm = tflearn.layers.normalization.batch_normalization(actor_layer2, name="{}actorLayer2_norm".format(prefix))
         actor_layer2_relu = tflearn.activations.relu(actor_layer2_norm)
 
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
-        actor_output = tflearn.fully_connected(actor_layer2_relu, self.a_dim, activation='tanh', name="actorOutput",
+        actor_output = tflearn.fully_connected(actor_layer2_relu, self.a_dim, activation='tanh', name="{}actorOutput".format(prefix),
                                                weights_init=tflearn.initializations.uniform(minval=-0.003, maxval=0.003))
-                                               
+
         scaled_output = tf.multiply(actor_output, self.action_bound)  # Scale output to -action_bound to action_bound
         return inputs, actor_output, scaled_output
 

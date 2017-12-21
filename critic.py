@@ -29,7 +29,7 @@ class CriticNetwork(object):
 
         self.network_params = tf.trainable_variables()[num_actor_vars:]
         # Target Network
-        self.target_inputs, self.target_action, self.target_out = self.create_critic_network()
+        self.target_inputs, self.target_action, self.target_out = self.create_critic_network(prefix='target_')
 
         self.target_network_params = tf.trainable_variables()[(len(self.network_params) + num_actor_vars):]
 
@@ -52,21 +52,21 @@ class CriticNetwork(object):
         # Get the gradient of the net w.r.t. the action
         self.action_grads = tf.gradients(self.out, self.action)
 
-    def create_critic_network(self):
+    def create_critic_network(self, prefix=''):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         action = tflearn.input_data(shape=[None, self.a_dim])
         weights_init1 = tflearn.initializations.uniform(minval=-1/sqrt(self.s_dim), maxval=1/sqrt(self.s_dim))
-        critic_layer1 = tflearn.fully_connected(inputs, 400, name="criticLayer1", weights_init=weights_init1)
-        critic_layer1_norm = tflearn.layers.normalization.batch_normalization(critic_layer1)
+        critic_layer1 = tflearn.fully_connected(inputs, 400, name="{}criticLayer1".format(prefix), weights_init=weights_init1)
+        critic_layer1_norm = tflearn.layers.normalization.batch_normalization(critic_layer1, name="{}criticLayer1_norm".format(prefix))
         critic_layer1_relu = tflearn.activations.relu(critic_layer1_norm)
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
         weights_init2 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
-        critic_layer2 = tflearn.fully_connected(critic_layer1_relu, 300, name="criticLayer2",weights_init=weights_init2)
+        critic_layer2 = tflearn.fully_connected(critic_layer1_relu, 300, name="{}criticLayer2".format(prefix),weights_init=weights_init2)
 
         weights_init3 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
-        critic_layer3 = tflearn.fully_connected(action, 300, name="criticLayerAction", weights_init=weights_init3)
+        critic_layer3 = tflearn.fully_connected(action, 300, name="{}criticLayerAction".format(prefix), weights_init=weights_init3)
 
         net = tflearn.activation(tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
                                  critic_layer3.b, activation='relu')
@@ -74,7 +74,7 @@ class CriticNetwork(object):
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        critic_output = tflearn.fully_connected(net, 1, weights_init=w_init)
+        critic_output = tflearn.fully_connected(net, 1, weights_init=w_init, name="{}criticOutput".format(prefix))
         return inputs, action, critic_output
 
     def train(self, sess, inputs, action, predicted_q_value):

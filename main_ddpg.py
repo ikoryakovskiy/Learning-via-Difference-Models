@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jan 16 17:49:02 2017
@@ -162,9 +162,9 @@ def get_address(addr):
 def observe(state):
     obs = np.zeros(OBSERVATION_DIMS)
     count = 0
-    for i in range(2, STATE_DIMS / 2):
+    for i in range(2, STATE_DIMS // 2):
         obs[count] = state[i]
-        obs[count + OBSERVATION_DIMS / 2] = state[i + STATE_DIMS / 2]
+        obs[count + OBSERVATION_DIMS // 2] = state[i + STATE_DIMS // 2]
         count += 1
     return obs
 
@@ -382,7 +382,7 @@ def train(cfg, ddpg, actor, critic, config, params, counter=None, diff_model=Non
 
                 # Logging performance at the end of the testing trial
                 if terminal and test:
-                    logtt = tt+1-(tt+1)/(config["test_interval"]+1)
+                    logtt = tt+1-(tt+1)//(config["test_interval"]+1)
                     #grad_norm = grad_norm / config["test_interval"]
                     msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11} {:>11.3f}" \
                         .format(logtt, ss, trial_return, max_trial_return, terminal, grad_norm)
@@ -427,6 +427,9 @@ def start(cfg, counter=None):
         critic = CriticNetwork(OBSERVATION_DIMS, ACTION_DIMS,
                                params["learning"]["critic_learning_rate"], params["learning"]["tau"],
                                actor.get_num_trainable_vars())
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        tf.summary.FileWriter(dir_path, ddpg)
+
     if counter:
         with tf.Graph().as_default() as diff_model:
             model = DifferenceModel(STATE_DIMS + ACTION_DIMS, STATE_DIMS)
