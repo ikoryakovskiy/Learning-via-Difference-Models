@@ -19,7 +19,6 @@
 *.smod
 
 # temporary and export files
-*.yaml
 *.csv
 *.meta
 *.index

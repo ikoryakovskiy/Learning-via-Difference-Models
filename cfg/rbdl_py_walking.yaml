@@ -1,0 +1,36 @@
+environment: 
+  type: environment/post/converting
+  environment: 
+    type: environment/sandbox
+    model: 
+      type: sandbox_model/leo_walk
+      control_step: 0.0003
+      integration_steps: 1
+      target_dof: 9
+      dynamics: 
+        type: dynamics/rbdl
+        file: leo_vc/leo_ff_dl.lua
+        points: tip_left, tip_right, heel_left, heel_right
+        auxiliary: ptpos, ptvel, com
+      animation: nope
+      mode: vc
+      knee_mode: punish_and_continue
+    task: 
+      type: task/leo_walking
+      timeout: 20
+      randomize: 5
+      measurement_noise: 0
+      rwForward: 300
+      knee_mode: environment/environment/model/knee_mode
+  converter: 
+    type: converter/state_action_converter
+    state_in: rlwTorsoX, rlwTorsoZ, rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoXRate, rlwTorsoZRate, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate
+    state_out: rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate
+    action_in: rlwLeftHipAction, rlwRightHipAction, rlwLeftKneeAction, rlwRightKneeAction, rlwLeftAnkleAction, rlwRightAnkleAction
+    action_out: rlwTorsoXAction, rlwTorsoZAction, rlwTorsoAction, rlwLeftHipAction, rlwRightHipAction, rlwLeftKneeAction, rlwRightKneeAction, rlwLeftAnkleAction, rlwRightAnkleAction
+  target_observation_min: environment/environment/task/observation_min
+  target_observation_max: environment/environment/task/observation_max
+  target_action_min: environment/environment/task/action_min
+  target_action_max: environment/environment/task/action_max
+  target_reward_min: environment/environment/task/reward_min
+  target_reward_max: environment/environment/task/reward_max
