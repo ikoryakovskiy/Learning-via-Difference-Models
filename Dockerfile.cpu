@@ -1,0 +1,83 @@
+FROM ubuntu:16.04
+
+LABEL maintainer="Ivan Koryakovskiy <i.koryakovskiy@tudelft.nl>"
+
+COPY keyboard /etc/default
+
+# use tud mirrors for ubuntu
+RUN sed -i 's|archive.ubuntu.com/ubuntu/|ftp.tudelft.nl/archive.ubuntu.com/|g' /etc/apt/sources.list
+
+# Pick up dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        pkg-config \
+        curl \
+        nano \
+        wget \
+        unzip \
+        xpra \
+        swig \
+        g++ \
+        cmake \
+        git \
+        rsync \
+        software-properties-common \
+        libfreetype6-dev \
+        libpng12-dev \
+        libzmq3-dev \
+        libpq-dev \
+        libjpeg-dev \
+        libboost-all-dev \
+        libsdl2-dev \
+        libav-tools \
+        libeigen3-dev \
+        libgl1-mesa-dev \
+        freeglut3-dev \
+        libz-dev \
+        libqt4-opengl-dev \
+        libtinyxml-dev \
+        libmuparser-dev \
+        libode-dev \
+        liblua5.1-dev \
+        libprotoc-dev \
+        protobuf-compiler \
+        python3 \
+        python3-dev \
+        python3-pip \
+        python3-setuptools \
+     && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/*
+
+RUN pip3 --no-cache-dir install \
+        gym \
+        scipy \
+        tqdm \
+        joblib \
+        zmq \
+        dill \
+        tensorflow \
+        azure \
+        progressbar2 \
+        mpi4py \
+        tflearn \
+        pyyaml
+
+# Install OpenAI Baselines
+ADD https://api.github.com/repos/ikoryakovskiy/baselines/git/refs/heads/master version.json
+RUN git clone https://github.com/ikoryakovskiy/baselines.git \
+    && cd baselines \
+    && pip3 install -e .
+
+# Install GRL wrapper
+ADD https://api.github.com/repos/ikoryakovskiy/grlwrappers/git/refs/heads/master version.json
+RUN git clone https://github.com/ikoryakovskiy/grlwrappers.git \
+    && cd grlwrappers \
+    && pip3 install -e .
+
+# Copy py_env library to openai location
+COPY entrypoint.sh /
+ENTRYPOINT ["/entrypoint.sh"]
+
+WORKDIR /drl
+
