@@ -66,6 +66,18 @@ def compute_action(sess, actor, obs, noise, test):
     action = np.clip(action, -1, 1)
     return action
 
+#def cur_gen(ss, params):
+#    space = np.linspace(params[0], params[1], params[2])
+#    idx = np.argmax(space>ss)
+#    return space[idx]
+
+def cur_gen(steps, x):
+    vals = np.linspace(x[0], x[1], x[2])
+    ss = np.linspace(0, steps, x[2])
+    ss = ss + ss[1]
+    for i, val in enumerate(vals):
+        yield ss[i], val
+
 
 # ===========================
 #   Agent Training
@@ -76,6 +88,14 @@ def train(env, ddpg, actor, critic, **config):
     print("Actor learning rate {}".format(config["actor_lr"]))
     print("Critic learning rate {}".format(config["critic_lr"]))
     print("Minibatch size {}".format(config["minibatch_size"]))
+
+    curriculums = []
+    if config["curriculum"]:
+        print("Following curriculum {}".format(config["curriculum"]))
+        params = config["curriculum"].split("_")
+        x = np.array(params[1:]).astype(np.float)
+        c = {'var': params[0], 'gen': cur_gen(config["steps"], x)}
+        curriculums.append(c)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -116,6 +136,10 @@ def train(env, ddpg, actor, critic, **config):
         # start environment
         test = (ti>=0 and tt%(ti+1) == ti)
         env.set_test(test)
+        for c in curriculums:
+            c['ss'], val = next(c['gen'])
+            d = {"action": "update", c['var']: val}
+            env.reconfigure(d)
         obs = env.reset()
 
         # Main loop over steps or trials
@@ -180,6 +204,11 @@ def train(env, ddpg, actor, critic, **config):
 
             if not test:
                 ss = ss + 1
+                for c in curriculums:
+                    if ss > c['ss']:
+                        c['ss'], val = next(c['gen'])
+                        d = {"action": "update", c['var']: val}
+                        env.reconfigure(d)
 
             if terminal:
                 tt += 1
@@ -190,6 +219,7 @@ def train(env, ddpg, actor, critic, **config):
                 terminal = 0
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
+
 
         # Save the last episode policy
         if config['save']:
@@ -205,6 +235,7 @@ def start(env, **config):
         random.seed(config['seed'])
         np.random.seed(random.randint(0, 1000))
         tf.set_random_seed(random.randint(0, 1000))
+        env.seed(random.randint(0, 1000))
 
         obs_dim = env.observation_space.shape[-1]
         act_dim = env.action_space.shape[-1]

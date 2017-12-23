@@ -14,8 +14,7 @@ def cfg_run(**config):
         yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
     del config['cores']
     if config['seed'] == None:
-        config['seed'] = int.from_bytes(os.urandom(4), byteorder='big')
-    print(type(config['seed']))
+        config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
     run(**config)
 
 def run(cfg, **config):
@@ -23,7 +22,6 @@ def run(cfg, **config):
     # Create envs.
     env = GRLEnv(cfg)
     env = MyMonitor(env, config['output'])
-    env.seed(seed=config['seed'])
 
     start_time = time.time()
     start(env=env, **config)
@@ -43,15 +41,16 @@ def parse_args():
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--train-steps', type=int, default=1)
-    parser.add_argument('--test-interval', type=int, default=10)
+    parser.add_argument('--test-interval', type=int, default=30)
+    parser.add_argument('--curriculum', type=str, default='')
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
     parser.add_argument('--layer-norm', default=True)
     parser.add_argument('--normalize-returns', default=False)
-    parser.add_argument('--normalize-observations', default=True)
+    parser.add_argument('--normalize-observations', default=False)
     parser.add_argument('--seed', help='RNG seed', type=int, default=None)
-    parser.add_argument('--critic-l2-reg', type=float, default=1e-2)
+    parser.add_argument('--critic-l2-reg', type=float, default=0.001)
     parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--actor-lr', type=float, default=1e-4)
     parser.add_argument('--critic-lr', type=float, default=1e-3)

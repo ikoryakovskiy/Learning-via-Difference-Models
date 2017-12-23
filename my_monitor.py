@@ -7,7 +7,7 @@ import json
 from baselines.bench import Monitor
 
 class MyMonitor(Monitor):
-    def __init__(self, env, filename, allow_early_resets=False, reset_keywords=(), report='test'):  
+    def __init__(self, env, filename, allow_early_resets=False, reset_keywords=(), report='test'):
         Wrapper.__init__(self, env=env)
         self.tstart = time.time()
         if filename is None:
@@ -58,11 +58,15 @@ class MyMonitor(Monitor):
             self.episode_rewards.append(eprew)
             self.episode_lengths.append(eplen)
         return (ob, rew, done, info)
-    
+
     # own
     def set_test(self, test=False):
         self.test = test
         self.env.set_test(self.test)
-        
+
+    def reconfigure(self, d=None):
+        """ Reconfigure the environemnt using the dict """
+        self.env.reconfigure(d)
+
     def _dict_to_string(self, rowdict):
         return (rowdict.get(key, self.restval) for key in self.fieldnames)
