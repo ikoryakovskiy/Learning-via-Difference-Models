@@ -27,6 +27,8 @@
 *.tar.bz2
 db_trajectories
 checkpoint
+*.tfevents.*
+tmp/*
 
 # Compiled Static libraries
 *.lai
@@ -51,3 +53,4 @@ cython_debug/
 
 # Temporary
 *~
+~*

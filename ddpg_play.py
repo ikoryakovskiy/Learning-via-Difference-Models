@@ -1,50 +1,33 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from ddpg import parse_args, cfg_run
 
-import yaml, collections
-import argparse
-import os
-import ddpg_params
-from main_ddpg import start
+args = parse_args()
 
-def dict_representer(dumper, data):
-    return dumper.represent_dict(data.iteritems())
+task = 'walking'
+#task = 'balancing'
 
+ld_option = 'best'
 
-######################################################################################
-def dict_constructor(loader, node):
-    return collections.OrderedDict(loader.construct_pairs(node))
+args['cfg'] = 'cfg/rbdl_py_{}_play.yaml'.format(task)
+args['steps'] = 0
+args['trials'] = 1
+args['test_interval'] = 0
+args['seed'] = 0
+args['critic_l2_reg']= 0.001
+args['tau']= 0.001
+args['normalize_observations'] = False
+args['normalize_returns'] = False
+args['layer_norm'] = True
+args['output'] = 'rbdl_py_{}_play'.format(task)
+args['load_file'] = 'rbdl_py_{}-{}'.format(task, ld_option)
 
+'''
+import yaml
+with open('tmp/ddpg-cfg_rbdl_py_balancing-10000000-000000-000000-000000-000000-000100-000000-mp0.yaml', 'r') as file:
+    args = yaml.load(file)
+'''
 
-######################################################################################
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    #parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_walking_play.yaml")
-    parser.add_argument('cfg', nargs='?', default="../grl/qt-build/cfg/leo/drl/rbdl_balancing_play.yaml")
-    args = parser.parse_args()
-
-    # create a copy of cfg with DDPG learning parameters in temporary location
-    loc = "tmp"
-    if not os.path.exists(loc):
-        os.makedirs(loc)
-    new_cfg = "{}/{}".format(loc, os.path.basename(args.cfg))
-
-    # for walking with yaml files
-    _mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
-    yaml.add_representer(collections.OrderedDict, dict_representer)
-    yaml.add_constructor(_mapping_tag, dict_constructor)
-
-    # append ddpg_param if missing
-    with open(args.cfg, 'r') as f:
-        conf = yaml.load(f)
-        if not "ddpg_param" in conf:
-            conf['ddpg_param'] = ddpg_params.init()
-            conf['ddpg_param']['learning']["ou_sigma"] = 0
-            conf['ddpg_param']['learning']["ou_theta"] = 1
-            conf['ddpg_param']['learning']["actor_learning_rate"] = 0
-            conf['ddpg_param']['learning']["critic_learning_rate"] = 0
-            with open(new_cfg, 'w') as f:
-                yaml.dump(conf, f)
-
-    # Use newly created configuration
-    start(new_cfg)
+# Run actual script.
+args['save'] = False
+cfg_run(**args)

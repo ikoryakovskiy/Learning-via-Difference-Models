@@ -11,7 +11,6 @@ import tflearn
 import math
 
 
-
 class ActorNetwork(object):
     """
     Input to the network is the state, output is the action

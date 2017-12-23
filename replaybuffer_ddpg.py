@@ -14,7 +14,6 @@ class ReplayBuffer(object):
         """
         The right side of the deque contains the most recent experiences
         """
-        random.seed(config["seed"])
         self.buffer_size = config["rb_max_size"]
         self.buffer_size_file = 0
         self.replay_buffer_count = 0

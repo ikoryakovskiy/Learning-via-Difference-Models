@@ -12,6 +12,7 @@ from replaybuffer_ddpg import ReplayBuffer
 from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
+import random
 
 # ==========================
 #   Environment Parameters
@@ -100,8 +101,8 @@ def train(env, ddpg, actor, critic, **config):
 
         obs_dim = actor.s_dim
         act_dim = actor.a_dim
-        act_scale = np.minimum(np.absolute(env.action_space.high),
-                               np.absolute(env.action_space.low))
+        max_action = np.minimum(np.absolute(env.action_space.high),
+                                np.absolute(env.action_space.low))
 
         obs = np.zeros(obs_dim)
         action = np.zeros(act_dim)
@@ -122,12 +123,13 @@ def train(env, ddpg, actor, critic, **config):
               (config["steps"]  == 0 or ss < config["steps"]):
 
             # Compute OU noise and action
-            noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, act_dim)
-            action = compute_action(sess, actor, obs, noise, test)
-            action = action * act_scale
+            if not test:
+                noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, act_dim)
+
+            action = compute_action(sess, actor, obs, noise, test) # from [-1; 1]
 
             # obtain observation of a state
-            next_obs, reward, terminal, _ = env.step(action)
+            next_obs, reward, terminal, _ = env.step(action * max_action)
 
             # Add the transition to replay buffer
             if not test:
@@ -196,15 +198,19 @@ def train(env, ddpg, actor, critic, **config):
 
 def start(env, **config):
 
-    obs_dim = env.observation_space.shape[-1]
-    act_dim = env.action_space.shape[-1]
-
     # Initialize the actor, critic and difference networks
     with tf.Graph().as_default() as ddpg:
-        actor = ActorNetwork(obs_dim, act_dim, 1,
-                             config["actor_lr"], config["tau"])
-        critic = CriticNetwork(obs_dim, act_dim,
-                               config["critic_lr"], config["tau"],
+
+        # setup random number generators for predicatbility
+        random.seed(config['seed'])
+        np.random.seed(random.randint(0, 1000))
+        tf.set_random_seed(random.randint(0, 1000))
+
+        obs_dim = env.observation_space.shape[-1]
+        act_dim = env.action_space.shape[-1]
+
+        actor = ActorNetwork(obs_dim, act_dim, 1, config["actor_lr"], config["tau"])
+        critic = CriticNetwork(obs_dim, act_dim, config["critic_lr"], config["tau"],
                                actor.get_num_trainable_vars())
 
         if config["tensorboard"] == True:

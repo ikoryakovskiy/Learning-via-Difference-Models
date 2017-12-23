@@ -13,7 +13,7 @@ def cfg_run(**config):
     with open("{}.yaml".format(config['output']), 'w', encoding='utf8') as file:
         yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
     del config['cores']
-    if not config['seed']:
+    if config['seed'] == None:
         config['seed'] = int.from_bytes(os.urandom(4), byteorder='big')
     print(type(config['seed']))
     run(**config)
@@ -64,7 +64,7 @@ def parse_args():
     # Replay Buffer options
     parser.add_argument('--minibatch-size', type=int, default=64)
     parser.add_argument('--rb-max-size', type=int, default=300000)
-    parser.add_argument('--rb-min-size', type=int, default=20000) # 20000
+    parser.add_argument('--rb-min-size', type=int, default=20000)
     parser.add_argument('--rb-save-filename', type=str, default='')
     parser.add_argument('--rb-load-filename', type=str, default='')
 
