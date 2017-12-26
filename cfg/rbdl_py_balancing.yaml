@@ -24,8 +24,8 @@ environment:
       knee_mode: environment/environment/model/knee_mode
   converter: 
     type: converter/state_action_converter
-    state_in: rlwTorsoX, rlwTorsoZ, rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoXRate, rlwTorsoZRate, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate
-    state_out: rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate
+    state_in: rlwTorsoX, rlwTorsoZ, rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoXRate, rlwTorsoZRate, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate, forwardPromotion
+    state_out: rlwTorsoAngle, rlwLeftHipAngle, rlwRightHipAngle, rlwLeftKneeAngle, rlwRightKneeAngle, rlwLeftAnkleAngle, rlwRightAnkleAngle, rlwTorsoAngleRate, rlwLeftHipAngleRate, rlwRightHipAngleRate, rlwLeftKneeAngleRate, rlwRightKneeAngleRate, rlwLeftAnkleAngleRate, rlwRightAnkleAngleRate, forwardPromotion
     action_in: rlwLeftHipAction, rlwRightHipAction, rlwLeftKneeAction, rlwRightKneeAction, rlwLeftAnkleAction, rlwRightAnkleAction
     action_out: rlwTorsoXAction, rlwTorsoZAction, rlwTorsoAction, rlwLeftHipAction, rlwRightHipAction, rlwLeftKneeAction, rlwRightKneeAction, rlwLeftAnkleAction, rlwRightAnkleAction
   target_observation_min: environment/environment/task/observation_min

@@ -35,6 +35,7 @@ def main():
     runs = range(10)
     steps = [50]
 
+
     options = []
     for r in itertools.product(steps, runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
@@ -42,36 +43,38 @@ def main():
     configs = {
                 "balancing" : "cfg/rbdl_py_balancing.yaml",
               }
-    L = rl_run(configs, alg, options)
+    L0 = rl_run(configs, alg, options, rb_save=True)
 
     steps = [300]
     options = []
     for r in itertools.product(steps, runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
     configs = {
-                "walking" : "cfg/rbdl_py_walking.yaml",
-                "curriculum" : "cfg/rbdl_py_walking.yaml",
+    #            "walking" : "cfg/rbdl_py_walking.yaml",
+    #            "curriculum" : "cfg/rbdl_py_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
     steps = [250]
+    re_evaluate = [1, 0]
     options = []
-    for r in itertools.product(steps, runs): options.append(r)
+    for r in itertools.product(steps, re_evaluate, runs): options.append(r)
     options = [flatten(tupl) for tupl in options]
     configs = {
                 "walking_after_balancing" : "cfg/rbdl_py_walking.yaml",
-                "curriculum_after_balancing" : "cfg/rbdl_py_walking.yaml",
+    #            "curriculum_after_balancing" : "cfg/rbdl_py_walking.yaml",
               }
-    L2 = rl_run(configs, alg, options, init = "ddpg-balancing-5000000")
+    L2 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
+    L3 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
 
+    do_multiprocessing_pool(arg_cores, L0)
+    L = L1+L2+L3
+    random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
-    L3 = L1+L2
-    random.shuffle(L3)
-    do_multiprocessing_pool(arg_cores, L3)
 
 
 ######################################################################################
-def rl_run(dict_of_cfgs, alg, options, init = ''):
+def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, rb_load=''):
     list_of_new_cfgs = []
 
     loc = "tmp"
@@ -84,6 +87,7 @@ def rl_run(dict_of_cfgs, alg, options, init = ''):
 
         for o in options:
             str_o = "-".join(map(lambda x : "{:06d}".format(int(round(100000*x))), o[:-1]))  # last element in 'o' is reserved for mp
+            str_o += '-' + boolList2BinString([save, bool(load_file), rb_save, bool(rb_load)])
             if not str_o:
                 str_o += "mp{}".format(o[-1])
             else:
@@ -95,15 +99,22 @@ def rl_run(dict_of_cfgs, alg, options, init = ''):
 
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
-            args['save'] = True
+            args['re_evaluate'] = bool(o[1])
+            args['save'] = save
 
             if 'curriculum' in key:
                 args['curriculum'] = 'rwForward_50_300_10'
 
-            if init:
-                args['load_file'] = "{}-mp{}-last".format(init, o[-1])
+            if load_file:
+                args['load_file'] = "{}-mp{}".format(load_file, o[-1])
 
             args['output'] = "{}-{}-{}".format(alg, key, str_o)
+
+            if rb_save:
+                args['rb_save_filename'] = args['output']
+
+            if rb_load:
+                args['rb_load_filename'] = "{}-mp{}".format(rb_load, o[-1])
 
             with io.open(list_of_new_cfgs[-1], 'w', encoding='utf8') as file:
                 yaml.dump(args, file, default_flow_style=False, allow_unicode=True)
@@ -154,9 +165,14 @@ def do_multiprocessing_pool(arg_cores, list_of_new_cfgs):
     else:
         pool.close()
     pool.join()
+
+
 ######################################################################################
+def boolList2BinString(lst):
+    return ''.join(['1' if x else '0' for x in lst])
 
 
+######################################################################################
 if __name__ == "__main__":
     main()
 

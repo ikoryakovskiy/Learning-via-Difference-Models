@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
@@ -10,7 +10,7 @@ import numpy as np
 import pickle
 
 class ReplayBuffer(object):
-    def __init__(self, config):
+    def __init__(self, config, o_dims = None):
         """
         The right side of the deque contains the most recent experiences
         """
@@ -21,20 +21,18 @@ class ReplayBuffer(object):
         self.save_filename = config['rb_save_filename']
         self.load_filename = config['rb_load_filename']
         self.buffer_size_file = config['rb_max_size']
+        self.o_dims = o_dims
 
         print("Replay Buffer save = '{}', load = '{}'".format(
                 self.save_filename, self.load_filename))
 
-        # load buffer now
-        if self.load_filename:
-            with open(self.load_filename) as f:
-                self.replay_buffer = pickle.load(f)
-                f.close()
-                self.replay_buffer_count += len(self.replay_buffer)
-
 
     def replay_buffer_add(self, s, a, r, t, s2):
-        experience = (s, a, r, t, s2)
+        if not self.o_dims:
+            experience = (s, a, r, t, s2)
+        else:
+            experience = (s[0:self.o_dims], a, r, t, s2[0:self.o_dims],
+                          s2[self.o_dims])
 
         if self.replay_buffer_count < self.buffer_size:
             self.replay_buffer.append(experience)
@@ -43,12 +41,6 @@ class ReplayBuffer(object):
             self.replay_buffer.popleft()
             self.replay_buffer.append(experience)
 
-        '''
-        if self.replay_buffer_count == self.buffer_size_file:
-            if self.buffer_save:
-                with open(self.save_filename, 'w') as f:
-                    pickle.dump(self.replay_buffer, f, protocol=pickle.HIGHEST_PROTOCOL)
-        '''
         return False
 
     def size(self):
@@ -71,3 +63,18 @@ class ReplayBuffer(object):
     def clear(self):
         self.deque.clear()
         self.replay_buffer_count = 0
+
+    def load(self):
+        """ Load experiences """
+        if self.load_filename:
+            with open(self.load_filename + '.db', 'rb') as f:
+                self.replay_buffer = pickle.load(f)
+                f.close()
+                self.replay_buffer_count += len(self.replay_buffer)
+
+    def save(self):
+        if self.save_filename:
+            with open(self.save_filename + '.db', 'wb') as f:
+                pickle.dump(self.replay_buffer, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+

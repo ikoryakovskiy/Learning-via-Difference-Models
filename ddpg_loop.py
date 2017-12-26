@@ -9,39 +9,30 @@ import tensorflow as tf
 import numpy as np
 import os.path
 from replaybuffer_ddpg import ReplayBuffer
+from rewarding import Rewarding
 from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
 import random
 
-# ==========================
-#   Environment Parameters
-# ==========================
-# Environment Parameters
-#ACTION_DIMS = 6
-#ACTION_DIMS_REAL = 9
-#STATE_DIMS = 18
-#OBSERVATION_DIMS = 14
-#ACTION_BOUND = 1
-#ACTION_BOUND_REAL = 8.6
-
-# GRL as a global variable
-#GRL_PATH = '../grl/qt-build/grld'
-
 # ===========================
 # Policy saving and loading
 # ===========================
 def preload_policy(sess, saver, config):
+    suffixes = ['', '-best', '-last']
+    loaded = False
     if config["load_file"]:
-        load_file = config["load_file"]
-        path = os.path.dirname(os.path.abspath(__file__))
-        load_file = "{}/{}".format(path, load_file)
-        meta_file = "{}.meta".format(load_file)
-        print("Loading meta file {}".format(meta_file))
-        if os.path.isfile(meta_file):
-            saver.restore(sess, load_file)
-            print("Model Restored")
-        else:
+        for sfx in suffixes:
+            load_file = config["load_file"] + sfx
+            path = os.path.dirname(os.path.abspath(__file__))
+            load_file = "{}/{}".format(path, load_file)
+            meta_file = "{}.meta".format(load_file)
+            if os.path.isfile(meta_file):
+                saver.restore(sess, load_file)
+                print("Loaded NN from {}".format(meta_file))
+                loaded = True
+                break
+        if not loaded:
             print("Not a valid path")
             sess.run(tf.global_variables_initializer())
     else:
@@ -110,7 +101,8 @@ def train(env, ddpg, actor, critic, **config):
         critic.update_target_network(sess)
 
         # Initialize replay memory
-        replay_buffer = ReplayBuffer(config)
+        o_dims=env.observation_space.shape[-1]
+        replay_buffer = ReplayBuffer(config, o_dims=o_dims)
 
         # Initialize constants for exploration noise
         ou_sigma = config["ou_sigma"]
@@ -133,6 +125,12 @@ def train(env, ddpg, actor, critic, **config):
         terminal = 0
         ti = config["test_interval"]
 
+        # rewarding object if rewards in replay buffer are to be recalculated
+        replay_buffer.load()
+        if config['re_evaluate']:
+            evaluator = Rewarding(max_action)
+            replay_buffer = evaluator.reEvaluate(replay_buffer, task = config['task_name'])
+
         # start environment
         test = (ti>=0 and tt%(ti+1) == ti)
         env.set_test(test)
@@ -150,15 +148,23 @@ def train(env, ddpg, actor, critic, **config):
             if not test:
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, act_dim)
 
-            action = compute_action(sess, actor, obs, noise, test) # from [-1; 1]
+            action = compute_action(sess, actor, obs[:o_dims], noise, test) # from [-1; 1]
 
             # obtain observation of a state
-            next_obs, reward, terminal, _ = env.step(action * max_action)
+            next_obs, reward, terminal, _ = env.step(action*max_action)
 
             # Add the transition to replay buffer
             if not test:
                 replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs)
+            '''
+            r = evaluator.evaluateExperience(obs[:o_dims], action*max_action,
+                                             terminal == 2,
+                                             next_obs[:o_dims],
+                                             fw = next_obs[o_dims:],
+                                             task = config['task_name'])
 
+            assert(reward == r)
+            '''
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
             if not test and replay_buffer.size() > config["rb_min_size"]:
@@ -220,10 +226,14 @@ def train(env, ddpg, actor, critic, **config):
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
 
+        # verify replay_buffer
+        evaluator.reEvaluate(replay_buffer, verify=True, task = config['task_name'])
 
         # Save the last episode policy
         if config['save']:
             save(sess, saver, config, suffix="-last")
+
+        replay_buffer.save()
 
 
 def start(env, **config):

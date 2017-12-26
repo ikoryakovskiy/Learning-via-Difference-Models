@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from grlgym.envs.grl import GRLEnv
+from grlgym.envs.grl import Leo
 import argparse
 import time
 import yaml
 import os
 from ddpg_loop import start
-
 from my_monitor import MyMonitor
+
+def boolean_flag(parser, name, default=False, help=None):
+    """Add a boolean flag to argparse parser."""
+    dest = name.replace('-', '_')
+    parser.add_argument("--" + name, action="store_true", default=default, dest=dest, help=help)
+    parser.add_argument("--no-" + name, action="store_false", dest=dest)
 
 def cfg_run(**config):
     with open("{}.yaml".format(config['output']), 'w', encoding='utf8') as file:
@@ -20,7 +25,7 @@ def cfg_run(**config):
 def run(cfg, **config):
 
     # Create envs.
-    env = GRLEnv(cfg)
+    env = Leo(cfg)
     env = MyMonitor(env, config['output'])
 
     start_time = time.time()
@@ -34,7 +39,8 @@ def parse_args():
 
     # Flow options
     parser.add_argument('--cores', type=int, default=1)
-    parser.add_argument('--tensorboard', type=bool, default=False)
+    boolean_flag(parser,  'tensorboard', default=False)
+    parser.add_argument('--task-name', type=str, default='')
 
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
@@ -46,9 +52,9 @@ def parse_args():
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
-    parser.add_argument('--layer-norm', default=True)
-    parser.add_argument('--normalize-returns', default=False)
-    parser.add_argument('--normalize-observations', default=False)
+    boolean_flag(parser,  'layer-norm', default=True)
+    boolean_flag(parser,  'normalize-returns', default=False)
+    boolean_flag(parser,  'normalize-observations', default=False)
     parser.add_argument('--seed', help='RNG seed', type=int, default=None)
     parser.add_argument('--critic-l2-reg', type=float, default=0.001)
     parser.add_argument('--batch-size', type=int, default=64)
@@ -66,11 +72,12 @@ def parse_args():
     parser.add_argument('--rb-min-size', type=int, default=20000)
     parser.add_argument('--rb-save-filename', type=str, default='')
     parser.add_argument('--rb-load-filename', type=str, default='')
+    boolean_flag(parser,  're-evaluate', default=False)
 
     # In/out options
     parser.add_argument('--output', type=str, default='default')
     parser.add_argument('--load-file', type=str, default='')
-    parser.add_argument('--save', type=bool, default=False)
+    boolean_flag(parser,  'save', default=False)
     args = parser.parse_args()
     dict_args = vars(args)
     return dict_args
