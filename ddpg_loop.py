@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 import os.path
 from replaybuffer_ddpg import ReplayBuffer
-from rewarding import Rewarding
+from assessment import Evaluator
 from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
@@ -127,9 +127,10 @@ def train(env, ddpg, actor, critic, **config):
 
         # rewarding object if rewards in replay buffer are to be recalculated
         replay_buffer.load()
-        if config['re_evaluate']:
-            evaluator = Rewarding(max_action)
-            replay_buffer = evaluator.reEvaluate(replay_buffer, task = config['task_name'])
+        if config['reassess_for']:
+            print('Reassessing replay buffer for {}'.format(config['reassess_for']))
+            evaluator = Evaluator(max_action)
+            replay_buffer = evaluator.reassess(replay_buffer, task = config['reassess_for'])
 
         # start environment
         test = (ti>=0 and tt%(ti+1) == ti)
@@ -156,15 +157,7 @@ def train(env, ddpg, actor, critic, **config):
             # Add the transition to replay buffer
             if not test:
                 replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs)
-            '''
-            r = evaluator.evaluateExperience(obs[:o_dims], action*max_action,
-                                             terminal == 2,
-                                             next_obs[:o_dims],
-                                             fw = next_obs[o_dims:],
-                                             task = config['task_name'])
 
-            assert(reward == r)
-            '''
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
             if not test and replay_buffer.size() > config["rb_min_size"]:
@@ -227,7 +220,7 @@ def train(env, ddpg, actor, critic, **config):
                 noise = np.zeros(actor.a_dim)
 
         # verify replay_buffer
-        #evaluator.reEvaluate(replay_buffer, verify=True, task = config['task_name'])
+        #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])
 
         # Save the last episode policy
         if config['save']:

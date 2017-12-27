@@ -5,7 +5,7 @@ from __future__ import print_function
 #import numpy as np
 
 
-class Rewarding(object):
+class Evaluator(object):
     def __init__(self, max_action):
         DXL_XM430_210_MAX_TORQUE  = 3.49054054054
         DXL_XM430_210_MAX_CURRENT = 2.59575289575
@@ -16,7 +16,7 @@ class Rewarding(object):
         self.max_action = max_action
 
 
-    def reEvaluate(self, replay_buffer, rwForward=300, verify=False,
+    def reassess(self, replay_buffer, rwForward=300, verify=False,
                    task = 'walking', knee_mode = "punish_and_continue"):
         """ verify: check if GRL rewards and  """
         new_replay_buffer = []

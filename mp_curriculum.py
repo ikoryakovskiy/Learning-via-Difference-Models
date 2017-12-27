@@ -15,6 +15,8 @@ counter_lock = multiprocessing.Lock()
 cores = 0
 random.seed(datetime.now())
 
+# Usage:
+# options = [flatten(tupl) for tupl in options]
 def flatten(x):
     if isinstance(x, collections.Iterable):
         return [a for i in x for a in flatten(i)]
@@ -34,44 +36,67 @@ def main():
     # Parameters
     runs = range(10)
     steps = [50]
-
+    reassess_for = ['']
 
     options = []
-    for r in itertools.product(steps, runs): options.append(r)
-    options = [flatten(tupl) for tupl in options]
+    for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
                 "balancing" : "cfg/rbdl_py_balancing.yaml",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
+    ## Zero-shot walking
     steps = [300]
     options = []
-    for r in itertools.product(steps, runs): options.append(r)
-    options = [flatten(tupl) for tupl in options]
+    for r in itertools.product(steps, reassess_for, runs): options.append(r)
     configs = {
-    #            "walking" : "cfg/rbdl_py_walking.yaml",
+                "walking" : "cfg/rbdl_py_walking.yaml",
     #            "curriculum" : "cfg/rbdl_py_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
+    ## Only neural network without replay buffer
     steps = [250]
-    re_evaluate = [1, 0]
     options = []
-    for r in itertools.product(steps, re_evaluate, runs): options.append(r)
-    options = [flatten(tupl) for tupl in options]
+    for r in itertools.product(steps, reassess_for, runs): options.append(r)
     configs = {
                 "walking_after_balancing" : "cfg/rbdl_py_walking.yaml",
     #            "curriculum_after_balancing" : "cfg/rbdl_py_walking.yaml",
               }
-    L2 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
-    L3 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
+    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010")
 
-    do_multiprocessing_pool(arg_cores, L0)
-    L = L1+L2+L3
+    ## Replay buffer
+    steps = [250]
+    reassess_for = ['walking', '']
+    options = []
+    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    configs = {
+                "walking_after_balancing" : "cfg/rbdl_py_walking.yaml",
+    #            "curriculum_after_balancing" : "cfg/rbdl_py_walking.yaml",
+              }
+    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
+    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
+
+    # Execute learning
+    #do_multiprocessing_pool(arg_cores, L0)
+    L = L1+L2+L3+L4
     random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+    #do_multiprocessing_pool(arg_cores, L)
 
+######################################################################################
+def opt_to_str(opt):
+    str_o = ''
+    for  o in opt[:-1]:  # last element in 'o' is reserved for mp
+        try:
+            fl = float(o) # converts to float numbers and bools
+            str_o += "-{:06d}".format(int(round(100000*fl)))
+        except ValueError:
+            if o: # skip empty elements, e.g. ""
+                str_o +='-' + o
+    if str_o:
+        str_o = str_o[1:]
+    return str_o
 
 ######################################################################################
 def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, rb_load=''):
@@ -86,7 +111,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
         cfg = dict_of_cfgs[key]
 
         for o in options:
-            str_o = "-".join(map(lambda x : "{:06d}".format(int(round(100000*x))), o[:-1]))  # last element in 'o' is reserved for mp
+            str_o = opt_to_str(o)
             str_o += '-' + boolList2BinString([save, bool(load_file), rb_save, bool(rb_load)])
             if not str_o:
                 str_o += "mp{}".format(o[-1])
@@ -99,7 +124,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
-            args['re_evaluate'] = bool(o[1])
+            args['reassess_for'] = o[1]
             args['save'] = save
 
             if 'curriculum' in key:

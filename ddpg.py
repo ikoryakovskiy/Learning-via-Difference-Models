@@ -5,6 +5,8 @@ import argparse
 import time
 import yaml
 import os
+import sys
+from importlib import reload
 from ddpg_loop import start
 from my_monitor import MyMonitor
 
@@ -23,7 +25,6 @@ def cfg_run(**config):
     run(**config)
 
 def run(cfg, **config):
-
     # Create envs.
     env = Leo(cfg)
     env = MyMonitor(env, config['output'])
@@ -40,7 +41,6 @@ def parse_args():
     # Flow options
     parser.add_argument('--cores', type=int, default=1)
     boolean_flag(parser,  'tensorboard', default=False)
-    parser.add_argument('--task-name', type=str, default='')
 
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument('--rb-min-size', type=int, default=20000)
     parser.add_argument('--rb-save-filename', type=str, default='')
     parser.add_argument('--rb-load-filename', type=str, default='')
-    boolean_flag(parser,  're-evaluate', default=False)
+    parser.add_argument('--reassess-for', type=str, default='')
 
     # In/out options
     parser.add_argument('--output', type=str, default='default')
