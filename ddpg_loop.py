@@ -227,7 +227,7 @@ def train(env, ddpg, actor, critic, **config):
                 noise = np.zeros(actor.a_dim)
 
         # verify replay_buffer
-        evaluator.reEvaluate(replay_buffer, verify=True, task = config['task_name'])
+        #evaluator.reEvaluate(replay_buffer, verify=True, task = config['task_name'])
 
         # Save the last episode policy
         if config['save']:
