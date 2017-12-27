@@ -79,10 +79,10 @@ def main():
     L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
 
     # Execute learning
-    #do_multiprocessing_pool(arg_cores, L0)
+    do_multiprocessing_pool(arg_cores, L0)
     L = L1+L2+L3+L4
     random.shuffle(L)
-    #do_multiprocessing_pool(arg_cores, L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
