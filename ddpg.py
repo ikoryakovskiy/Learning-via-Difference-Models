@@ -46,7 +46,6 @@ def parse_args():
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
-    parser.add_argument('--train-steps', type=int, default=1)
     parser.add_argument('--test-interval', type=int, default=30)
     parser.add_argument('--curriculum', type=str, default='')
 
