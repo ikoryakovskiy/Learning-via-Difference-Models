@@ -4,8 +4,8 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-task = 'walking'
-#task = 'balancing'
+#task = 'walking'
+task = 'balancing'
 
 ld_option = 'best'
 
@@ -20,7 +20,7 @@ args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
 args['output'] = 'rbdl_py_{}_play'.format(task)
-args['load_file'] = 'rbdl_py_{}-{}'.format(task, ld_option)
+args['load_file'] = 'ddpg-balancing-5000000-1010-mp3-last' #'rbdl_py_{}-{}'.format(task, ld_option)
 
 '''
 import yaml

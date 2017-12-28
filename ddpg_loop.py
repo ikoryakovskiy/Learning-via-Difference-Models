@@ -57,17 +57,17 @@ def compute_action(sess, actor, obs, noise, test):
     action = np.clip(action, -1, 1)
     return action
 
-#def cur_gen(ss, params):
-#    space = np.linspace(params[0], params[1], params[2])
-#    idx = np.argmax(space>ss)
-#    return space[idx]
-
 def cur_gen(steps, x):
-    vals = np.linspace(x[0], x[1], x[2])
-    ss = np.linspace(0, steps, x[2])
-    ss = ss + ss[1]
-    for i, val in enumerate(vals):
-        yield ss[i], val
+    if x.size == 3:
+        vals = np.linspace(x[0], x[1], x[2])
+        ss = np.linspace(0, steps, x[2])
+        ss = ss + ss[1]
+        for i, val in enumerate(vals):
+            yield ss[i], val
+    else:
+        # a single number which sets a certain life-time value
+        while True:
+            yield steps, x[0]
 
 
 # ===========================
@@ -83,10 +83,12 @@ def train(env, ddpg, actor, critic, **config):
     curriculums = []
     if config["curriculum"]:
         print("Following curriculum {}".format(config["curriculum"]))
-        params = config["curriculum"].split("_")
-        x = np.array(params[1:]).astype(np.float)
-        c = {'var': params[0], 'gen': cur_gen(config["steps"], x)}
-        curriculums.append(c)
+        items = config["curriculum"].split(";")
+        for item in items:
+            params = item.split("_")
+            x = np.array(params[1:]).astype(np.float)
+            c = {'var': params[0], 'gen': cur_gen(config["steps"], x)}
+            curriculums.append(c)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -137,7 +139,7 @@ def train(env, ddpg, actor, critic, **config):
         env.set_test(test)
         for c in curriculums:
             c['ss'], val = next(c['gen'])
-            d = {"action": "update", c['var']: val}
+            d = {"action": "update_{}".format(c['var']), c['var']: val}
             env.reconfigure(d)
         obs = env.reset()
 
@@ -206,7 +208,7 @@ def train(env, ddpg, actor, critic, **config):
                 for c in curriculums:
                     if ss > c['ss']:
                         c['ss'], val = next(c['gen'])
-                        d = {"action": "update", c['var']: val}
+                        d = {"action": "update_{}".format(c['var']), c['var']: val}
                         env.reconfigure(d)
 
             if terminal:
