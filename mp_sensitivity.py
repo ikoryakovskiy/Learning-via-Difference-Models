@@ -35,7 +35,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(1)
+    runs = range(3)
     steps = [50]
     reassess_for = ['']
 
@@ -49,10 +49,10 @@ def main():
 
     ## Zero-shot walking
     steps = [300]
-    grid_size = 3
-    rwForward = np.linspace(200, 400, grid_size)
-    rwTime = np.linspace(-2.0, -1.0, grid_size)
-    rwWork = np.linspace(-3.0, -1.0, grid_size)
+    grid_size = 5
+    rwForward = np.linspace(100, 500, grid_size)
+    rwTime = np.linspace(-2.9, -0.1, grid_size)
+    rwWork = np.linspace(-3.9, -0.1, grid_size)
     options = []
     for r in itertools.product(steps, reassess_for, rwForward, rwTime, rwWork, runs): options.append(r)
     configs = {
@@ -71,10 +71,10 @@ def main():
     L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
 
     # Execute learning
-    #do_multiprocessing_pool(arg_cores, L0)
+    do_multiprocessing_pool(arg_cores, L0)
     L = L1+L2
     random.shuffle(L)
-    #do_multiprocessing_pool(arg_cores, L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
