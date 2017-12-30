@@ -68,7 +68,7 @@ class MyMonitor(Monitor):
         try:
             self.env.set_test(self.test)
         except AttributeError:
-            print("set_test method is not supported by the environment")
+            pass
 
 
     def reconfigure(self, d=None):

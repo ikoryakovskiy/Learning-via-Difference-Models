@@ -28,7 +28,7 @@ class ReplayBuffer(object):
 
 
     def replay_buffer_add(self, s, a, r, t, s2):
-        if not self.o_dims:
+        if s.size == self.o_dims:
             experience = (s, a, r, t, s2)
         else:
             experience = (s[0:self.o_dims], a, r, t, s2[0:self.o_dims],

@@ -29,9 +29,6 @@ done
 # Running desktop
 fluxbox -display $DISPLAY &
 
-# Running bash
-#gnome-terminal &
-
 #x11vnc -ncache -forever -bg -nopw -xkb -usepw -shared -rfbport 5900 -display $DISPLAY
 x11vnc -display $DISPLAY -bg -nopw -xkb -shared -repeat -loop -forever &
 

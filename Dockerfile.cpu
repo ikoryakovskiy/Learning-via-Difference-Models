@@ -85,13 +85,16 @@ ENV DISPLAY :0
 # VNC, locale, fonts, fluxbox (a fast, lightweight and responsive window manager)
 RUN apt-get update -qqy \
   && apt-get -qqy install \
-    x11vnc xvfb \
+    x11vnc xvfb dbus \
     locales language-pack-en \
     fonts-ipafont-gothic xfonts-100dpi xfonts-75dpi xfonts-cyrillic xfonts-scalable \
     fluxbox \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p ~/.vnc
-#RUN x11vnc -storepasswd 111 ~/.vnc/passwd
+
+# Fixing Warning: D-Bus library appears to be incorrectly set up; failed to read machine uuid: Failed to open “/var/lib/dbus/machine-id”
+# http://www.torkwrench.com/2011/12/16/d-bus-library-appears-to-be-incorrectly-set-up-failed-to-read-machine-uuid-failed-to-open-varlibdbusmachine-id/
+RUN dbus-uuidgen > /etc/machine-id
 
 # Locale settings
 ENV LANGUAGE en_US.UTF-8

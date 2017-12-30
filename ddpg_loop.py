@@ -188,6 +188,12 @@ def train(env, ddpg, actor, critic, **config):
                 actor.update_target_network(sess)
                 critic.update_target_network(sess)
 
+            # Render
+            if config["render"]:
+                still_open = env.render("human")
+                if still_open==False:
+                    break
+
             # Prepare next step
             obs = next_obs
             trial_return += reward
@@ -220,6 +226,7 @@ def train(env, ddpg, actor, critic, **config):
                 terminal = 0
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
+
 
         # verify replay_buffer
         #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])

@@ -4,18 +4,18 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
+env = 'hopper'
 #task = 'walking'
 task = 'balancing'
-env = 'hopper'
+
 
 args['cfg'] = "RoboschoolHopper-v1"
-args['steps'] = 50000
+args['steps'] = 300000
 args['test_interval'] = 30
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
-args['reassess_for'] = ''
-args['output'] = 'hopper_{}'.format(task)
+args['output'] = '{}_{}'.format(env, task)
 
 # Run actual script.
 args['save'] = True

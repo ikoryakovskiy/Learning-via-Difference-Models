@@ -57,6 +57,7 @@ def parse_args():
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--test-interval', type=int, default=30)
     parser.add_argument('--curriculum', type=str, default='')
+    boolean_flag(parser,  'render', default=False)
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
