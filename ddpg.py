@@ -5,10 +5,14 @@ import argparse
 import time
 import yaml
 import os
-import sys
 from importlib import reload
 from ddpg_loop import start
 from my_monitor import MyMonitor
+
+import gym
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+import roboschool
 
 def boolean_flag(parser, name, default=False, help=None):
     """Add a boolean flag to argparse parser."""
@@ -26,7 +30,12 @@ def cfg_run(**config):
 
 def run(cfg, **config):
     # Create envs.
-    env = Leo(cfg)
+    if os.path.isfile(cfg):
+        #from grlgym.envs.grl import Leo
+        env = Leo(cfg)
+    else:
+        env = gym.make(cfg)
+
     env = MyMonitor(env, config['output'])
 
     start_time = time.time()

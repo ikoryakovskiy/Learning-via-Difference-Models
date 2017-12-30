@@ -158,7 +158,7 @@ def train(env, ddpg, actor, critic, **config):
 
             # Add the transition to replay buffer
             if not test:
-                replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs)
+                replay_buffer.replay_buffer_add(obs, action, reward, terminal, next_obs)
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
@@ -199,7 +199,7 @@ def train(env, ddpg, actor, critic, **config):
                 print("{}".format(msg))
 
             # Save NN if performance is better then before
-            if terminal == 1 and config['save'] and trial_return > max_trial_return:
+            if terminal and config['save'] and trial_return > max_trial_return:
                 max_trial_return = trial_return
                 save(sess, saver, config, suffix="-best")
 

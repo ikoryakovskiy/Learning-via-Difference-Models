@@ -35,7 +35,10 @@ class MyMonitor(Monitor):
         self.current_reset_info = {} # extra info about the current episode, that was passed in during reset()
         self.test = False
         self.report = report
-        env.report(report)
+        try:
+            self.env.report(self.report)
+        except AttributeError:
+            print("report method is not supported by the environment")
 
     def _step(self, action):
         if self.needs_reset:
@@ -62,11 +65,19 @@ class MyMonitor(Monitor):
     # own
     def set_test(self, test=False):
         self.test = test
-        self.env.set_test(self.test)
+        try:
+            self.env.set_test(self.test)
+        except AttributeError:
+            print("set_test method is not supported by the environment")
+
 
     def reconfigure(self, d=None):
         """ Reconfigure the environemnt using the dict """
-        self.env.reconfigure(d)
+        try:
+            self.env.reconfigure(d)
+        except AttributeError:
+            print("reconfigure method is not supported by the environment")
+
 
     def _dict_to_string(self, rowdict):
         return (rowdict.get(key, self.restval) for key in self.fieldnames)
