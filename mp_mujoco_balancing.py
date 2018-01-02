@@ -46,7 +46,8 @@ def main():
                 "Walker2dBalancing" : "RoboschoolWalker2dBalancing-v1",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
-    #do_multiprocessing_pool(arg_cores, L0)
+    random.shuffle(L0)
+    do_multiprocessing_pool(arg_cores, L0)
 
 ######################################################################################
 def opt_to_str(opt):
