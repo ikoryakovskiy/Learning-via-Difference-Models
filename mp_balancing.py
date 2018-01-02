@@ -42,7 +42,7 @@ def main():
     for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/rbdl_py_balancing.yaml",
+                "balancing" : "cfg/leo_balancing.yaml",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
     do_multiprocessing_pool(arg_cores, L0)

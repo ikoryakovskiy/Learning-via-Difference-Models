@@ -43,7 +43,7 @@ def main():
     for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/rbdl_py_balancing.yaml",
+                "balancing" : "cfg/leo_balancing.yaml",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
@@ -56,7 +56,7 @@ def main():
     options = []
     for r in itertools.product(steps, reassess_for, rwForward, rwTime, rwWork, runs): options.append(r)
     configs = {
-                "walking" : "cfg/rbdl_py_walking.yaml",
+                "walking" : "cfg/leo_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
@@ -66,7 +66,7 @@ def main():
     options = []
     for r in itertools.product(steps, reassess_for, rwForward, rwTime, rwWork, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/rbdl_py_walking.yaml",
+                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
     L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
 

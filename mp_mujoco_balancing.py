@@ -34,55 +34,19 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(10)
-    steps = [50]
+    runs = range(3)
+    steps = [500]
     reassess_for = ['']
 
     options = []
     for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/leo_balancing.yaml",
+                "HalfCheetahBalancing" : "RoboschoolHalfCheetahBalancing-v1",
+                "Walker2dBalancing" : "RoboschoolWalker2dBalancing-v1",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
-
-    ## Zero-shot walking
-    steps = [300]
-    options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
-    configs = {
-                "walking" : "cfg/leo_walking.yaml",
-    #            "curriculum" : "cfg/rbdl_py_walking.yaml",
-              }
-    L1 = rl_run(configs, alg, options)
-
-    ## Only neural network without replay buffer
-    steps = [250]
-    options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
-    configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
-    #            "curriculum_after_balancing" : "cfg/leo_walking.yaml",
-              }
-    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010")
-
-    ## Replay buffer
-    steps = [250]
-    reassess_for = ['walking', '']
-    options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
-    configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
-    #            "curriculum_after_balancing" : "cfg/leo_walking.yaml",
-              }
-    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
-    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
-
-    # Execute learning
-    do_multiprocessing_pool(arg_cores, L0)
-    L = L1+L2+L3+L4
-    random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+    #do_multiprocessing_pool(arg_cores, L0)
 
 ######################################################################################
 def opt_to_str(opt):
@@ -124,6 +88,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
+            args['rb_max_size'] = args['steps']
             args['reassess_for'] = o[1]
             args['save'] = save
 
