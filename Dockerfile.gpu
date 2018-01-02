@@ -115,7 +115,7 @@ RUN cd $ROBOSCHOOL_PATH \
 RUN pip3 install -e $ROBOSCHOOL_PATH
 
 # Entrypoint scripts
-COPY entrypoint.sh /opt/bin/entrypoint.sh
+COPY entrypoint_nogui.sh /opt/bin/entrypoint.sh
 RUN chmod +x /opt/bin/entrypoint.sh
 EXPOSE 5900
 ENTRYPOINT ["/opt/bin/entrypoint.sh"]
