@@ -4,10 +4,11 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
+env = 'leo'
 #task = 'walking'
 task = 'balancing'
 
-args['cfg'] = 'cfg/rbdl_py_{}.yaml'.format(task)
+args['cfg'] = 'cfg/{}_{}.yaml'.format(env, task)
 args['steps'] = 50000
 args['test_interval'] = 30
 #args['seed'] = 1
@@ -15,8 +16,8 @@ args['test_interval'] = 30
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
-args['reassess_for'] = '{}'.format(task)
-args['output'] = 'rbdl_py_{}'.format(task)
+args['reassess_for'] = '{}{}'.format(env, task)
+args['output'] = '{}_{}'.format(env, task)
 
 #args['rb_save_filename'] = 'rbdl_py_{}'.format(task)
 #args['rb_load_filename'] = 'rbdl_py_balancing'

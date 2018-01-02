@@ -40,6 +40,10 @@ class MyMonitor(Monitor):
         except AttributeError:
             print("report method is not supported by the environment")
 
+    def _reset(self, **kwargs):
+        self.test = kwargs['test']
+        return super(MyMonitor, self)._reset(**kwargs)
+
     def _step(self, action):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
@@ -50,7 +54,10 @@ class MyMonitor(Monitor):
             self.needs_reset = True
             eprew = sum(self.rewards)
             eplen = len(self.rewards)
-            line = "{:15d}{:15.5f}{:15d}{}".format(self.total_steps, eprew, done, info)
+            if info:
+                line = "{:15d}{:15.5f}{:15d}{}".format(self.total_steps, eprew, done, info)
+            else:
+                line = "{:15d}{:15.5f}{:15d}".format(self.total_steps, eprew, done)
             epinfo = {"steps-reward-terminal-info": line}
             epinfo.update(self.current_reset_info)
             log_ok = (self.test and (self.report=='test' or self.report=='all')) or \
@@ -63,14 +70,6 @@ class MyMonitor(Monitor):
         return (ob, rew, done, info)
 
     # own
-    def set_test(self, test=False):
-        self.test = test
-        try:
-            self.env.set_test(self.test)
-        except AttributeError:
-            pass
-
-
     def reconfigure(self, d=None):
         """ Reconfigure the environemnt using the dict """
         try:

@@ -4,13 +4,13 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
+env = 'leo'
 #task = 'walking'
 task = 'balancing'
-env = 'hopper'
 
-args['cfg'] = "RoboschoolHopper-v1"
+args['cfg'] = 'cfg/{}_{}_play.yaml'.format(env, task)
 args['steps'] = 0
-args['trials'] = 1
+args['trials'] = 10
 args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False

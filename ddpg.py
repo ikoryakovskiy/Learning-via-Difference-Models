@@ -12,7 +12,6 @@ from my_monitor import MyMonitor
 import gym
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
-import roboschool
 
 def boolean_flag(parser, name, default=False, help=None):
     """Add a boolean flag to argparse parser."""
@@ -34,6 +33,7 @@ def run(cfg, **config):
         #from grlgym.envs.grl import Leo
         env = Leo(cfg)
     else:
+        import roboschool
         env = gym.make(cfg)
 
     env = MyMonitor(env, config['output'])

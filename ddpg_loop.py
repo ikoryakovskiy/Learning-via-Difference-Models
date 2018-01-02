@@ -14,6 +14,7 @@ from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
 import random
+import pdb
 
 # ===========================
 # Policy saving and loading
@@ -135,13 +136,12 @@ def train(env, ddpg, actor, critic, **config):
             replay_buffer = evaluator.reassess(replay_buffer, task = config['reassess_for'])
 
         # start environment
-        test = (ti>=0 and tt%(ti+1) == ti)
-        env.set_test(test)
         for c in curriculums:
             c['ss'], val = next(c['gen'])
             d = {"action": "update_{}".format(c['var']), c['var']: val}
             env.reconfigure(d)
-        obs = env.reset()
+        test = (ti>=0 and tt%(ti+1) == ti)
+        obs = env.reset(test=test)
 
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
@@ -220,8 +220,7 @@ def train(env, ddpg, actor, critic, **config):
             if terminal:
                 tt += 1
                 test = (ti>=0 and tt%(ti+1) == ti)
-                env.set_test(test)
-                obs = env.reset()
+                obs = env.reset(test=test)
                 reward = 0
                 terminal = 0
                 trial_return = 0

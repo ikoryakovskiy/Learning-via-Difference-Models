@@ -60,7 +60,6 @@ RUN wget https://github.com/lakshayg/tensorflow-build/raw/master/tensorflow-1.4.
 RUN pip3 install --ignore-installed --upgrade tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
 
 RUN pip3 --no-cache-dir install \
-        gym \
         scipy \
         tqdm \
         joblib \
@@ -69,6 +68,7 @@ RUN pip3 --no-cache-dir install \
         azure \
         progressbar2 \
         mpi4py \
+        h5py \
         tflearn \
         pyyaml \
         pyopengl
@@ -96,6 +96,11 @@ RUN apt-get update -qqy \
 # http://www.torkwrench.com/2011/12/16/d-bus-library-appears-to-be-incorrectly-set-up-failed-to-read-machine-uuid-failed-to-open-varlibdbusmachine-id/
 RUN dbus-uuidgen > /etc/machine-id
 
+# Fixing errors like: "Failed to read: session.screen0.tab.width"
+# https://sourceforge.net/p/fluxbox/mailman/fluxbox-users/thread/NEBBIAHCLNICCIFIKLCHGECKFDAA.chrys@cs.ualberta.ca/
+RUN cp -R /etc/X11/fluxbox ~/.fluxbox
+RUN cp -R /etc/X11/fluxbox /home/.fluxbox
+
 # Locale settings
 ENV LANGUAGE en_US.UTF-8
 ENV LANG en_US.UTF-8
@@ -117,7 +122,7 @@ RUN git clone https://github.com/ikoryakovskiy/grlwrappers.git \
     && cd grlwrappers \
     && pip3 install -e .
 
-# Install OpenAI Robotschool
+# Install OpenAI Robotschool with Gym in the middle
 ARG ROBOSCHOOL_PATH=/roboschool
 ARG ROBOSCHOOL_REPO=https://github.com/ikoryakovskiy/roboschool.git
 RUN git clone https://github.com/olegklimov/bullet3 -b roboschool_self_collision \
@@ -126,13 +131,18 @@ RUN git clone https://github.com/olegklimov/bullet3 -b roboschool_self_collision
     && cmake -DBUILD_SHARED_LIBS=ON -DUSE_DOUBLE_PRECISION=1 -DCMAKE_INSTALL_PREFIX:PATH=$ROBOSCHOOL_PATH/roboschool/cpp-household/bullet_local_install -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF  -DBUILD_UNIT_TESTS=OFF -DBUILD_CLSOCKET=OFF -DBUILD_ENET=OFF -DBUILD_OPENGL3_DEMOS=OFF .. \
     && make -j4 \
     && make install
+# Install OpenAI Gum
+ADD https://api.github.com/repos/ikoryakovskiy/gym/git/refs/heads/master version.json
+RUN git clone https://github.com/ikoryakovskiy/gym.git \
+    && cd gym \
+    && pip3 install -e .
+# Finish with OpenAI Robotschool
 ADD https://api.github.com/repos/ikoryakovskiy/roboschool/git/refs/heads/master version.json
 RUN cd $ROBOSCHOOL_PATH \
     && git init \
     && git remote add origin $ROBOSCHOOL_REPO \
     && git fetch \
     && git checkout -t origin/master
-#RUN git clone https://github.com/ikoryakovskiy/roboschool.git
 RUN pip3 install -e $ROBOSCHOOL_PATH
 
 # Entrypoint scripts
