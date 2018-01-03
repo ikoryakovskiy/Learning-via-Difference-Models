@@ -133,7 +133,7 @@ def train(env, ddpg, actor, critic, **config):
         if config['reassess_for']:
             print('Reassessing replay buffer for {}'.format(config['reassess_for']))
             evaluator = Evaluator(max_action)
-            replay_buffer = evaluator.reassess(replay_buffer, task = config['reassess_for'])
+            replay_buffer = evaluator.add_bonus(replay_buffer, how = config['reassess_for'])
 
         # start environment
         for c in curriculums:
@@ -244,10 +244,11 @@ def start(env, **config):
     with tf.Graph().as_default() as ddpg:
 
         # setup random number generators for predicatbility
+        print("Random seed ", config['seed'])
         random.seed(config['seed'])
-        np.random.seed(random.randint(0, 1000))
-        tf.set_random_seed(random.randint(0, 1000))
-        env.seed(random.randint(0, 1000))
+        np.random.seed(random.randint(0, 10000))
+        tf.set_random_seed(random.randint(0, 10000))
+        env.seed(random.randint(0, 10000))
 
         obs_dim = env.observation_space.shape[-1]
         act_dim = env.action_space.shape[-1]

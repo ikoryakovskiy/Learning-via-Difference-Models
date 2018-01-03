@@ -15,13 +15,18 @@ else:
     task_balancing = ''
 
 args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
-args['steps'] = 1000000
+args['steps'] = 2000
 args['test_interval'] = 30
+args['seed'] = 1
 args['rb_max_size'] = args['steps']
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
 args['output'] = '{}_{}'.format(env.lower(), task.lower())
+
+#args['rb_save_filename'] = '{}_{}'.format(env, 'balancing')
+args['rb_load_filename'] = '{}_{}'.format(env, 'balancing')
+args['reassess_for'] = 'walking_1_0'
 
 # Run actual script.
 args['save'] = True

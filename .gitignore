@@ -20,6 +20,7 @@
 
 # temporary and export files
 *.csv
+*.db
 *.meta
 *.index
 *.data-*

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-#import numpy as np
+import pdb
 
 
 class Evaluator(object):
@@ -16,9 +16,29 @@ class Evaluator(object):
         self.max_action = max_action
 
 
+    def add_bonus(self, replay_buffer, rwForward=300, rwTime=-1.5,
+                 how = 'walking'):
+        items = how.split("_")
+        if not items[0] == 'walking':
+            return replay_buffer
+
+        if len(items) > 1: rwForward = float(items[1])
+        if len(items) > 2: rwTime = float(items[2])
+
+        new_replay_buffer = []
+        for e in replay_buffer.replay_buffer:
+            r_old = e[2]
+            r_new = r_old + rwForward*e[5] + rwTime
+            print(r_old, r_new, e[5])
+            pdb.set_trace()
+            new_e = (e[0], e[1], r_new, e[3], e[4], e[5])
+            new_replay_buffer.append(new_e)
+        replay_buffer.replay_buffer = new_replay_buffer
+        return replay_buffer
+
+
     def reassess(self, replay_buffer, rwForward=300, verify=False,
                    task = 'walking', knee_mode = "punish_and_continue"):
-        """ verify: check if GRL rewards and  """
         new_replay_buffer = []
         for e in replay_buffer.replay_buffer:
             r_old = e[2]
