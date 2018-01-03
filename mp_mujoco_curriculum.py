@@ -34,7 +34,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(5)
+    runs = range(4)
     reassess_for = ['']
 
     #####
@@ -111,8 +111,8 @@ def main():
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2d-v1",
               }
-    L3_W = rl_run(configs, alg, options, rb_load="ddpg-Walker2d_balancing-20000000-1010")
-    L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-20000000-1010", rb_load="ddpg-Walker2d_balancing-20000000-1010")
+    L3_W = rl_run(configs, alg, options, rb_load="ddpg-Walker2d_balancing-30000000-1010")
+    L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-30000000-1010", rb_load="ddpg-Walker2d_balancing-30000000-1010")
 
     ####
     do_multiprocessing_pool(arg_cores, L0_H+L0_W)

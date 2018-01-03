@@ -29,8 +29,8 @@ class Evaluator(object):
         for e in replay_buffer.replay_buffer:
             r_old = e[2]
             r_new = r_old + rwForward*e[5] + rwTime
-            print(r_old, r_new, e[5])
-            pdb.set_trace()
+            #print(r_old, r_new, e[5])
+            #pdb.set_trace()
             new_e = (e[0], e[1], r_new, e[3], e[4], e[5])
             new_replay_buffer.append(new_e)
         replay_buffer.replay_buffer = new_replay_buffer

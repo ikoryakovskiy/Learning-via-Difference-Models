@@ -90,7 +90,7 @@ def train(env, ddpg, actor, critic, **config):
             x = np.array(params[1:]).astype(np.float)
             c = {'var': params[0], 'gen': cur_gen(config["steps"], x)}
             curriculums.append(c)
-
+#    pdb.set_trace()
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
@@ -152,7 +152,8 @@ def train(env, ddpg, actor, critic, **config):
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, act_dim)
 
             action = compute_action(sess, actor, obs[:o_dims], noise, test) # from [-1; 1]
-
+#            pdb.set_trace()
+#            print(ss)
             # obtain observation of a state
             next_obs, reward, terminal, _ = env.step(action*max_action)
 
@@ -206,6 +207,7 @@ def train(env, ddpg, actor, critic, **config):
 
             # Save NN if performance is better then before
             if terminal and config['save'] and trial_return > max_trial_return:
+#                pdb.set_trace()
                 max_trial_return = trial_return
                 save(sess, saver, config, suffix="-best")
 
@@ -218,7 +220,7 @@ def train(env, ddpg, actor, critic, **config):
                         env.reconfigure(d)
 
             if terminal:
-                #pdb.set_trace()
+#                pdb.set_trace()
                 tt += 1
                 test = (ti>=0 and tt%(ti+1) == ti)
                 obs = env.reset(test=test)
