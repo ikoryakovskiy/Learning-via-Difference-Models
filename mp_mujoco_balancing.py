@@ -34,20 +34,31 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(3)
-    steps = [500]
+    runs = range(2)
     reassess_for = ['']
 
+    ####
     options = []
+    steps = [200]
     for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
                 "HalfCheetahBalancing" : "RoboschoolHalfCheetahBalancing-v1",
-                "Walker2dBalancing" : "RoboschoolWalker2dBalancing-v1",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
-    random.shuffle(L0)
-    do_multiprocessing_pool(arg_cores, L0)
+
+    ####
+    options = []
+    steps = [300]
+    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+
+    configs = {
+                "Walker2dBalancing" : "RoboschoolWalker2dBalancing-v1",
+              }
+    L1 = rl_run(configs, alg, options, rb_save=True)
+
+    ####
+    do_multiprocessing_pool(arg_cores, L0+L1)
 
 ######################################################################################
 def opt_to_str(opt):

@@ -158,7 +158,7 @@ def train(env, ddpg, actor, critic, **config):
 
             # Add the transition to replay buffer
             if not test:
-                replay_buffer.replay_buffer_add(obs, action, reward, terminal, next_obs)
+                replay_buffer.replay_buffer_add(obs, action, reward, terminal == 2, next_obs)
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
@@ -218,6 +218,7 @@ def train(env, ddpg, actor, critic, **config):
                         env.reconfigure(d)
 
             if terminal:
+                #pdb.set_trace()
                 tt += 1
                 test = (ti>=0 and tt%(ti+1) == ti)
                 obs = env.reset(test=test)
