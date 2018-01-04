@@ -34,7 +34,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(4)
+    runs = range(1)
     reassess_for = ['']
 
     #####
@@ -115,9 +115,9 @@ def main():
     L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-30000000-1010", rb_load="ddpg-Walker2d_balancing-30000000-1010")
 
     ####
-    do_multiprocessing_pool(arg_cores, L0_H+L0_W)
+    #do_multiprocessing_pool(arg_cores, L0_H+L0_W)
     L = L1 + L2_H + L2_W + L3_H + L3_W + L4_H + L4_W
-    random.shuffle(L)
+    #random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
@@ -196,6 +196,7 @@ def mp_run(cfg):
         counter.value += 2
     sleep(wait)
     print('wait finished {0}'.format(wait))
+    print('mp_run of {}'.format(cfg))
     # Run the experiment
     with open(cfg, 'r') as file:
         args = yaml.load(file)
