@@ -39,7 +39,6 @@ def main():
     options = []
     steps = [1000]
     for r in itertools.product(steps, reward_scale, runs): options.append(r)
-
     configs = {
                 "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
               }
@@ -48,14 +47,21 @@ def main():
     ####
     options = []
     for r in itertools.product(steps, reward_scale, runs): options.append(r)
-
     configs = {
                 "Walker2dWalking" : "RoboschoolWalker2d-v1",
               }
     L1 = rl_run(configs, alg, options, rb_save=True)
 
     ####
-    L = L0+L1
+    options = []
+    for r in itertools.product(steps, reward_scale, runs): options.append(r)
+    configs = {
+                "HopperWalking" : "RoboschoolHopper-v1",
+              }
+    L2 = rl_run(configs, alg, options, rb_save=True)
+
+    ####
+    L = L0+L1+L2
     random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 
