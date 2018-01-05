@@ -55,7 +55,9 @@ def main():
     L1 = rl_run(configs, alg, options, rb_save=True)
 
     ####
-    do_multiprocessing_pool(arg_cores, L0+L1)
+    L = L0+L1
+    random.shuffle(L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):

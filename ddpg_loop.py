@@ -158,7 +158,7 @@ def train(env, ddpg, actor, critic, **config):
             next_obs, reward, terminal, _ = env.step(action*max_action)
 
             reward *= config['reward_scale']
-            pdb.set_trace()
+            #pdb.set_trace()
 
             # Add the transition to replay buffer
             if not test:
