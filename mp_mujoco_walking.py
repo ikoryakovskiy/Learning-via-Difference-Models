@@ -8,7 +8,6 @@ import itertools
 import signal
 import random
 from datetime import datetime
-import numpy as np
 
 from ddpg import parse_args, cfg_run
 
@@ -36,52 +35,34 @@ def main():
 
     # Parameters
     runs = range(3)
-    steps = [50]
-    reassess_for = ['']
+    reward_scale = [0.01, 0.1, 10.0, 100.0]
 
+    ####
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    steps = [1000]
+    for r in itertools.product(steps, reward_scale, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/leo_balancing.yaml",
+                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
-    ## Zero-shot walking
-    steps = [300]
-    grid_size = 5
-    rwForward = np.linspace(100, 500, grid_size) # 300
-    rwTime = np.linspace(-2.9, -0.1, grid_size)  # -1.5
-    rwWork = np.linspace(-3.9, -0.1, grid_size)  # -2.0
+    ####
     options = []
-    for r in itertools.product(steps, reassess_for, rwForward, rwTime, rwWork, runs): options.append(r)
-    configs = {
-                "walking" : "cfg/leo_walking.yaml",
-              }
-    L1 = rl_run(configs, alg, options)
+    for r in itertools.product(steps, reward_scale, runs): options.append(r)
 
-    ## Replay buffer
-    steps = [250]
-    reassess_for = ['']
-    options = []
-    for r in itertools.product(steps, reassess_for, rwForward, rwTime, rwWork, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
+                "Walker2dWalking" : "RoboschoolWalker2d-v1",
               }
-    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
+    L1 = rl_run(configs, alg, options, rb_save=True)
 
-    # Execute learning
-    do_multiprocessing_pool(arg_cores, L0)
-    L = L1+L2
-    random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+    ####
+    do_multiprocessing_pool(arg_cores, L0+L1)
 
 ######################################################################################
-def opt_to_str(opt, use_el = None):
-    if use_el == None: use_el = range(0, len(opt)-1) # by default, last element in 'o' is reserved for mp
+def opt_to_str(opt):
     str_o = ''
-    for el in use_el:
-        o = opt[el]
+    for  o in opt[:-1]:  # last element in 'o' is reserved for mp
         try:
             fl = float(o) # converts to float numbers and bools
             str_o += "-{:06d}".format(int(round(100000*fl)))
@@ -89,9 +70,8 @@ def opt_to_str(opt, use_el = None):
             if o: # skip empty elements, e.g. ""
                 str_o +='-' + o
     if str_o:
-        str_o = str_o[1:] # remove first '-'
+        str_o = str_o[1:]
     return str_o
-
 
 ######################################################################################
 def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, rb_load=''):
@@ -119,10 +99,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
-            args['reassess_for'] = o[1]
-            if len(o) > 5:
-                args['curriculum'] = 'rwForward_{};rwTime_{};rwWork_{}'.format(o[2], o[3], o[4])
-
+            args['rb_max_size'] = args['steps']
+            args['reward_scale'] = o[1]
             args['save'] = save
 
             if 'curriculum' in key:
