@@ -32,21 +32,24 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(3)
-    reward_scale = [0.01, 0.1, 10.0, 100.0]
+    runs = range(2)
+    steps = [500]
+    reward_scale = [0.1, 1.0, 10.0, 20.0]
+    normalize_observations = [True, False]
+    layer_norm = [True, False]
+    version = [0]
 
     ####
     options = []
-    steps = [1000]
-    for r in itertools.product(steps, reward_scale, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
     configs = {
-                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
+#                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
     ####
     options = []
-    for r in itertools.product(steps, reward_scale, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
     configs = {
                 "Walker2dWalking" : "RoboschoolWalker2d-v1",
               }
@@ -54,14 +57,44 @@ def main():
 
     ####
     options = []
-    for r in itertools.product(steps, reward_scale, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
     configs = {
                 "HopperWalking" : "RoboschoolHopper-v1",
               }
     L2 = rl_run(configs, alg, options, rb_save=True)
 
     ####
-    L = L0+L1+L2
+    ####
+    ####
+    layer_norm = [True]
+    version = [1]
+
+    ####
+    options = []
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    configs = {
+#                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
+              }
+    L3 = rl_run(configs, alg, options, rb_save=True)
+
+    ####
+    options = []
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    configs = {
+                "Walker2dWalking" : "RoboschoolWalker2d-v1",
+              }
+    L4 = rl_run(configs, alg, options, rb_save=True)
+
+    ####
+    options = []
+    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    configs = {
+                "HopperWalking" : "RoboschoolHopper-v1",
+              }
+    L5 = rl_run(configs, alg, options, rb_save=True)
+
+    ####
+    L = L0+L1+L2+L3+L4+L5
     random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 
@@ -107,6 +140,9 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             args['steps'] = o[0]*1000
             args['rb_max_size'] = args['steps']
             args['reward_scale'] = o[1]
+            args['normalize_observations'] = o[2]
+            args['layer_norm'] = o[3]
+            args['version'] = o[4]
             args['save'] = save
 
             if 'curriculum' in key:

@@ -50,6 +50,7 @@ def parse_args():
     # Flow options
     parser.add_argument('--cores', type=int, default=1)
     boolean_flag(parser,  'tensorboard', default=False)
+    parser.add_argument('--version', type=int, default=0)
 
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')

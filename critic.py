@@ -9,6 +9,7 @@ Created on Mon Jan 16 17:49:02 2017
 import tensorflow as tf
 import tflearn
 from math import sqrt
+import pdb
 
 class CriticNetwork(object):
     """
@@ -16,13 +17,15 @@ class CriticNetwork(object):
     The action must be obtained from the output of the Actor network.
     """
 
-    def __init__(self, state_dim, action_dim, learning_rate, tau, num_actor_vars):
+    def __init__(self, state_dim, action_dim, config, num_actor_vars):
         # self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
-        self.learning_rate = learning_rate
-        self.tau = tau
-        self.l2 = 0.001
+        self.learning_rate = config["critic_lr"]
+        self.tau = config["tau"]
+        self.l2 = config["critic_l2_reg"]
+        self.layer_norm = config["layer_norm"]
+        self.version = config["version"]
 
         # Create the critic network
         self.inputs, self.action, self.out = self.create_critic_network()
@@ -57,8 +60,10 @@ class CriticNetwork(object):
         action = tflearn.input_data(shape=[None, self.a_dim])
         weights_init1 = tflearn.initializations.uniform(minval=-1/sqrt(self.s_dim), maxval=1/sqrt(self.s_dim))
         critic_layer1 = tflearn.fully_connected(inputs, 400, name="{}criticLayer1".format(prefix), weights_init=weights_init1)
-        critic_layer1_norm = tflearn.layers.normalization.batch_normalization(critic_layer1, name="{}criticLayer1_norm".format(prefix))
-        critic_layer1_relu = tflearn.activations.relu(critic_layer1_norm)
+        #pdb.set_trace()
+        if self.layer_norm:
+            critic_layer1 = tflearn.layers.normalization.batch_normalization(critic_layer1, name="{}criticLayer1_norm".format(prefix))
+        critic_layer1_relu = tflearn.activations.relu(critic_layer1)
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
@@ -68,8 +73,14 @@ class CriticNetwork(object):
         weights_init3 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
         critic_layer3 = tflearn.fully_connected(action, 300, name="{}criticLayerAction".format(prefix), weights_init=weights_init3)
 
-        net = tflearn.activation(tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
-                                 critic_layer3.b, activation='relu')
+        if self.version == 0 or not self.layer_norm:
+            net = tflearn.activation(tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
+                                     critic_layer3.b, activation='relu')
+        elif self.version > 0:
+            # ivan 6.01.2018 adding another normailization layer
+            net = tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) + critic_layer3.b
+            net = tflearn.layers.normalization.batch_normalization(net, name="{}criticLayer2_norm".format(prefix))
+            net = tflearn.activations.relu(net)
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]

@@ -15,6 +15,8 @@ from actor import ActorNetwork
 from critic import CriticNetwork
 import random
 import pdb
+from running_mean_std import RunningMeanStd
+import json
 
 # ===========================
 # Policy saving and loading
@@ -70,6 +72,18 @@ def cur_gen(steps, x):
         while True:
             yield steps, x[0]
 
+def normalize(x, stats):
+    if stats is None:
+        return x
+    return (x - stats.mean) / stats.std
+
+def obs_normalize(obs, obs_rms, obs_range, o_dims, normalize_observations):
+    #pdb.set_trace()
+    obsx = obs[np.newaxis, :o_dims]
+    if normalize_observations:
+        obs_rms.update(obsx)
+    obs[:o_dims] = np.clip(normalize(obsx, obs_rms) , obs_range[0], obs_range[1])
+    return obs
 
 # ===========================
 #   Agent Training
@@ -107,6 +121,14 @@ def train(env, ddpg, actor, critic, **config):
         o_dims=env.observation_space.shape[-1]
         replay_buffer = ReplayBuffer(config, o_dims=o_dims)
 
+        # Observation normalization.
+        obs_range = [env.observation_space.low, env.observation_space.high]
+        obs_range = [-5, 5]
+        if config["normalize_observations"]:
+            obs_rms = RunningMeanStd(shape=env.observation_space.shape)
+        else:
+            obs_rms = None
+
         # Initialize constants for exploration noise
         ou_sigma = config["ou_sigma"]
         ou_theta = config["ou_theta"]
@@ -142,6 +164,7 @@ def train(env, ddpg, actor, critic, **config):
             env.reconfigure(d)
         test = (ti>=0 and tt%(ti+1) == ti)
         obs = env.reset(test=test)
+        obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
@@ -152,10 +175,10 @@ def train(env, ddpg, actor, critic, **config):
                 noise = ExplorationNoise.ou_noise(ou_theta, ou_mu, ou_sigma, noise, act_dim)
 
             action = compute_action(sess, actor, obs[:o_dims], noise, test) # from [-1; 1]
-#            pdb.set_trace()
-#            print(ss)
+
             # obtain observation of a state
             next_obs, reward, terminal, _ = env.step(action*max_action)
+            next_obs = obs_normalize(next_obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
             reward *= config['reward_scale']
             #pdb.set_trace()
@@ -227,6 +250,7 @@ def train(env, ddpg, actor, critic, **config):
                 tt += 1
                 test = (ti>=0 and tt%(ti+1) == ti)
                 obs = env.reset(test=test)
+                obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
                 reward = 0
                 terminal = 0
                 trial_return = 0
@@ -238,7 +262,12 @@ def train(env, ddpg, actor, critic, **config):
 
         # Save the last episode policy
         if config['save']:
-            save(sess, saver, config, suffix="-last")
+            suffix="-last"
+            save(sess, saver, config, suffix=suffix)
+            if config["normalize_observations"]:
+                with open(config["output"]+suffix+'.obs_rms', 'w') as f:
+                    data = {'count': obs_rms.count, 'mean': obs_rms.mean.tolist(), 'std': obs_rms.std.tolist(), 'var': obs_rms.var.tolist()}
+                    json.dump(data, f)
 
         replay_buffer.save()
 
@@ -258,8 +287,8 @@ def start(env, **config):
         obs_dim = env.observation_space.shape[-1]
         act_dim = env.action_space.shape[-1]
 
-        actor = ActorNetwork(obs_dim, act_dim, 1, config["actor_lr"], config["tau"])
-        critic = CriticNetwork(obs_dim, act_dim, config["critic_lr"], config["tau"],
+        actor = ActorNetwork(obs_dim, act_dim, 1, config)
+        critic = CriticNetwork(obs_dim, act_dim, config,
                                actor.get_num_trainable_vars())
 
         if config["tensorboard"] == True:

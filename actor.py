@@ -9,7 +9,7 @@ Created on Mon Jan 16 17:49:02 2017
 import tensorflow as tf
 import tflearn
 import math
-
+import pdb
 
 class ActorNetwork(object):
     """
@@ -20,13 +20,14 @@ class ActorNetwork(object):
     between -2 and 2
     """
 
-    def __init__(self, state_dim, action_dim, action_bound, learning_rate, tau):
+    def __init__(self, state_dim, action_dim, action_bound, config):
         # self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
         self.action_bound = action_bound
-        self.learning_rate = learning_rate
-        self.tau = tau
+        self.learning_rate = config["actor_lr"]
+        self.tau = config["tau"]
+        self.layer_norm = config["layer_norm"]
 
         # Actor Network
         self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -60,13 +61,16 @@ class ActorNetwork(object):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         weights_init1 = tflearn.initializations.uniform(minval=-1/math.sqrt(self.s_dim), maxval=1/math.sqrt(self.s_dim))
         actor_layer1 = tflearn.fully_connected(inputs, 400, name="{}actorLayer1".format(prefix), weights_init=weights_init1)
-        actor_layer1_norm = tflearn.layers.normalization.batch_normalization(actor_layer1, name="{}actorLayer1_norm".format(prefix))
-        actor_layer1_relu = tflearn.activations.relu(actor_layer1_norm)
+        #pdb.set_trace()
+        if self.layer_norm:
+            actor_layer1 = tflearn.layers.normalization.batch_normalization(actor_layer1, name="{}actorLayer1_norm".format(prefix))
+        actor_layer1_relu = tflearn.activations.relu(actor_layer1)
 
         weights_init2 = tflearn.initializations.uniform(minval=-1/math.sqrt(400), maxval=1/math.sqrt(400))
         actor_layer2 = tflearn.fully_connected(actor_layer1_relu, 300, name="{}actorLayer2".format(prefix), weights_init=weights_init2)
-        actor_layer2_norm = tflearn.layers.normalization.batch_normalization(actor_layer2, name="{}actorLayer2_norm".format(prefix))
-        actor_layer2_relu = tflearn.activations.relu(actor_layer2_norm)
+        if self.layer_norm:
+            actor_layer2 = tflearn.layers.normalization.batch_normalization(actor_layer2, name="{}actorLayer2_norm".format(prefix))
+        actor_layer2_relu = tflearn.activations.relu(actor_layer2)
 
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
         actor_output = tflearn.fully_connected(actor_layer2_relu, self.a_dim, activation='tanh', name="{}actorOutput".format(prefix),

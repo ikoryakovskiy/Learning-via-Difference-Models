@@ -4,8 +4,9 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-#env = 'Walker2d'
-env = 'HalfCheetah'
+#env = 'Walker2dGRL'
+#env = 'HalfCheetahGRL'
+env = 'HopperGRL'
 #task = 'Balancing'
 task = 'Walking'
 
@@ -15,7 +16,7 @@ else:
     task_balancing = ''
 
 args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
-args['steps'] = 2000
+args['steps'] = 1000000
 args['test_interval'] = 30
 args['seed'] = 1
 args['rb_max_size'] = args['steps']
@@ -25,8 +26,8 @@ args['layer_norm'] = True
 args['output'] = '{}_{}'.format(env.lower(), task.lower())
 
 #args['rb_save_filename'] = '{}_{}'.format(env, 'balancing')
-args['rb_load_filename'] = '{}_{}'.format(env, 'balancing')
-args['reassess_for'] = 'walking_1_0'
+#args['rb_load_filename'] = '{}_{}'.format(env, 'balancing')
+#args['reassess_for'] = 'walking_1_0'
 
 # Run actual script.
 args['save'] = True

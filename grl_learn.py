@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from ddpg import parse_args, cfg_run
-
+'''
 args = parse_args()
 
 env = 'leo'
@@ -9,11 +9,11 @@ env = 'leo'
 task = 'balancing'
 
 args['cfg'] = 'cfg/{}_{}.yaml'.format(env, task)
-args['steps'] = 50000
+args['steps'] = 2000
 args['test_interval'] = 30
-#args['seed'] = 1
+args['seed'] = 1
 #args['curriculum'] = 'rwForward_50_300_10'
-args['normalize_observations'] = False
+args['normalize_observations'] = True
 args['normalize_returns'] = False
 args['layer_norm'] = True
 #args['reassess_for'] = 'walking_300_-1.5'
@@ -28,12 +28,11 @@ args['output'] = '{}_{}'.format(env, task)
 
 '''
 import yaml
-with open('tmp/ddpg-walking-30000000-30000000--150000--200000-1000-mp0.yaml', 'r') as file:
-#with open('tmp/ddpg-balancing-5000000-1010-mp0.yaml', 'r') as file:
+with open('tmp/ddpg-HopperWalking-50000000-010000-000000-000000-000000-1010-mp0.yaml', 'r') as file:
     args = yaml.load(file)
 args['seed'] = 1
 #args['steps'] = 500
-'''
+
 # Run actual script.
 args['save'] = True
 cfg_run(**args)
