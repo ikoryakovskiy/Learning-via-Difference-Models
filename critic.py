@@ -60,7 +60,6 @@ class CriticNetwork(object):
         action = tflearn.input_data(shape=[None, self.a_dim])
         weights_init1 = tflearn.initializations.uniform(minval=-1/sqrt(self.s_dim), maxval=1/sqrt(self.s_dim))
         critic_layer1 = tflearn.fully_connected(inputs, 400, name="{}criticLayer1".format(prefix), weights_init=weights_init1)
-        #pdb.set_trace()
         if self.layer_norm:
             critic_layer1 = tflearn.layers.normalization.batch_normalization(critic_layer1, name="{}criticLayer1_norm".format(prefix))
         critic_layer1_relu = tflearn.activations.relu(critic_layer1)
@@ -73,6 +72,7 @@ class CriticNetwork(object):
         weights_init3 = tflearn.initializations.uniform(minval=-1/sqrt(400 + self.a_dim), maxval=1/sqrt(400 + self.a_dim))
         critic_layer3 = tflearn.fully_connected(action, 300, name="{}criticLayerAction".format(prefix), weights_init=weights_init3)
 
+        #pdb.set_trace()
         if self.version == 0 or not self.layer_norm:
             net = tflearn.activation(tf.matmul(critic_layer1_relu, critic_layer2.W) + tf.matmul(action, critic_layer3.W) +
                                      critic_layer3.b, activation='relu')

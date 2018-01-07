@@ -78,10 +78,10 @@ def normalize(x, stats):
     return (x - stats.mean) / stats.std
 
 def obs_normalize(obs, obs_rms, obs_range, o_dims, normalize_observations):
-    #pdb.set_trace()
     obsx = obs[np.newaxis, :o_dims]
     if normalize_observations:
         obs_rms.update(obsx)
+    #pdb.set_trace()
     obs[:o_dims] = np.clip(normalize(obsx, obs_rms) , obs_range[0], obs_range[1])
     return obs
 
@@ -123,7 +123,8 @@ def train(env, ddpg, actor, critic, **config):
 
         # Observation normalization.
         obs_range = [env.observation_space.low, env.observation_space.high]
-        obs_range = [-5, 5]
+        #pdb.set_trace()
+        #obs_range = [-5, 5]
         if config["normalize_observations"]:
             obs_rms = RunningMeanStd(shape=env.observation_space.shape)
         else:
@@ -155,6 +156,7 @@ def train(env, ddpg, actor, critic, **config):
         if config['reassess_for']:
             print('Reassessing replay buffer for {}'.format(config['reassess_for']))
             evaluator = Evaluator(max_action)
+            #pdb.set_trace()
             replay_buffer = evaluator.add_bonus(replay_buffer, how = config['reassess_for'])
 
         # start environment

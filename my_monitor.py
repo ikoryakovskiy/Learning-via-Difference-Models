@@ -49,7 +49,8 @@ class MyMonitor(Monitor):
             raise RuntimeError("Tried to step environment that needs reset")
         ob, rew, done, info = self.env.step(action)
         self.rewards.append(rew)
-        self.total_steps += 1
+        if not self.test:
+            self.total_steps += 1 # account for learning steps only
         if done:
             self.needs_reset = True
             eprew = sum(self.rewards)
