@@ -88,7 +88,7 @@ def main():
     configs = {
                 "Hopper_walking_after_balancing" : "RoboschoolHopperGRL-v1",
               }
-    L2_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-20000000-1010")
+    L2_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-10000000-1010")
 
     ## Only neural network without replay buffer HalfCheetah
     #steps = [800]
@@ -97,7 +97,7 @@ def main():
     configs = {
                 "HalfCheetah_walking_after_balancing" : "RoboschoolHalfCheetahGRL-v1",
               }
-    L2_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-20000000-1010")
+    L2_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-10000000-1010")
 
     ## Only neural network without replay buffer Walker2d
     #steps = [700]
@@ -106,7 +106,7 @@ def main():
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2dGRL-v1",
               }
-    L2_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-30000000-1010")
+    L2_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-10000000-1010")
     ####
 
     ####
@@ -118,8 +118,8 @@ def main():
     configs = {
                 "Hopper_walking_after_balancing" : "RoboschoolHopperGRL-v1",
               }
-    L3_H = rl_run(configs, alg, options, rb_load="ddpg-Hopper_balancing-20000000-1010")
-    L4_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-20000000-1010", rb_load="ddpg-Hopper_balancing-20000000-1010")
+    L3_H = rl_run(configs, alg, options, rb_load="ddpg-Hopper_balancing-10000000-1010")
+    L4_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-10000000-1010", rb_load="ddpg-Hopper_balancing-10000000-1010")
 
     ## Replay buffer HalfCheetah
     #steps = [800]
@@ -129,8 +129,8 @@ def main():
     configs = {
                 "HalfCheetah_walking_after_balancing" : "RoboschoolHalfCheetahGRL-v1",
               }
-    L3_C = rl_run(configs, alg, options, rb_load="ddpg-HalfCheetah_balancing-20000000-1010")
-    L4_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-20000000-1010", rb_load="ddpg-HalfCheetah_balancing-20000000-1010")
+    L3_C = rl_run(configs, alg, options, rb_load="ddpg-HalfCheetah_balancing-10000000-1010")
+    L4_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-10000000-1010", rb_load="ddpg-HalfCheetah_balancing-10000000-1010")
 
     ## Replay buffer Walker2d
     #steps = [700]
@@ -140,8 +140,8 @@ def main():
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2dGRL-v1",
               }
-    L3_W = rl_run(configs, alg, options, rb_load="ddpg-Walker2d_balancing-30000000-1010")
-    L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-30000000-1010", rb_load="ddpg-Walker2d_balancing-30000000-1010")
+    L3_W = rl_run(configs, alg, options, rb_load="ddpg-Walker2d_balancing-10000000-1010")
+    L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-10000000-1010", rb_load="ddpg-Walker2d_balancing-10000000-1010")
 
     ####
     do_multiprocessing_pool(arg_cores, L0_H+L0_C+L0_W)
