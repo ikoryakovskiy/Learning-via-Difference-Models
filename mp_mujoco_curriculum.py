@@ -36,10 +36,20 @@ def main():
     reassess_for = ['']
 
     #####
+    # Curriculum
+    bsteps = {"Hopper": 100, "HalfCheetah": 100, "Walker2d":400}
+    steps = {"Hopper": 500, "HalfCheetah": 500, "Walker2d":1000}
+    rb_names = {}
+    for key in bsteps:
+        rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
+    wsteps = {}
+    for key in bsteps:
+        wsteps[key] = steps[key] - bsteps[key]
+
+    #####
     ## Zero-shot balancing Hopper
     options = []
-    steps = [100]
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([bsteps["Hopper"]], reassess_for, runs): options.append(r)
 
     configs = {
                 "Hopper_balancing" : "RoboschoolHopperBalancingGRL-v1",
@@ -48,8 +58,7 @@ def main():
 
     ## Zero-shot balancing HalfCheetah
     options = []
-    #steps = [100]
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([bsteps["HalfCheetah"]], reassess_for, runs): options.append(r)
 
     configs = {
                 "HalfCheetah_balancing" : "RoboschoolHalfCheetahBalancingGRL-v1",
@@ -58,8 +67,7 @@ def main():
 
     ## Zero-shot balancing Walker2d
     options = []
-    #steps = [300]
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([bsteps["Walker2d"]], reassess_for, runs): options.append(r)
 
     configs = {
                 "Walker2d_balancing" : "RoboschoolWalker2dBalancingGRL-v1",
@@ -69,83 +77,89 @@ def main():
 
     #####
     ## Zero-shot walking Hopper & HalfCheetah & Walker2d
-    steps = [500]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([steps["Hopper"]], reassess_for, runs): options.append(r)
     configs = {
                 "Hopper_walking" : "RoboschoolHopperGRL-v1",
+              }
+    L1_H = rl_run(configs, alg, options)
+
+    options = []
+    for r in itertools.product([steps["HalfCheetah"]], reassess_for, runs): options.append(r)
+    configs = {
                 "HalfCheetah_walking" : "RoboschoolHalfCheetahGRL-v1",
+              }
+    L1_C = rl_run(configs, alg, options)
+
+    options = []
+    for r in itertools.product([steps["Walker2d"]], reassess_for, runs): options.append(r)
+    configs = {
                 "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
               }
-    L1 = rl_run(configs, alg, options)
+    L1_W = rl_run(configs, alg, options)
     #####
 
     #####
     ## Only neural network without replay buffer Hopper
-    steps = [400]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["Hopper"]], reassess_for, runs): options.append(r)
     configs = {
                 "Hopper_walking_after_balancing" : "RoboschoolHopperGRL-v1",
               }
-    L2_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-10000000-1010")
+    L2_H = rl_run(configs, alg, options, load_file=rb_names["Hopper"])
 
     ## Only neural network without replay buffer HalfCheetah
-    #steps = [800]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["HalfCheetah"]], reassess_for, runs): options.append(r)
     configs = {
                 "HalfCheetah_walking_after_balancing" : "RoboschoolHalfCheetahGRL-v1",
               }
-    L2_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-10000000-1010")
+    L2_C = rl_run(configs, alg, options, load_file=rb_names["HalfCheetah"])
 
     ## Only neural network without replay buffer Walker2d
-    #steps = [700]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["Walker2d"]], reassess_for, runs): options.append(r)
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2dGRL-v1",
               }
-    L2_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-10000000-1010")
+    L2_W = rl_run(configs, alg, options, load_file=rb_names["HalfCheetah"])
     ####
 
     ####
     ## Replay buffer Hopper
-    #steps = [800]
     reassess_for = ['walking_3_-1.5', '']
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["Hopper"]], reassess_for, runs): options.append(r)
     configs = {
                 "Hopper_walking_after_balancing" : "RoboschoolHopperGRL-v1",
               }
-    L3_H = rl_run(configs, alg, options, rb_load="ddpg-Hopper_balancing-10000000-1010")
-    L4_H = rl_run(configs, alg, options, load_file="ddpg-Hopper_balancing-10000000-1010", rb_load="ddpg-Hopper_balancing-10000000-1010")
+    L3_H = rl_run(configs, alg, options, rb_load=rb_names["Hopper"])
+    L4_H = rl_run(configs, alg, options, load_file=rb_names["Hopper"], rb_load=rb_names["Hopper"])
 
     ## Replay buffer HalfCheetah
-    #steps = [800]
     reassess_for = ['walking_3_-1.5', '']
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["HalfCheetah"]], reassess_for, runs): options.append(r)
     configs = {
                 "HalfCheetah_walking_after_balancing" : "RoboschoolHalfCheetahGRL-v1",
               }
-    L3_C = rl_run(configs, alg, options, rb_load="ddpg-HalfCheetah_balancing-10000000-1010")
-    L4_C = rl_run(configs, alg, options, load_file="ddpg-HalfCheetah_balancing-10000000-1010", rb_load="ddpg-HalfCheetah_balancing-10000000-1010")
+    L3_C = rl_run(configs, alg, options, rb_load=rb_names["HalfCheetah"])
+    L4_C = rl_run(configs, alg, options, load_file=rb_names["HalfCheetah"], rb_load=rb_names["HalfCheetah"])
 
     ## Replay buffer Walker2d
-    #steps = [700]
     reassess_for = ['walking_3_-1.5', '']
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product([wsteps["Walker2d"]], reassess_for, runs): options.append(r)
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2dGRL-v1",
               }
-    L3_W = rl_run(configs, alg, options, rb_load="ddpg-Walker2d_balancing-10000000-1010")
-    L4_W = rl_run(configs, alg, options, load_file="ddpg-Walker2d_balancing-10000000-1010", rb_load="ddpg-Walker2d_balancing-10000000-1010")
+    L3_W = rl_run(configs, alg, options, rb_load=rb_names["Walker2d"])
+    L4_W = rl_run(configs, alg, options, load_file=rb_names["Walker2d"], rb_load=rb_names["Walker2d"])
 
     ####
-    do_multiprocessing_pool(arg_cores, L0_H+L0_C+L0_W)
-    L = L1 + L2_H + L2_C + L2_W + L3_H + L3_C + L3_W + L4_H + L4_C + L4_W
+    #do_multiprocessing_pool(arg_cores, L0_H+L0_C+L0_W)
+    #L = L1_H + L1_C + L1_W + L2_H + L2_C + L2_W + L3_H + L3_C + L3_W + L4_H + L4_C + L4_W
+    L = L1_W + L2_W + L3_W + L4_W
     random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 
