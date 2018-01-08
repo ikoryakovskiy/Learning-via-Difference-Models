@@ -32,13 +32,13 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(3)
+    runs = range(5)
     reassess_for = ['']
 
     #####
     # Curriculum
-    bsteps = {"Hopper": 100, "HalfCheetah": 100, "Walker2d":400}
-    steps = {"Hopper": 500, "HalfCheetah": 500, "Walker2d":1000}
+    bsteps = {"Hopper": 100, "HalfCheetah": 100, "Walker2d":200}
+    steps = {"Hopper": 500, "HalfCheetah": 500, "Walker2d":600}
     rb_names = {}
     for key in bsteps:
         rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
@@ -157,9 +157,9 @@ def main():
     L4_W = rl_run(configs, alg, options, load_file=rb_names["Walker2d"], rb_load=rb_names["Walker2d"])
 
     ####
-    #do_multiprocessing_pool(arg_cores, L0_H+L0_C+L0_W)
+    do_multiprocessing_pool(arg_cores, L0_H+L0_C+L0_W)
     #L = L1_H + L1_C + L1_W + L2_H + L2_C + L2_W + L3_H + L3_C + L3_W + L4_H + L4_C + L4_W
-    L = L1_W + L2_W + L3_W + L4_W
+    L = L1_H + L1_W + L2_H + L2_W + L3_H + L3_W + L4_H + L4_W
     random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 

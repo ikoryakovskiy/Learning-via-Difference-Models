@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+from collections import deque
 import pdb
 
 
@@ -25,7 +25,7 @@ class Evaluator(object):
         if len(items) > 1: rwForward = float(items[1])
         if len(items) > 2: rwTime = float(items[2])
 
-        new_replay_buffer = []
+        new_replay_buffer = deque()
         for e in replay_buffer.replay_buffer:
             r_old = e[2]
             r_new = r_old + rwForward*e[5] + rwTime
@@ -39,7 +39,7 @@ class Evaluator(object):
 
     def reassess(self, replay_buffer, rwForward=300, verify=False,
                    task = 'walking', knee_mode = "punish_and_continue"):
-        new_replay_buffer = []
+        new_replay_buffer = deque()
         for e in replay_buffer.replay_buffer:
             r_old = e[2]
             r_new = self.evaluateExperience(e[0], e[1]*self.max_action,
