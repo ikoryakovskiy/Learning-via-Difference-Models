@@ -38,7 +38,7 @@ def main():
     #####
     # Curriculum
     bsteps = {"Hopper": 100, "HalfCheetah": 100, "Walker2d":200}
-    steps = {"Hopper": 500, "HalfCheetah": 500, "Walker2d":600}
+    steps = {"Hopper": 500, "HalfCheetah": 500, "Walker2d":800}
     rb_names = {}
     for key in bsteps:
         rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
@@ -122,7 +122,7 @@ def main():
     configs = {
                 "Walker2d_walking_after_balancing" : "RoboschoolWalker2dGRL-v1",
               }
-    L2_W = rl_run(configs, alg, options, load_file=rb_names["HalfCheetah"])
+    L2_W = rl_run(configs, alg, options, load_file=rb_names["Walker2d"])
     ####
 
     ####
