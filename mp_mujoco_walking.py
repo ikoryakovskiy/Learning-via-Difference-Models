@@ -32,11 +32,11 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(2)
+    runs = range(5)
     steps = [500]
-    reward_scale = [0.1, 1.0, 10.0, 20.0]
-    normalize_observations = [True, False]
-    layer_norm = [True, False]
+    reward_scale = [1.0]
+    normalize_observations = [False]
+    layer_norm = [True]
     version = [0]
 
     ####
@@ -51,7 +51,7 @@ def main():
     options = []
     for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
     configs = {
-                "Walker2dWalking" : "RoboschoolWalker2d-v1",
+                "Walker2dWalking" : "RoboschoolWalker2dGRL-v1",
               }
     L1 = rl_run(configs, alg, options, rb_save=True)
 
@@ -59,42 +59,12 @@ def main():
     options = []
     for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
     configs = {
-                "HopperWalking" : "RoboschoolHopper-v1",
+                "HopperWalking" : "RoboschoolHopperGRL-v1",
               }
     L2 = rl_run(configs, alg, options, rb_save=True)
 
     ####
-    ####
-    ####
-    layer_norm = [True]
-    version = [1]
-
-    ####
-    options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
-    configs = {
-#                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
-              }
-    L3 = rl_run(configs, alg, options, rb_save=True)
-
-    ####
-    options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
-    configs = {
-                "Walker2dWalking" : "RoboschoolWalker2d-v1",
-              }
-    L4 = rl_run(configs, alg, options, rb_save=True)
-
-    ####
-    options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
-    configs = {
-                "HopperWalking" : "RoboschoolHopper-v1",
-              }
-    L5 = rl_run(configs, alg, options, rb_save=True)
-
-    ####
-    L = L0+L1+L2+L3+L4+L5
+    L = L0+L1+L2
     random.shuffle(L)
     do_multiprocessing_pool(arg_cores, L)
 
