@@ -16,14 +16,15 @@ else:
     task_balancing = ''
 
 args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
+#args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
+
 args['steps'] = 0
 args['trials'] = 11
 args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
-#args['load_file'] = '{}_{}'.format(env.lower(), task.lower())
-args['load_file'] = 'ddpg-Walker2d_walking-80000000-1000-mp1'
+args['load_file'] = 'ddpg-Walker2d_walking_after_balancing-60000000-walking_3_-1.5-1101-mp1'
 args['output'] = '{}_{}_play'.format(env.lower(), task.lower())
 args['render'] = True
 

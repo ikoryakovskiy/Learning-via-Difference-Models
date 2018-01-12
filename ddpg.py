@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from grlgym.envs.grl import Leo
 import argparse
 import time
 import yaml
@@ -30,7 +29,7 @@ def cfg_run(**config):
 def run(cfg, **config):
     # Create envs.
     if os.path.isfile(cfg):
-        #from grlgym.envs.grl import Leo
+        from grlgym.envs.grl import Leo
         env = Leo(cfg)
     else:
         import roboschool
