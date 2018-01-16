@@ -4,8 +4,8 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-env = 'Hopper'
-#env = 'Walker2d'
+#env = 'Hopper'
+env = 'Walker2d'
 #env = 'HalfCheetah'
 #task = 'Balancing'
 task = 'Walking'
@@ -24,8 +24,8 @@ args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
-args['load_file'] = 'ddpg-Hopper_walking-50000000-1000-mp0'
-args['output'] = '{}_{}_play'.format(env.lower(), task.lower())
+args['load_file'] = 'ddpg-Walker2d200_walking_after_balancing-50000000-1100-mp2-best'
+args['output'] = '' #'{}_{}_play'.format(env.lower(), task.lower())
 args['render'] = True
 
 # Run actual script.

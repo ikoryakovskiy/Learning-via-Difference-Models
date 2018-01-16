@@ -37,9 +37,9 @@ def main():
 
     #####
     # Curriculum
-    keys = ("Walker2d50", "Walker2d100", "Walker2d150", "Walker2d200")
-    bsteps = {"Walker2d50":50, "Walker2d100":100, "Walker2d150":150, "Walker2d200":200}
-    steps = {"Walker2d50":700, "Walker2d100":700, "Walker2d150":700, "Walker2d200":700}
+    keys   = ("Walker2d250",     "Walker2d300")
+    bsteps = {"Walker2d250":250, "Walker2d300":300}
+    steps  = {"Walker2d250":750, "Walker2d300":800}
     rb_names = {}
     for key in bsteps:
         rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
@@ -52,7 +52,7 @@ def main():
     options = []
     for r in itertools.product([700], reassess_for, runs): options.append(r)
     configs = {
-                "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
+#                "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
               }
     L1 += rl_run(configs, alg, options)
     #####

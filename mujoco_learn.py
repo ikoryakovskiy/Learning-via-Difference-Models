@@ -4,11 +4,14 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-env = 'Walker2d'
+#env = 'Walker2d'
 #env = 'HalfCheetah'
 #env = 'Hopper'
 #task = 'Balancing'
-task = 'Walking'
+#task = 'Walking'
+
+env = 'Atlas'
+task = 'ForwardWalk'
 
 if task == 'Balancing':
     task_balancing = task
@@ -16,8 +19,9 @@ else:
     task_balancing = ''
 
 #args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
-args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
-args['steps'] = 500000
+#args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
+args['cfg'] = "Roboschool{}-v1".format(env+task)
+args['steps'] = 1000000
 args['test_interval'] = 30
 args['seed'] = 1
 args['rb_max_size'] = args['steps']
