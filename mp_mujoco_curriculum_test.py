@@ -37,9 +37,9 @@ def main():
 
     #####
     # Curriculum
-    keys   = ("Walker2d250",     "Walker2d300")
-    bsteps = {"Walker2d250":250, "Walker2d300":300}
-    steps  = {"Walker2d250":750, "Walker2d300":800}
+    keys   = ("Walker2d100",     "Walker2d150",     "Walker2d200",     "Walker2d250")
+    bsteps = {"Walker2d100":100, "Walker2d150":150, "Walker2d200":200, "Walker2d250":250}
+    steps  = {"Walker2d100":700, "Walker2d150":700, "Walker2d200":700, "Walker2d250":700}
     rb_names = {}
     for key in bsteps:
         rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
@@ -52,7 +52,7 @@ def main():
     options = []
     for r in itertools.product([700], reassess_for, runs): options.append(r)
     configs = {
-#                "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
+                "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
               }
     L1 += rl_run(configs, alg, options)
     #####
@@ -86,10 +86,10 @@ def main():
         L3 += rl_run(configs, alg, options, load_file=rb_names[key], rb_load=rb_names[key])
 
     ####
-    do_multiprocessing_pool(arg_cores, L0)
+    #do_multiprocessing_pool(arg_cores, L0)
     L = L1 + L2 + L3
     random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+    #do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
