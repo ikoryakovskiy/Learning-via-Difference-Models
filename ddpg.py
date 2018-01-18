@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+# GRL should be imported before tensorflow.
+# Otherwise, error : "dlopen: cannot load any more object with static TLS"
+try:
+    from grlgym.envs.grl import Leo
+except ImportError:
+    pass
+
 import argparse
 import time
 import yaml
@@ -29,7 +37,6 @@ def cfg_run(**config):
 def run(cfg, **config):
     # Create envs.
     if os.path.isfile(cfg):
-        from grlgym.envs.grl import Leo
         env = Leo(cfg)
     else:
         import roboschool

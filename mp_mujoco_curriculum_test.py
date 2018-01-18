@@ -86,10 +86,10 @@ def main():
         L3 += rl_run(configs, alg, options, load_file=rb_names[key], rb_load=rb_names[key])
 
     ####
-    #do_multiprocessing_pool(arg_cores, L0)
+    do_multiprocessing_pool(arg_cores, L0)
     L = L1 + L2 + L3
     random.shuffle(L)
-    #do_multiprocessing_pool(arg_cores, L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
