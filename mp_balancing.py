@@ -11,8 +11,6 @@ from datetime import datetime
 
 from ddpg import parse_args, cfg_run
 
-counter_lock = multiprocessing.Lock()
-cores = 0
 random.seed(datetime.now())
 
 # Usage:
@@ -34,7 +32,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(50)
+    runs = range(3)
     steps = [50]
     reassess_for = ['']
 
@@ -42,9 +40,10 @@ def main():
     for r in itertools.product(steps, reassess_for, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/leo_balancing.yaml",
+#                "balancing" : "cfg/leo_balancing.yaml",
+                "balancing_after_crouching" : "cfg/leo_balancing.yaml",
               }
-    L0 = rl_run(configs, alg, options, rb_save=True)
+    L0 = rl_run(configs, alg, options, rb_save=True, load_file="ddpg-crouching-5000000-1010")
     do_multiprocessing_pool(arg_cores, L0)
 
 ######################################################################################
@@ -104,6 +103,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             if rb_load:
                 args['rb_load_filename'] = "{}-mp{}".format(rb_load, o[-1])
 
+            # Threads start at the same time, to prevent this we specify seed in the configuration
+            args['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
             with io.open(list_of_new_cfgs[-1], 'w', encoding='utf8') as file:
                 yaml.dump(args, file, default_flow_style=False, allow_unicode=True)
 
@@ -113,38 +114,31 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 
 ######################################################################################
 def mp_run(cfg):
-    # Multiple copies can be run on one computer at the same time, which results in the same seed for a random generator.
-    # Thus we need to wait for a second or so between runs
-    global counter
-    global cores
-    with counter_lock:
-        wait = counter.value
-        counter.value += 2
-    sleep(wait)
-    print('wait finished {0}'.format(wait))
-    # Run the experiment
-    with open(cfg, 'r') as file:
+    print('mp_run of {}'.format(cfg))
+    # Read configuration
+    try:
+        file = open(cfg, 'r')
+    except IOError:
+        print("Could not read file: {}".format(cfg))
+        sys.exit()
+    with file:
         args = yaml.load(file)
-    cfg_run(**args)
 
-
-######################################################################################
-def init(cnt, num):
-    """ store the counter for later use """
-    global counter
-    global cores
-    counter = cnt
-    cores = num
+    # Run the experiment
+    try:
+        cfg_run(**args)
+    except Exception:
+        print('mp_run {} failid to exit correctly'.format(cfg))
+        sys.exit()
 
 
 ######################################################################################
 def do_multiprocessing_pool(arg_cores, list_of_new_cfgs):
     """Do multiprocesing"""
-    counter = multiprocessing.Value('i', 0)
     cores = multiprocessing.Value('i', arg_cores)
     print('cores {0}'.format(cores.value))
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-    pool = multiprocessing.Pool(arg_cores, initializer = init, initargs = (counter, cores))
+    pool = multiprocessing.Pool(arg_cores)
     signal.signal(signal.SIGINT, original_sigint_handler)
     try:
         pool.map(mp_run, list_of_new_cfgs)

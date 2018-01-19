@@ -35,11 +35,17 @@ def main():
     runs = range(10)
     reassess_for = ['']
 
+    env = 'Walker2d2'
+    e100 = "{}100".format(env)
+    e150 = "{}150".format(env)
+    e200 = "{}200".format(env)
+    e250 = "{}250".format(env)
+
     #####
     # Curriculum
-    keys   = ("Walker2d100",     "Walker2d150",     "Walker2d200",     "Walker2d250")
-    bsteps = {"Walker2d100":100, "Walker2d150":150, "Walker2d200":200, "Walker2d250":250}
-    steps  = {"Walker2d100":700, "Walker2d150":700, "Walker2d200":700, "Walker2d250":700}
+    keys   = (e100,     e150,     e200,     e250)
+    bsteps = {e100:100, e150:150, e200:200, e250:250}
+    steps  = {e100:700, e150:700, e200:700, e250:700}
     rb_names = {}
     for key in bsteps:
         rb_names[key] = "ddpg-{}_balancing-{:06d}-1010".format(key, int(round(100000*bsteps[key])))
@@ -52,7 +58,7 @@ def main():
     options = []
     for r in itertools.product([700], reassess_for, runs): options.append(r)
     configs = {
-                "Walker2d_walking" : "RoboschoolWalker2dGRL-v1",
+                "{}_walking".format(env) : "Roboschool{}GRL-v1".format(env),
               }
     L1 += rl_run(configs, alg, options)
     #####
@@ -63,7 +69,7 @@ def main():
         for r in itertools.product([bsteps[key]], reassess_for, runs): options.append(r)
 
         configs = {
-                    "{}_balancing".format(key) : "RoboschoolWalker2dBalancingGRL-v1",
+                    "{}_balancing".format(key) : "Roboschool{}BalancingGRL-v1".format(env),
                   }
         L0 += rl_run(configs, alg, options, rb_save=True)
         ####
@@ -72,7 +78,7 @@ def main():
         options = []
         for r in itertools.product([wsteps[key]], reassess_for, runs): options.append(r)
         configs = {
-                    "{}_walking_after_balancing".format(key) : "RoboschoolWalker2dGRL-v1",
+                    "{}_walking_after_balancing".format(key) : "Roboschool{}GRL-v1".format(env),
                   }
         L2 += rl_run(configs, alg, options, load_file=rb_names[key])
         ####
@@ -81,7 +87,7 @@ def main():
         options = []
         for r in itertools.product([wsteps[key]], reassess_for, runs): options.append(r)
         configs = {
-                    "{}_walking_after_balancing".format(key) : "RoboschoolWalker2dGRL-v1",
+                    "{}_walking_after_balancing".format(key) : "Roboschool{}GRL-v1".format(env),
                   }
         L3 += rl_run(configs, alg, options, load_file=rb_names[key], rb_load=rb_names[key])
 
