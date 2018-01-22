@@ -25,7 +25,7 @@ args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['layer_norm'] = True
-args['load_file'] = 'ddpg-Walker2d_walking-80000000-1000-mp0'
+args['load_file'] = 'ddpg-Walker2d2250_walking_after_balancing-45000000-1100-mp0'
 args['output'] = '' #'{}_{}_play'.format(env.lower(), task.lower())
 args['render'] = True
 

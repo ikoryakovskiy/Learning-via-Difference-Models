@@ -13,15 +13,17 @@ from assessment import Evaluator
 from ExplorationNoise import ExplorationNoise
 from actor import ActorNetwork
 from critic import CriticNetwork
+from cl_network import CurriculumNetwork
 import random
-import pdb
 from running_mean_std import RunningMeanStd
 import json
+import pdb
+
 
 # ===========================
 # Policy saving and loading
 # ===========================
-def preload_policy(sess, saver, config):
+def load_policy(sess, config):
     suffixes = ['', '-best', '-last']
     loaded = False
     if config["load_file"]:
@@ -31,21 +33,24 @@ def preload_policy(sess, saver, config):
             load_file = "{}/{}".format(path, load_file)
             meta_file = "{}.meta".format(load_file)
             if os.path.isfile(meta_file):
+                var_all = tf.trainable_variables()
+                var_this = [v for v in var_all if not 'curriculum' in v.name]
+                saver = tf.train.Saver(var_this)
                 saver.restore(sess, load_file)
                 print("Loaded NN from {}".format(meta_file))
                 loaded = True
                 break
         if not loaded:
             print("Not a valid path")
-            sess.run(tf.global_variables_initializer())
-    else:
-        sess.run(tf.global_variables_initializer())
     return sess
 
 
-def save(sess, saver, config, suffix = "", global_step = None):
-    saver.save(sess, "./{}{}".format(config["output"], suffix), global_step)
-
+def save_policy(sess, config, suffix = "", global_step = None):
+    if config["output"]:
+        var_all = tf.trainable_variables()
+        var_this = [v for v in var_all if not 'curriculum' in v.name]
+        saver = tf.train.Saver(var_this)
+        saver.save(sess, "./{}{}".format(config["output"], suffix), global_step)
 
 # ===========================
 # Helper function
@@ -88,7 +93,7 @@ def obs_normalize(obs, obs_rms, obs_range, o_dims, normalize_observations):
 # ===========================
 #   Agent Training
 # ===========================
-def train(env, ddpg, actor, critic, **config):
+def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None, **config):
 
     print("Noise: {} and {}".format(config["ou_sigma"], config["ou_theta"]))
     print("Actor learning rate {}".format(config["actor_lr"]))
@@ -104,14 +109,19 @@ def train(env, ddpg, actor, critic, **config):
             x = np.array(params[1:]).astype(np.float)
             c = {'var': params[0], 'gen': cur_gen(config["steps"], x)}
             curriculums.append(c)
-#    pdb.set_trace()
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
-    with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
-        saver = tf.train.Saver()
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
+    with tf.Session(graph=ddpg_graph, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+
+        # random initialization of variables
+        sess.run(tf.global_variables_initializer())
+
+        # load curriculum neural network weights (provided parametes have priority)
+        if cl_nn:
+            sess = cl_nn.load(sess, config["cl_load"])
 
         # Check if a policy needs to be loaded
-        sess = preload_policy(sess, saver, config)
+        sess = load_policy(sess, config)
 
         # Initialize target network weights
         actor.update_target_network(sess)
@@ -129,6 +139,13 @@ def train(env, ddpg, actor, critic, **config):
             obs_rms = RunningMeanStd(shape=env.observation_space.shape)
         else:
             obs_rms = None
+
+        # decide mode
+        cl_mode_new = None
+        if config['cl_on']:
+            v = pt.flatten()
+            cl_mode_new = cl_nn.predict(sess, v)
+            #cl_nn.get_params(sess)
 
         # Initialize constants for exploration noise
         ou_sigma = config["ou_sigma"]
@@ -149,7 +166,10 @@ def train(env, ddpg, actor, critic, **config):
         tt = 0
         ss = 0
         terminal = 0
+        terminal_info = None
+        prev_falls = 0
         ti = config["test_interval"]
+        test_returns = []
 
         # rewarding object if rewards in replay buffer are to be recalculated
         replay_buffer.load()
@@ -170,7 +190,8 @@ def train(env, ddpg, actor, critic, **config):
 
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
-              (config["steps"]  == 0 or ss < config["steps"]):
+              (config["steps"]  == 0 or ss < config["steps"]) and \
+              (cl_mode_new == cl_mode or not config['cl_on']):
 
             # Compute OU noise and action
             if not test:
@@ -179,7 +200,7 @@ def train(env, ddpg, actor, critic, **config):
             action = compute_action(sess, actor, obs[:o_dims], noise, test) # from [-1; 1]
 
             # obtain observation of a state
-            next_obs, reward, terminal, _ = env.step(action*max_action)
+            next_obs, reward, terminal, info = env.step(action*max_action)
             next_obs = obs_normalize(next_obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
             reward *= config['reward_scale']
@@ -233,11 +254,21 @@ def train(env, ddpg, actor, critic, **config):
                     .format(tt, ss, trial_return, max_trial_return, terminal)
                 print("{}".format(msg))
 
+                # update PerformanceTracker
+                if cl_nn:
+                    s = info.split()
+                    # convert number of falls into a relative value
+                    damage = (float(s[1]) - prev_falls) / ti
+                    pt.add([trial_return, float(s[0]), damage]) # return, duration, damage
+                    v = pt.flatten()
+                    cl_mode_new = cl_nn.predict(sess, v)
+                    prev_falls = float(s[1])
+                test_returns.append(trial_return)
+
             # Save NN if performance is better then before
             if terminal and config['save'] and trial_return > max_trial_return:
-#                pdb.set_trace()
                 max_trial_return = trial_return
-                save(sess, saver, config, suffix="-best")
+                save_policy(sess, config, suffix="-best")
 
             if not test:
                 ss = ss + 1
@@ -248,7 +279,6 @@ def train(env, ddpg, actor, critic, **config):
                         env.reconfigure(d)
 
             if terminal:
-#                pdb.set_trace()
                 tt += 1
                 test = (ti>=0 and tt%(ti+1) == ti)
                 obs = env.reset(test=test)
@@ -257,7 +287,7 @@ def train(env, ddpg, actor, critic, **config):
                 terminal = 0
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
-
+                terminal_info = info
 
         # verify replay_buffer
         #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])
@@ -265,7 +295,7 @@ def train(env, ddpg, actor, critic, **config):
         # Save the last episode policy
         if config['save']:
             suffix="-last"
-            save(sess, saver, config, suffix=suffix)
+            save_policy(sess, config, suffix=suffix)
             if config["normalize_observations"]:
                 with open(config["output"]+suffix+'.obs_rms', 'w') as f:
                     data = {'count': obs_rms.count, 'mean': obs_rms.mean.tolist(), 'std': obs_rms.std.tolist(), 'var': obs_rms.var.tolist()}
@@ -273,8 +303,20 @@ def train(env, ddpg, actor, critic, **config):
 
         replay_buffer.save()
 
+        # save curriculum network
+        if cl_nn:
+            cl_nn.save(sess, config["cl_save"])
 
-def start(env, **config):
+        # extract damage from the last step
+        damage = 0
+        if terminal_info:
+            s = terminal_info.split()
+            damage = float(s[1])
+
+    return (test_returns, damage, ss, cl_mode_new)
+
+
+def start(env, pt=None, cl_mode=None, **config):
 
     # Initialize the actor, critic and difference networks
     with tf.Graph().as_default() as ddpg:
@@ -297,4 +339,9 @@ def start(env, **config):
             dir_path = os.path.dirname(os.path.realpath(__file__))
             tf.summary.FileWriter(dir_path, ddpg)
 
-        train(env, ddpg, actor, critic, **config)
+        # create curriculum switching network
+        cl_nn = None
+        if config["cl_on"]:
+            cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config)
+
+    return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)

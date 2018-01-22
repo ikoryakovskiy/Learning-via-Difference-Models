@@ -61,8 +61,9 @@ class MyMonitor(Monitor):
                 line = "{:15d}{:15.5f}{:15d}".format(self.total_steps, eprew, done)
             epinfo = {"steps-reward-terminal-info": line}
             epinfo.update(self.current_reset_info)
-            log_ok = (self.test and (self.report=='test' or self.report=='all')) or \
-                     (not self.test and (self.report=='learn' or self.report=='all'))
+            #log_ok = (self.test and (self.report=='test' or self.report=='all')) or \
+            #         (not self.test and (self.report=='learn' or self.report=='all'))
+            log_ok = self.test
             if self.logger and log_ok:
                 self.logger.writerow(epinfo)
                 self.f.flush()

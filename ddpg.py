@@ -66,6 +66,18 @@ def parse_args():
     parser.add_argument('--curriculum', type=str, default='')
     boolean_flag(parser,  'render', default=False)
 
+    # Curriculum
+    boolean_flag(parser,  'cl-on', default=False)
+    parser.add_argument('--cl-load', type=str, default='')
+    #parser.add_argument('--cl-provided', type=str, default=None)
+    parser.add_argument('--cl-structure', type=str, default='relu_3;tanh_1')
+    parser.add_argument('--cl-l2-reg', type=float, default=0.001)
+    parser.add_argument('--cl-lr', type=float, default=0.001)
+    boolean_flag(parser,  'cl-layer-norm', default=False)
+    boolean_flag(parser,  'cl-input-norm', default=True)
+    parser.add_argument('--cl-save', type=str, default='')
+
+
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
     boolean_flag(parser,  'layer-norm', default=True)

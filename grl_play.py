@@ -5,8 +5,8 @@ from ddpg import parse_args, cfg_run
 args = parse_args()
 
 env = 'leo'
-#task = 'walking'
-task = 'balancing'
+task = 'walking'
+#task = 'balancing'
 #task = 'crouching'
 
 args['cfg'] = 'cfg/{}_{}_play.yaml'.format(env, task)
@@ -20,7 +20,7 @@ args['output'] = '{}_{}_play'.format(env, task)
 #args['load_file'] = '{}_{}'.format(env, task)
 #args['load_file'] = 'ddpg-balancing_after_crouching-5000000-1110-mp2'
 #args['load_file'] = 'ddpg-crouching-5000000-1010-mp2'
-args['load_file'] = 'ddpg-balancing-5000000-1010-mp0'
+args['load_file'] = 'ddpg-walking_after_balancing_after_crouching-25000000-1100-mp2'
 
 # Run actual script.
 args['save'] = False
