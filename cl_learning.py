@@ -74,15 +74,15 @@ def main():
             mp_cfgs.append( (cpy_args, tasks, starting_task) )
 
         # evaluating
-        #damage_info = do_multiprocessing_pool(arg_cores, mp_cfgs)
-        #damage, info = zip(*damage_info)
-        config, tasks, starting_task = mp_cfgs[0]
-        (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
-        config, tasks, starting_task = mp_cfgs[1]
-        (damage1, cl_info1) = cl_run(tasks, starting_task, **config)
-        damage = [damage0, damage1]
-        info = [cl_info0, cl_info1]
-        damage_info = zip(damage, info)
+        damage_info = do_multiprocessing_pool(arg_cores, mp_cfgs)
+        damage, info = zip(*damage_info)
+#        config, tasks, starting_task = mp_cfgs[0]
+#        (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
+#        config, tasks, starting_task = mp_cfgs[1]
+#        (damage1, cl_info1) = cl_run(tasks, starting_task, **config)
+#        damage = [damage0, damage1]
+#        info = [cl_info0, cl_info1]
+#        damage_info = zip(damage, info)
 
         # update cma
         es.tell(solutions, damage)
