@@ -33,11 +33,12 @@ def main():
 
     # Parameters
     runs = range(10)
+    rb_min_size = [64, 1000, 5000, 10000, 15000, 20000]
     steps = [50]
     reassess_for = ['']
 
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
 
     configs = {
                 "balancing" : "cfg/leo_balancing.yaml",
@@ -47,20 +48,18 @@ def main():
     ## Zero-shot walking
     steps = [300]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
                 "walking" : "cfg/leo_walking.yaml",
-    #            "curriculum" : "cfg/rbdl_py_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
     ## Only neural network without replay buffer
     steps = [250]
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
                 "walking_after_balancing" : "cfg/leo_walking.yaml",
-    #            "curriculum_after_balancing" : "cfg/leo_walking.yaml",
               }
     L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010")
 
@@ -68,10 +67,9 @@ def main():
     steps = [250]
     reassess_for = ['walking', '']
     options = []
-    for r in itertools.product(steps, reassess_for, runs): options.append(r)
+    for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
-    #            "curriculum_after_balancing" : "cfg/leo_walking.yaml",
+#                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
     L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
     L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
@@ -122,7 +120,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
-            args['reassess_for'] = o[1]
+            args['rb_min_size'] = o[1]
+            args['reassess_for'] = o[2]
             args['save'] = save
 
             if 'curriculum' in key:
