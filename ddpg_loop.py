@@ -170,6 +170,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         prev_falls = 0
         ti = config["test_interval"]
         test_returns = []
+        avg_test_return = config['reach_reward']
 
         # rewarding object if rewards in replay buffer are to be recalculated
         replay_buffer.load()
@@ -191,7 +192,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
               (config["steps"]  == 0 or ss < config["steps"]) and \
-              (cl_mode_new == cl_mode or not config['cl_on']):
+              (not config['cl_on']   or cl_mode_new == cl_mode ) and \
+              (not config['reach_reward'] or avg_test_return <= config['reach_reward']):
 
             # Compute OU noise and action
             if not test:
@@ -263,7 +265,10 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     v = pt.flatten()
                     cl_mode_new = cl_nn.predict(sess, v)
                     prev_falls = float(s[1])
+
+                # check if performance is satisfactory
                 test_returns.append(trial_return)
+                avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
 
             # Save NN if performance is better then before
             if terminal and config['save'] and trial_return > max_trial_return:
@@ -313,7 +318,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             s = terminal_info.split()
             damage = float(s[1])
 
-    return (test_returns, damage, ss, cl_mode_new)
+    return (avg_test_return, damage, ss, cl_mode_new)
 
 
 def start(env, pt=None, cl_mode=None, **config):
