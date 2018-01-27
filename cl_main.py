@@ -13,26 +13,26 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 from ddpg_loop import start
 from my_monitor import MyMonitor
-import numpy as np
 from ptracker import PerformanceTracker
 
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
+    assert(base_cfg['reach_reward'])
 
     #return 1.5
 
     ss = 0
     stage_counter = 0
     prev_config = None
-    returns = []
     damage = 0
     env = None
     pt = PerformanceTracker(base_cfg["cl_input_norm"])
 
     cl_info = ''
+    avg_test_return = base_cfg['reach_reward']
 
-    while ss < base_cfg["steps"]:
+    while ss < base_cfg["steps"] and avg_test_return <= base_cfg['reach_reward']:
         stage = '-{:02d}_'.format(stage_counter) + cl_mode
         config = base_cfg.copy() # Dicts are mutable
 
@@ -62,9 +62,8 @@ def cl_run(tasks, cl_mode, **base_cfg):
         cl_info += cl_mode + ' '
 
         # run the stage
-        test_returns_new, damage_new, ss_new, cl_mode = start(env=env, pt=pt, cl_mode=cl_mode, **config)
+        avg_test_return, damage_new, ss_new, cl_mode = start(env=env, pt=pt, cl_mode=cl_mode, **config)
 
-        returns = returns + test_returns_new
         damage += damage_new
         ss += ss_new
         prev_config = config.copy() # Dicts are mutable
@@ -75,14 +74,10 @@ def cl_run(tasks, cl_mode, **base_cfg):
         env.close()
 
     # calculate final performance
-    # take last 10 returns, if possible
-    ret_num = len(returns)
-    avg_return = np.mean(returns[max([0, ret_num-10]):])
-    walking_lower_bound_return = 1417.4435728893145
-    walking_avg_damage = 6571.057853432745
+    walking_avg_damage = 6003.09
 
     print(base_cfg['output'] + ' finished!')
-    if avg_return > walking_lower_bound_return:
+    if avg_test_return > base_cfg['reach_reward']:
         return (damage, cl_info)
     else:
         return (max([walking_avg_damage, damage]), cl_info)

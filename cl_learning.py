@@ -28,8 +28,12 @@ def main():
     # important defaults
     args['cl_on'] = True
     args['steps'] = 300000
-    #args['seed']  = 0
+    args['reach_reward'] = 1422.66
     popsize = None
+
+    #args['steps'] = 2000
+    #args['seed']  = 0
+    #popsize = 2
 
     # Parameters
     starting_task = 'balancing'
@@ -60,35 +64,38 @@ def main():
     es = cma.CMAEvolutionStrategy(init, 0.5, cma_inopts)
 
     g = 1
-    while not es.stop() or g <= 10:
+    while not es.stop() or g <= 1000:
         solutions = es.ask()
 
         # preparation
         mp_cfgs = []
         for run, solution in enumerate(solutions):
             cpy_args = args.copy()
-            cpy_args['output']  = '{}/{}-g{:02}-mp{}'.format(root, alg, g, run)
-            cpy_args['cl_save'] = '{}/{}-nn-g{:02}-mp{}'.format(root, alg, g, run)
-            cpy_args['cl_load'] = '{}/{}-nn-g{:02}-mp{}'.format(root, alg, g-1, run)
+            cpy_args['output']  = '{}/{}-g{:04}-mp{}'.format(root, alg, g, run)
+            cpy_args['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(root, alg, g, run)
+            cpy_args['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(root, alg, g-1, run)
             np.save(cpy_args['cl_load'], solution)
             mp_cfgs.append( (cpy_args, tasks, starting_task) )
 
         # evaluating
-        damage_info = do_multiprocessing_pool(arg_cores, mp_cfgs)
-        damage, info = zip(*damage_info)
-#        config, tasks, starting_task = mp_cfgs[0]
-#        (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
-#        config, tasks, starting_task = mp_cfgs[1]
-#        (damage1, cl_info1) = cl_run(tasks, starting_task, **config)
-#        damage = [damage0, damage1]
-#        info = [cl_info0, cl_info1]
-#        damage_info = zip(damage, info)
+        if popsize != 2:
+            damage_info = do_multiprocessing_pool(arg_cores, mp_cfgs)
+            damage, info = zip(*damage_info)
+        else:
+            # for debug purpose
+            config, tasks, starting_task = mp_cfgs[0]
+            (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
+            config, tasks, starting_task = mp_cfgs[1]
+            (damage1, cl_info1) = cl_run(tasks, starting_task, **config)
+            damage = [damage0, damage1]
+            info = [cl_info0, cl_info1]
+            damage_info = zip(damage, info)
 
         # update cma
         es.tell(solutions, damage)
         es.logger.add()
         res = es.result_pretty()
-        with open('{}/{}-g{:02}.txt'.format(root, alg, g), 'w') as f:
+        with open('{}/{}-g{:04}.txt'.format(root, alg, g), 'w') as f:
             f.write(str(res.fbest)+'\n')
             f.write(str(res.xbest)+'\n')
             f.write(str(res.xfavorite)+'\n')

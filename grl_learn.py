@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from ddpg import parse_args, cfg_run
-
+'''
 args = parse_args()
 
 env = 'leo'
@@ -27,11 +27,11 @@ args['output'] = '{}_{}'.format(env, task)
 
 '''
 import yaml
-with open('tmp/ddpg-HopperWalking-50000000-010000-000000-000000-000000-1010-mp0.yaml', 'r') as file:
+with open('tmp/ddpg-balancing-5000000-6400000-1010-mp0.yaml', 'r') as file:
     args = yaml.load(file)
 args['seed'] = 1
 #args['steps'] = 500
-'''
+
 
 # Run actual script.
 args['save'] = True
