@@ -83,7 +83,8 @@ RUN pip3 --no-cache-dir install \
         h5py \
         tflearn \
         pyyaml \
-        pyopengl
+        pyopengl \
+        cma
 
 # Install OpenAI Baselines
 ADD https://api.github.com/repos/ikoryakovskiy/baselines/git/refs/heads/master version.json
