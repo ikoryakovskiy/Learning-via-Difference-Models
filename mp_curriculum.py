@@ -41,7 +41,7 @@ def main():
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
 
     configs = {
-                "balancing" : "cfg/leo_balancing.yaml",
+#                "balancing" : "cfg/leo_balancing.yaml",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
@@ -50,7 +50,7 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking" : "cfg/leo_walking.yaml",
+#                "walking" : "cfg/leo_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
@@ -61,24 +61,24 @@ def main():
     configs = {
                 "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
-    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010")
+    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010")
 
     ## Replay buffer
     steps = [250]
-    reassess_for = ['walking', '']
+    reassess_for = [''] #['walking', '']
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-#                "walking_after_balancing" : "cfg/leo_walking.yaml",
+                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
-    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-1010")
-    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-1010", rb_load="ddpg-balancing-5000000-1010")
+    L3 = [] #rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-{}-1010")
+    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010", rb_load="ddpg-balancing-5000000-{}-1010")
 
     # Execute learning
-    do_multiprocessing_pool(arg_cores, L0)
+    #do_multiprocessing_pool(arg_cores, L0)
     L = L1+L2+L3+L4
     random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+    #do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
@@ -121,6 +121,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             args['cfg'] = cfg
             args['steps'] = o[0]*1000
             args['rb_min_size'] = o[1]
+            str_rb_min_size = "{:06d}".format(int(round(100000*o[1])))
             args['reassess_for'] = o[2]
             args['save'] = save
 
@@ -128,7 +129,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
                 args['curriculum'] = 'rwForward_50_300_10'
 
             if load_file:
-                args['load_file'] = "{}-mp{}".format(load_file, o[-1])
+                load_file_with_rb = load_file.format(str_rb_min_size)
+                args['load_file'] = "{}-mp{}".format(load_file_with_rb, o[-1])
 
             args['output'] = "{}-{}-{}".format(alg, key, str_o)
 
@@ -136,7 +138,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
                 args['rb_save_filename'] = args['output']
 
             if rb_load:
-                args['rb_load_filename'] = "{}-mp{}".format(rb_load, o[-1])
+                rb_load_with_rb = rb_load.format(str_rb_min_size)
+                args['rb_load_filename'] = "{}-mp{}".format(rb_load_with_rb, o[-1])
 
             # Threads start at the same time, to prevent this we specify seed in the configuration
             args['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
