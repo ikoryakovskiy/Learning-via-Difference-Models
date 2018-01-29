@@ -41,6 +41,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
         config['output']  = base_cfg['output']  + stage
         config['save']    = base_cfg['output']  + stage
         config['cl_save'] = base_cfg['cl_save'] + stage
+        config['rb_save_filename'] = base_cfg['output']  + stage
         if config['seed'] == None:
             config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
 
@@ -55,6 +56,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if prev_config:
             config['cl_load'] = prev_config['cl_save']
             config['load_file'] = prev_config['output']
+            config['rb_load_filename'] = prev_config['rb_save_filename']
 
         if cl_mode == 'walking':
             config['cl_on'] = False # forbid loading curriculum
@@ -74,7 +76,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
         env.close()
 
     # calculate final performance
-    walking_avg_damage = 6003.09
+    walking_avg_damage = 4035.00
 
     print(base_cfg['output'] + ' finished!')
     if avg_test_return > base_cfg['reach_reward']:

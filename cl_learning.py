@@ -27,13 +27,17 @@ def main():
 
     # important defaults
     args['cl_on'] = True
-    args['steps'] = 300000
+    args['rb_min_size'] = 500
     args['reach_reward'] = 1422.66
+    args['steps'] = 300000
     popsize = None
+    G = 1000
 
-    #args['steps'] = 2000
-    #args['seed']  = 0
-    #popsize = 2
+
+#    args['steps'] = 1000
+#    args['seed']  = 0
+#    popsize = 2
+#    G = 1
 
     # Parameters
     starting_task = 'balancing'
@@ -64,7 +68,7 @@ def main():
     es = cma.CMAEvolutionStrategy(init, 0.5, cma_inopts)
 
     g = 1
-    while not es.stop() or g <= 1000:
+    while not es.stop() and g <= G:
         solutions = es.ask()
 
         # preparation
@@ -102,13 +106,15 @@ def main():
             f.write(str(res.stds)+'\n\n')
             for di in damage_info:
                 f.write(str(di)+'\n')
+
+        with open('{}/cmaes.pkl'.format(root), 'wb') as output:
+            pickle.dump(es, output, pickle.HIGHEST_PROTOCOL)
+
         # new iteration
         g += 1
 
     print(es.result_pretty())
 
-    with open('{}/cmaes.pkl'.format(root), 'wb') as output:
-        pickle.dump(es, output, pickle.HIGHEST_PROTOCOL)
 
 
 ######################################################################################

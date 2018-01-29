@@ -8,6 +8,7 @@ from collections import deque
 import random
 import numpy as np
 import pickle
+import os
 
 class ReplayBuffer(object):
     def __init__(self, config, o_dims = None):
@@ -66,7 +67,7 @@ class ReplayBuffer(object):
 
     def load(self):
         """ Load experiences """
-        if self.load_filename:
+        if self.load_filename and os.path.isfile(self.load_filename + '.db'):
             with open(self.load_filename + '.db', 'rb') as f:
                 self.replay_buffer = pickle.load(f)
                 f.close()
