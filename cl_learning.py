@@ -27,11 +27,11 @@ def main():
 
     # important defaults
     args['cl_on'] = True
-    args['rb_min_size'] = 500
+    args['rb_min_size'] = 1000
     args['reach_reward'] = 1422.66
     args['steps'] = 300000
     popsize = None
-    G = 1000
+    G = 500
 
 
 #    args['steps'] = 1000
