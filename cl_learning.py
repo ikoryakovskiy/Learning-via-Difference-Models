@@ -6,7 +6,6 @@ import random
 from datetime import datetime
 import os
 import cma
-import pickle
 import numpy as np
 
 from ptracker import PerformanceTracker
@@ -14,6 +13,120 @@ from cl_main import cl_run
 from ddpg import parse_args
 
 random.seed(datetime.now())
+
+class MyNoiseHandler(cma.NoiseHandler):
+    def reeval(self, X, fit, helper, ask, args=()):
+        """store two fitness lists, `fit` and ``fitre`` reevaluating some
+        solutions in `X`.
+        ``self.evaluations`` evaluations are done for each reevaluated
+        fitness value.
+        See `__call__`, where `reeval` is called.
+
+        """
+        self.fit = list(fit)
+        self.fitre = list(fit)
+        self.idx = self.indices(fit)
+        if not len(self.idx):
+            return self.idx
+        evals = int(self.evaluations) if self.f_aggregate else 1
+        fagg = np.median if self.f_aggregate is None else self.f_aggregate
+        mp_cfgs = []
+        self.mp_idxs = []
+        g = args[0]
+        begin = args[1]
+
+        for i in self.idx:
+            X_i = X[i]
+            if self.epsilon:
+                if self.parallel:
+                    cfgs = helper.reeval_cfgs(ask(evals, X_i, self.epsilon), g, begin)
+                    for j in range(len(cfgs)):
+                        mp_cfgs.append(cfgs[j])
+                        self.mp_idxs.append(i)
+                    begin += len(cfgs)
+                else:
+                    raise Exception('This value of self.parallel is not supported')
+            else:
+                raise Exception('This value of self.epsilon is not supported')
+
+        # resample function
+        damage = helper.run(mp_cfgs, reeval=True) # damage follows the order of mp_cfgs and mp_idxs
+
+        # calculate median value for all
+        for i in self.idx:
+            damage_of_index = [damage[j] for j, x in enumerate(self.mp_idxs) if x == i]
+            self.fitre[i] = fagg(damage_of_index)
+
+        self.evaluations_just_done = evals * len(self.idx)
+        return self.fit, self.fitre, self.idx
+
+    def print(self):
+        return 'alphasigma = {:0.5f}, evaluations = {:0.5f}'.format(self.alphasigma, self.evaluations)
+
+
+class Helper(object):
+    def __init__(self, base_cfg, root, alg, tasks, starting_task, arg_cores, use_mp=True):
+        self.base_cfg = base_cfg
+        self.root = root
+        self.alg = alg
+        self.tasks = tasks
+        self.starting_task = starting_task
+        self.arg_cores = arg_cores
+        self.use_mp = use_mp
+
+    def gen_cfg(self, solutions, g, begin=0):
+        mp_cfgs = []
+        for run, solution in enumerate(solutions):
+            cpy_cfg = self.base_cfg.copy()
+            cpy_cfg['output']  = '{}/{}-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
+            cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
+            cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, begin+run)
+            np.save(cpy_cfg['cl_load'], solution)
+            mp_cfgs.append( (cpy_cfg, self.tasks, self.starting_task) )
+        return mp_cfgs
+
+    def run(self, mp_cfgs, reeval=False):
+        if self.use_mp:
+            damage_info = do_multiprocessing_pool(self.arg_cores, mp_cfgs)
+            damage, info = zip(*damage_info)
+        else:
+            # for debug purpose
+            damage, info = [], []
+            for cfg in mp_cfgs:
+                config, tasks, starting_task = cfg
+                (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
+                damage.append(damage0)
+                info.append(cl_info0)
+            damage_info = zip(damage, info)
+
+        if not reeval:
+            self.damage_info = list(damage_info).copy()
+        else:
+            self.reeval_damage_info = list(damage_info).copy()
+        return damage
+
+
+    def reeval_cfgs(self, solutions, g, begin):
+        mp_cfgs = self.gen_cfg(solutions, g, begin)
+        return mp_cfgs
+
+
+    def log(self, g, cma_res, nh = None):
+        with open('{}/{}-g{:04}.txt'.format(self.root, self.alg, g), 'w') as f:
+            f.write(str(cma_res.fbest)+'\n')
+            f.write(str(cma_res.xbest)+'\n')
+            f.write(str(cma_res.xfavorite)+'\n')
+            f.write(str(cma_res.stds)+'\n\n')
+
+            for i, di in enumerate(self.damage_info):
+                f.write('{:2d}'.format(i).rjust(3) + ': ' +  str(di) + '\n')
+
+            if nh:
+                f.write('\n')
+                for i, di in enumerate(self.reeval_damage_info):
+                    f.write('{:2d}'.format(nh.mp_idxs[i]).rjust(3) + ': ' +  str(di) + '\n')
+                f.write('\n' + nh.print() + '\n')
+
 
 def main():
     alg = 'ddpg'
@@ -31,13 +144,16 @@ def main():
     args['reach_reward'] = 1422.66
     args['steps'] = 300000
     popsize = None
-    G = 500
-
+    G = 250
+    use_mp = True
+    reeval = True
 
 #    args['steps'] = 1000
 #    args['seed']  = 0
-#    popsize = 2
-#    G = 1
+#    #popsize = 2
+#    G = 300
+#    use_mp = False
+#    #reeval = False
 
     # Parameters
     starting_task = 'balancing'
@@ -65,56 +181,40 @@ def main():
         cma_inopts['seed'] = args['seed'] + 1 # cma treats 0 as a random seed
     cma_inopts['popsize'] = popsize
     init = [0] * w_num
-    es = cma.CMAEvolutionStrategy(init, 0.5, cma_inopts)
+    es = cma.CMAEvolutionStrategy(init, 1, cma_inopts)
+    nh = MyNoiseHandler(es.N, maxevals=[0, 2, 5], parallel=True, aggregate=np.mean)
+
+    logger = cma.CMADataLogger().register(es)
+
+    hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
     g = 1
     while not es.stop() and g <= G:
         solutions = es.ask()
 
         # preparation
-        mp_cfgs = []
-        for run, solution in enumerate(solutions):
-            cpy_args = args.copy()
-            cpy_args['output']  = '{}/{}-g{:04}-mp{}'.format(root, alg, g, run)
-            cpy_args['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(root, alg, g, run)
-            cpy_args['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(root, alg, g-1, run)
-            np.save(cpy_args['cl_load'], solution)
-            mp_cfgs.append( (cpy_args, tasks, starting_task) )
+        mp_cfgs = hp.gen_cfg(solutions, g)
 
         # evaluating
-        if popsize != 2:
-            damage_info = do_multiprocessing_pool(arg_cores, mp_cfgs)
-            damage, info = zip(*damage_info)
-        else:
-            # for debug purpose
-            config, tasks, starting_task = mp_cfgs[0]
-            (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
-            config, tasks, starting_task = mp_cfgs[1]
-            (damage1, cl_info1) = cl_run(tasks, starting_task, **config)
-            damage = [damage0, damage1]
-            info = [cl_info0, cl_info1]
-            damage_info = zip(damage, info)
+        damage = hp.run(mp_cfgs)
 
         # update cma
         es.tell(solutions, damage)
-        es.logger.add()
-        res = es.result_pretty()
-        with open('{}/{}-g{:04}.txt'.format(root, alg, g), 'w') as f:
-            f.write(str(res.fbest)+'\n')
-            f.write(str(res.xbest)+'\n')
-            f.write(str(res.xfavorite)+'\n')
-            f.write(str(res.stds)+'\n\n')
-            for di in damage_info:
-                f.write(str(di)+'\n')
 
-        with open('{}/cmaes.pkl'.format(root), 'wb') as output:
-            pickle.dump(es, output, pickle.HIGHEST_PROTOCOL)
+        # reevaluation to prevent prepature convergence
+        if reeval:
+            es.sigma *= nh(solutions, damage, hp, es.ask, args=(g, len(solutions)))  # see method __call__
+            es.countevals += nh.evaluations_just_done
+
+        # logging
+        logger.add(more_data = [nh.evaluations, nh.noiseS])
+        cma_res = es.result_pretty()
+        hp.log(g, cma_res, nh)
 
         # new iteration
         g += 1
 
     print(es.result_pretty())
-
 
 
 ######################################################################################

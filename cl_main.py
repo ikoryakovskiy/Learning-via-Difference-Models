@@ -14,13 +14,17 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from ddpg_loop import start
 from my_monitor import MyMonitor
 from ptracker import PerformanceTracker
+import random
+import numpy as np
 
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
     assert(base_cfg['reach_reward'])
 
-    #return 1.5
+#    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
+#    rd = np.sum(np.square(params-1))
+#    return (1*random.random() + rd, 'testing')
 
     ss = 0
     stage_counter = 0
@@ -45,7 +49,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if config['seed'] == None:
             config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
 
-        # every stage happens when environmebt is switched over, thus we initialise it every stage
+        # every stage happens when environment is switched over, thus we initialise it every stage
         if env:
             env.close()
         env = Leo(config['cfg'])
