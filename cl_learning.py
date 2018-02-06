@@ -129,6 +129,7 @@ class Helper(object):
 
 
 def main():
+    prepare_multiprocessing()
     alg = 'ddpg'
     args = parse_args()
 
@@ -149,8 +150,8 @@ def main():
     reeval = True
 
 #    args['steps'] = 1000
+#    popsize = 2
 #    args['seed']  = 0
-#    #popsize = 2
 #    G = 300
 #    use_mp = False
 #    #reeval = False
@@ -181,8 +182,8 @@ def main():
         cma_inopts['seed'] = args['seed'] + 1 # cma treats 0 as a random seed
     cma_inopts['popsize'] = popsize
     init = [0] * w_num
-    es = cma.CMAEvolutionStrategy(init, 1, cma_inopts)
-    nh = MyNoiseHandler(es.N, maxevals=[0, 2, 5], parallel=True, aggregate=np.mean)
+    es = cma.CMAEvolutionStrategy(init, sigma0=4.0, inopts=cma_inopts)
+    nh = MyNoiseHandler(es.N, maxevals=[0, 5, 5.01], parallel=True, aggregate=np.mean)
 
     logger = cma.CMADataLogger().register(es)
 
@@ -220,12 +221,22 @@ def main():
 ######################################################################################
 def mp_run(mp_cfg):
     config, tasks, starting_task = mp_cfg
+    bailing = None
     # Run the experiment
     try:
         return cl_run(tasks, starting_task, **config)
-    except Exception:
-        print('mp_run {} failid to exit correctly'.format(config['output']))
-        sys.exit()
+    except Exception as e:
+        bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, config['output'], e)
+
+    # take care of fails
+    if bailing:
+        f = open("bailing.out", "a")
+        try:
+            f.write(bailing + "\n")
+        finally:
+            f.close()
+
+    return (4035.00, 'failed')
 
 
 ######################################################################################
@@ -238,12 +249,22 @@ def do_multiprocessing_pool(arg_cores, mp_cfgs):
     signal.signal(signal.SIGINT, original_sigint_handler)
     try:
         damage_info = pool.map(mp_run, mp_cfgs)
+        print('Finished tasks')
     except KeyboardInterrupt:
         pool.terminate()
     else:
         pool.close()
+        print('Closing complete')
     pool.join()
+    print('Joining complete')
     return damage_info
+
+
+######################################################################################
+def prepare_multiprocessing():
+    # clean bailing.out file
+    f = open("bailing.out", "w")
+    f.close()
 
 
 ######################################################################################
