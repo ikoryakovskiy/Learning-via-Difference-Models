@@ -14,6 +14,7 @@ from ddpg import parse_args, cfg_run
 random.seed(datetime.now())
 
 def main():
+    prepare_multiprocessing()
     alg = 'ddpg'
     args = parse_args()
 
@@ -51,7 +52,7 @@ def main():
     L1 = L1[::-1]
     #print(L0)
     #print(L1)
-    do_multiprocessing_pool(arg_cores, L0)
+    #do_multiprocessing_pool(arg_cores, L0)
     do_multiprocessing_pool(arg_cores, L1)
 
 ######################################################################################
@@ -127,21 +128,30 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
 ######################################################################################
 def mp_run(cfg):
     print('mp_run of {}'.format(cfg))
-    # Read configuration
+    bailing = None
+    # Try to read configuration
+    file = None
     try:
         file = open(cfg, 'r')
-    except IOError:
-        print("Could not read file: {}".format(cfg))
-        sys.exit()
-    with file:
-        args = yaml.load(file)
+    except Exception as e:
+        bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, cfg, e)
 
     # Run the experiment
-    try:
-        cfg_run(**args)
-    except Exception:
-        print('mp_run {} failid to exit correctly'.format(cfg))
-        sys.exit()
+    if file:
+        with file:
+            args = yaml.load(file)
+        try:
+            cfg_run(**args)
+        except Exception as e:
+            bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, cfg, e)
+
+    # take care of fails
+    if bailing:
+        f = open("bailing.out", "a")
+        try:
+            f.write(bailing + "\n")
+        finally:
+            f.close()
 
 
 ######################################################################################
@@ -154,11 +164,21 @@ def do_multiprocessing_pool(arg_cores, list_of_new_cfgs):
     signal.signal(signal.SIGINT, original_sigint_handler)
     try:
         pool.map(mp_run, list_of_new_cfgs)
+        print('Finished tasks')
     except KeyboardInterrupt:
         pool.terminate()
     else:
         pool.close()
+        print('Closing complete')
     pool.join()
+    print('Joining complete')
+
+
+######################################################################################
+def prepare_multiprocessing():
+    # clean bailing.out file
+    f = open("bailing.out", "w")
+    f.close()
 
 
 ######################################################################################
