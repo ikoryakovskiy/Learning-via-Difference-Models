@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import os.path
 import yaml, io
-import sys
+import traceback
 import itertools
 import signal
 import random
@@ -25,7 +25,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(10)
+    runs = range(10, 20)
     bsteps = range(10, 160, 10)
 
     options = []
@@ -52,7 +52,7 @@ def main():
     L1 = L1[::-1]
     #print(L0)
     #print(L1)
-    #do_multiprocessing_pool(arg_cores, L0)
+    do_multiprocessing_pool(arg_cores, L0)
     do_multiprocessing_pool(arg_cores, L1)
 
 ######################################################################################
@@ -134,7 +134,7 @@ def mp_run(cfg):
     try:
         file = open(cfg, 'r')
     except Exception as e:
-        bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, cfg, e)
+        bailing = "mp_run {}:\n{}\n".format(cfg, traceback.format_exc())
 
     # Run the experiment
     if file:
@@ -143,7 +143,7 @@ def mp_run(cfg):
         try:
             cfg_run(**args)
         except Exception as e:
-            bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, cfg, e)
+            bailing = "mp_run {}:\n{}\n".format(cfg, traceback.format_exc())
 
     # take care of fails
     if bailing:
