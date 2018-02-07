@@ -63,7 +63,7 @@ def parse_args():
     parser.add_argument('--env-timeout', type=float, default=20.0)
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
-    parser.add_argument('--reach-reward', type=float, default=None)
+    parser.add_argument('--reach-return', type=float, default=None)
     parser.add_argument('--default-damage', type=float, default=None)
     parser.add_argument('--test-interval', type=int, default=30)
     parser.add_argument('--curriculum', type=str, default='')
