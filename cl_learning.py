@@ -1,6 +1,6 @@
 from __future__ import division
 import multiprocessing
-import sys
+import traceback
 import signal
 import random
 from datetime import datetime
@@ -142,16 +142,21 @@ def main():
     # important defaults
     args['cl_on'] = True
     args['rb_min_size'] = 1000
-    args['reach_reward'] = 1422.66
+    args['reach_return'] = 1422.66
+    args['default_damage'] = 4035.00
     args['steps'] = 300000
-    popsize = None
+    args['cl_depth'] = 2
+    args['cl_structure'] = '_1'
+    args['cl_l2_reg'] = 10
+    args['cl_cmaes_sigma0'] = 1.0
+    popsize = 15 # None
     G = 250
     use_mp = True
     reeval = True
 
 #    args['steps'] = 1000
 #    popsize = 2
-#    args['seed']  = 0
+#    args['seed']  = 123
 #    G = 300
 #    use_mp = False
 #    #reeval = False
@@ -165,7 +170,7 @@ def main():
         os.makedirs(root)
 
     # calulate number of weights
-    pt = PerformanceTracker()
+    pt = PerformanceTracker(depth=args['cl_depth'], input_norm=args["cl_input_norm"])
     input_dim = pt.get_v_size()
     w_num = 0
     fan_in = input_dim
@@ -182,7 +187,7 @@ def main():
         cma_inopts['seed'] = args['seed'] + 1 # cma treats 0 as a random seed
     cma_inopts['popsize'] = popsize
     init = [0] * w_num
-    es = cma.CMAEvolutionStrategy(init, sigma0=4.0, inopts=cma_inopts)
+    es = cma.CMAEvolutionStrategy(init, sigma0=args['cl_cmaes_sigma0'], inopts=cma_inopts)
     nh = MyNoiseHandler(es.N, maxevals=[0, 5, 5.01], parallel=True, aggregate=np.mean)
 
     logger = cma.CMADataLogger().register(es)
@@ -226,7 +231,7 @@ def mp_run(mp_cfg):
     try:
         return cl_run(tasks, starting_task, **config)
     except Exception as e:
-        bailing = "{}:mp_run {}: {}".format(sys.exc_info()[-1].tb_lineno, config['output'], e)
+        bailing = "mp_run {}:\n{}\n".format(config['output'], traceback.format_exc())
 
     # take care of fails
     if bailing:

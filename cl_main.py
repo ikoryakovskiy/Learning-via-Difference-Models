@@ -16,27 +16,28 @@ from my_monitor import MyMonitor
 from ptracker import PerformanceTracker
 import random
 import numpy as np
+from os.path import exists
 
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
-    assert(base_cfg['reach_reward'])
+    assert(base_cfg['reach_return'])
 
 #    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
-#    rd = np.sum(np.square(params-1))
-#    return (1*random.random() + rd, 'testing')
+#    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
+#    return (0*random.random() + reg, 'testing')
 
     ss = 0
     stage_counter = 0
     prev_config = None
     damage = 0
     env = None
-    pt = PerformanceTracker(base_cfg["cl_input_norm"])
+    pt = PerformanceTracker(depth=base_cfg['cl_depth'], input_norm=base_cfg["cl_input_norm"])
 
     cl_info = ''
-    avg_test_return = base_cfg['reach_reward']
+    avg_test_return = base_cfg['reach_return']
 
-    while ss < base_cfg["steps"] and avg_test_return <= base_cfg['reach_reward']:
+    while ss < base_cfg["steps"] and avg_test_return <= base_cfg['reach_return']:
         stage = '-{:02d}_'.format(stage_counter) + cl_mode
         config = base_cfg.copy() # Dicts are mutable
 
@@ -53,7 +54,6 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if env:
             env.close()
         env = Leo(config['cfg'])
-        #env.report('all') # 'all' is used to get correct damage info
         env = MyMonitor(env, config['output'], report='all')
 
         # load previous stage actor, critic and curriculum
@@ -80,13 +80,20 @@ def cl_run(tasks, cl_mode, **base_cfg):
         env.close()
 
     # calculate final performance
-    walking_avg_damage = 4035.00
+    walking_avg_damage = base_cfg['default_damage']
+
+    # add solution regularization
+    reg = 0
+    if base_cfg['cl_l2_reg']:
+        if exists(base_cfg["cl_load"]+'.npy'):
+            params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
+            reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
 
     print(base_cfg['output'] + ' finished!')
-    if avg_test_return > base_cfg['reach_reward']:
-        return (damage, cl_info)
+    if avg_test_return > base_cfg['reach_return']:
+        return (damage + reg, cl_info)
     else:
-        return (max([walking_avg_damage, damage]), cl_info)
+        return (max([walking_avg_damage, damage]) + reg, cl_info)
 
 
 

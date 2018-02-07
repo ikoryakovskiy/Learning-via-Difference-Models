@@ -21,7 +21,7 @@ class CurriculumNetwork(object):
         self.i_dim = input_dim
         self.o_dim = output_dim
         self.learning_rate = config["cl_lr"]
-        self.l2 = config["cl_l2_reg"]
+        #self.l2 = config["cl_l2_reg"]
         self.layer_norm = config["cl_layer_norm"]
         self.w_num = 0          # total number of weights
 
@@ -34,6 +34,10 @@ class CurriculumNetwork(object):
             self.nn_activation.append(activation)
             self.nn_size.append(int(size))
             self.nn_i_dim.append(int(size)) # for the next layer
+
+        self.norm_int = False
+        if self.nn_activation[-1] == 'tanh':
+            self.norm_int = True
 
         self.num_layers = len(self.nn_size)
 
@@ -116,8 +120,11 @@ class CurriculumNetwork(object):
         r = sess.run(self.out, feed_dict={self.inputs: inputs})[0]
 
         modes = ['balancing', 'walking']
-        eps = 1E-7
-        bins = np.linspace(-1-eps, 1+eps, len(modes)+1) # forces NN output to be tanh
-        idx = np.digitize(r, bins, right=True)[0] - 1 # index starts at 1, and include 0 as a left bin
-        return modes[idx]
+        if len(modes) == 2 and not self.norm_int:
+            idx = int(r[0] > 0)
+        else:
+            eps = 1E-7
+            bins = np.linspace(-1-eps, 1+eps, len(modes)+1) # forces NN output to be tanh
+            idx = np.digitize(r, bins, right=True)[0] - 1 # index starts at 1, and include 0 as a left bin
+        return modes[idx], r[0]
 

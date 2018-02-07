@@ -142,10 +142,10 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # decide mode
         cl_mode_new = None
+        cl_threshold = None
         if config['cl_on']:
             v = pt.flatten()
-            cl_mode_new = cl_nn.predict(sess, v)
-            #cl_nn.get_params(sess)
+            cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
 
         # Initialize constants for exploration noise
         ou_sigma = config["ou_sigma"]
@@ -170,7 +170,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         prev_falls = 0
         ti = config["test_interval"]
         test_returns = []
-        avg_test_return = config['reach_reward']
+        avg_test_return = config['reach_return']
 
         # rewarding object if rewards in replay buffer are to be recalculated
         replay_buffer.load()
@@ -189,11 +189,14 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         obs = env.reset(test=test)
         obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
+        # Export environment state
+        env.log("{:15.5f}".format(cl_threshold) if cl_threshold else '')
+
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
               (config["steps"]  == 0 or ss < config["steps"]) and \
               (not config['cl_on']   or cl_mode_new == cl_mode ) and \
-              (not config['reach_reward'] or avg_test_return <= config['reach_reward']):
+              (not config['reach_return'] or avg_test_return <= config['reach_return']):
 
             # Compute OU noise and action
             if not test:
@@ -252,23 +255,29 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
             # Logging performance at the end of the testing trial
             if terminal and test:
-                msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11}" \
-                    .format(tt, ss, trial_return, max_trial_return, terminal)
-                print("{}".format(msg))
-
                 # update PerformanceTracker
                 if cl_nn:
                     s = info.split()
                     # convert number of falls into a relative value
-                    damage = (float(s[1]) - prev_falls) / ti
-                    pt.add([trial_return, float(s[0]), damage]) # return, duration, damage
+                    norm_trial_return = trial_return / config['reach_return']
+                    norm_duration = float(s[0]) / config["env_timeout"]
+                    falls = float(s[1])
+                    norm_damage = (falls - prev_falls) / ti
+                    pt.add([norm_trial_return, norm_duration, norm_damage]) # return, duration, damage
                     v = pt.flatten()
-                    cl_mode_new = cl_nn.predict(sess, v)
-                    prev_falls = float(s[1])
+                    cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
+                    prev_falls = falls
 
                 # check if performance is satisfactory
                 test_returns.append(trial_return)
                 avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
+
+                # report
+                env.log("{:15.5f}".format(cl_threshold) if cl_threshold else '')
+                msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11}" \
+                    .format(tt, ss, trial_return, max_trial_return, terminal)
+                print("{}".format(msg))
+
 
             # Save NN if performance is better then before
             if terminal and config['save'] and trial_return > max_trial_return:
