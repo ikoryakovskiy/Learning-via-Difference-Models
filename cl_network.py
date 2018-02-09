@@ -21,8 +21,8 @@ class CurriculumNetwork(object):
         self.i_dim = input_dim
         self.o_dim = output_dim
         self.learning_rate = config["cl_lr"]
-        #self.l2 = config["cl_l2_reg"]
         self.layer_norm = config["cl_layer_norm"]
+        self.l2 = config["cl_l2_reg"]
         self.w_num = 0          # total number of weights
 
         self.nn_i_dim = [self.i_dim]
@@ -45,6 +45,12 @@ class CurriculumNetwork(object):
         self.inputs, self.out = self.create_curriculum_network()
         self.network_params = [v for v in tf.trainable_variables() if 'curriculum' in v.name]
 
+        # supervised training
+        if self.nn_activation[-1] == 'softmax':
+            self.labels = tf.placeholder("float", [None, self.nn_size[-1]])
+            var = tf.add_n([ tf.nn.l2_loss(v) for v in self.network_params if 'bias' not in v.name ]) * self.l2
+            self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels) + var)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.cost)
 
     def create_curriculum_network(self):
         inputs = tflearn.input_data(shape=[None, self.i_dim])
@@ -109,17 +115,22 @@ class CurriculumNetwork(object):
         #print(w)
         return w
 
-    def train(self, sess, inputs, predicted_q_value):
-        return sess.run([self.out, self.optimize], feed_dict={
-            self.inputs: inputs,
-            self.predicted_q_value: predicted_q_value
-        })
+
+    def train(self, sess, batch_x, batch_y):
+        return sess.run([self.optimizer, self.cost], feed_dict={
+                self.inputs: batch_x,
+                self.labels: batch_y
+               })
 
 
     def predict(self, sess, inputs):
         r = sess.run(self.out, feed_dict={self.inputs: inputs})[0]
 
         modes = ['balancing', 'walking']
+
+        if len(modes) == 2 and self.nn_activation[-1] == 'softmax':
+            return int(r[0] > r[1])
+
         if len(modes) == 2 and not self.norm_int:
             idx = int(r[0] > 0)
         else:
