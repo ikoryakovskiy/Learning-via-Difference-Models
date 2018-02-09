@@ -27,7 +27,7 @@ class ActorNetwork(object):
         self.action_bound = action_bound
         self.learning_rate = config["actor_lr"]
         self.tau = config["tau"]
-        self.layer_norm = config["layer_norm"]
+        self.batch_norm = config["batch_norm"]
 
         # Actor Network
         self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -62,13 +62,13 @@ class ActorNetwork(object):
         weights_init1 = tflearn.initializations.uniform(minval=-1/math.sqrt(self.s_dim), maxval=1/math.sqrt(self.s_dim))
         actor_layer1 = tflearn.fully_connected(inputs, 400, name="{}actorLayer1".format(prefix), weights_init=weights_init1)
         #pdb.set_trace()
-        if self.layer_norm:
+        if self.batch_norm:
             actor_layer1 = tflearn.layers.normalization.batch_normalization(actor_layer1, name="{}actorLayer1_norm".format(prefix))
         actor_layer1_relu = tflearn.activations.relu(actor_layer1)
 
         weights_init2 = tflearn.initializations.uniform(minval=-1/math.sqrt(400), maxval=1/math.sqrt(400))
         actor_layer2 = tflearn.fully_connected(actor_layer1_relu, 300, name="{}actorLayer2".format(prefix), weights_init=weights_init2)
-        if self.layer_norm:
+        if self.batch_norm:
             actor_layer2 = tflearn.layers.normalization.batch_normalization(actor_layer2, name="{}actorLayer2_norm".format(prefix))
         actor_layer2_relu = tflearn.activations.relu(actor_layer2)
 

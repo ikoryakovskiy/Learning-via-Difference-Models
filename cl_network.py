@@ -21,7 +21,7 @@ class CurriculumNetwork(object):
         self.i_dim = input_dim
         self.o_dim = output_dim
         self.learning_rate = config["cl_lr"]
-        self.layer_norm = config["cl_layer_norm"]
+        self.batch_norm = config["cl_batch_norm"]
         self.l2 = config["cl_l2_reg"]
         self.w_num = 0          # total number of weights
 
@@ -60,7 +60,7 @@ class CurriculumNetwork(object):
             weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.nn_i_dim[i]), maxval=1/sqrt(self.nn_i_dim[i]))
             new_layer = tflearn.fully_connected(layer, self.nn_size[i], name="curriculumLayer{}".format(i), weights_init=weights_init)
 
-            if self.layer_norm:
+            if self.batch_norm:
                 new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
 
             if self.nn_activation[i] == 'relu':

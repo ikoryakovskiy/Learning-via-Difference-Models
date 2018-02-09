@@ -36,12 +36,12 @@ def main():
     steps = [500]
     reward_scale = [1.0]
     normalize_observations = [False]
-    layer_norm = [True]
+    batch_norm = [True]
     version = [0]
 
     ####
     options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, batch_norm, version, runs): options.append(r)
     configs = {
 #                "HalfCheetahWalking" : "RoboschoolHalfCheetah-v1",
               }
@@ -49,7 +49,7 @@ def main():
 
     ####
     options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, batch_norm, version, runs): options.append(r)
     configs = {
                 "Walker2dWalking" : "RoboschoolWalker2dGRL-v1",
               }
@@ -57,7 +57,7 @@ def main():
 
     ####
     options = []
-    for r in itertools.product(steps, reward_scale, normalize_observations, layer_norm, version, runs): options.append(r)
+    for r in itertools.product(steps, reward_scale, normalize_observations, batch_norm, version, runs): options.append(r)
     configs = {
                 "HopperWalking" : "RoboschoolHopperGRL-v1",
               }
@@ -111,7 +111,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             args['rb_max_size'] = args['steps']
             args['reward_scale'] = o[1]
             args['normalize_observations'] = o[2]
-            args['layer_norm'] = o[3]
+            args['batch_norm'] = o[3]
             args['version'] = o[4]
             args['save'] = save
 

@@ -365,7 +365,7 @@ if __name__ == '__main__':
     args['test_interval'] = 0
     args['normalize_observations'] = False
     args['normalize_returns'] = False
-    args['layer_norm'] = True
+    args['batch_norm'] = True
     args['output'] = '{}_{}_play'.format(env, task)
     #args['load_file'] = 'leo_curriculum_analysis/ddpg-walking-30000000-1000-mp0-best'
     args['load_file'] = 'leo_curriculum_analysis/ddpg-walking_after_balancing-25000000-1101-mp2-best'

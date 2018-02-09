@@ -76,7 +76,7 @@ def parse_args():
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)
     parser.add_argument('--cl-lr', type=float, default=0.001)
     parser.add_argument('--cl-cmaes-sigma0', type=float, default=4.0)
-    boolean_flag(parser,  'cl-layer-norm', default=False)
+    boolean_flag(parser,  'cl-batch-norm', default=False)
     boolean_flag(parser,  'cl-input-norm', default=False)
     parser.add_argument('--cl-depth', type=int, default=3)
     parser.add_argument('--cl-save', type=str, default='')
@@ -84,7 +84,7 @@ def parse_args():
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
-    boolean_flag(parser,  'layer-norm', default=True)
+    boolean_flag(parser,  'batch-norm', default=True)
     boolean_flag(parser,  'normalize-returns', default=False)
     boolean_flag(parser,  'normalize-observations', default=False)
     parser.add_argument('--seed', help='RNG seed', type=int, default=None)

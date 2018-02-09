@@ -27,7 +27,7 @@ args['seed'] = 1
 args['rb_max_size'] = args['steps']
 args['normalize_observations'] = False
 args['normalize_returns'] = False
-args['layer_norm'] = True
+args['batch_norm'] = True
 args['version'] = 0
 args['output'] = '{}_{}'.format(env.lower(), task.lower())
 

@@ -14,7 +14,7 @@ args['test_interval'] = 30
 args['seed'] = 1
 args['normalize_observations'] = False
 args['normalize_returns'] = False
-args['layer_norm'] = True
+args['batch_norm'] = True
 #args['reassess_for'] = 'walking_300_-1.5'
 args['output'] = '{}_{}'.format(env, task)
 
