@@ -19,8 +19,8 @@ tasks = {'balancing': 'cfg/leo_balancing.yaml', 'walking': 'cfg/leo_walking.yaml
 hp = Helper(args, 'cl', 'ddpg', tasks, starting_task, 1, use_mp=False)
 
 # Weights of the NN
-sl_solution = '''0.18473815  1.60566807 -2.5843519   0.42126614  0.83710431 -1.36806102
- -0.31722035'''
+sl_solution = ''' 0.14189844  2.04973769 -0.43931572 -0.35940488  3.11302185 -1.19225234
+ -0.59215328'''
 
 solution = [float(i) for i in sl_solution.split()]
 

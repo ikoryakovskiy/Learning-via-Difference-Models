@@ -36,7 +36,7 @@ def main():
         fbalancing, fwalking = fps.split()
 
         data = np.loadtxt(fbalancing, skiprows=2, usecols=(1, 3, 4))
-        rw = data[:, 0, np.newaxis]/config['reach_return']  # reward
+        rw = data[:, 0, np.newaxis]/config['reach_return']  # return
         tt = data[:, 1, np.newaxis]/config['env_timeout']   # duration
         fl = data[:, 2, np.newaxis]                         # falls
         fl_rate = np.diff(np.vstack(([0], fl)), axis=0) / config["test_interval"]
@@ -116,6 +116,8 @@ def main():
         for v in tsN:
             nlabels.append(cl_nn.predict(sess, v[np.newaxis, 0:6])) # output should be 0 for negatives
 
+        #fp = [tsN[i, :] for i, l in enumerate(nlabels) if l == 1]
+
         TP = sum(plabels) / len(plabels)
         FN = 1 - TP
         FP = sum(nlabels) / len(nlabels)
@@ -128,9 +130,10 @@ def main():
         params = cl_nn.get_params(sess)
         print('params = {}'.format(params))
 
-        l = len(params)//2
-        cmaes_param = params[l:]-params[:l]
-        print('cmaes_param = {}'.format(cmaes_param))
+        cmaes_params = params[::2] - params[1::2]
+        print('cmaes_param = {}'.format(cmaes_params))
+
+        pass
 
 
 

@@ -106,6 +106,9 @@ def parse_args():
     parser.add_argument('--rb-load-filename', type=str, default='')
     parser.add_argument('--reassess-for', type=str, default='')
 
+    # Performance trackers
+    boolean_flag(parser,  'gpg', default=True) # Gradient prediction gain
+
     # In/out options
     parser.add_argument('--output', type=str, default='default')
     parser.add_argument('--load-file', type=str, default='')
