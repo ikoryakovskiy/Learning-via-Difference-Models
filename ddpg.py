@@ -57,10 +57,12 @@ def parse_args():
     parser.add_argument('--cores', type=int, default=1)
     boolean_flag(parser,  'tensorboard', default=False)
     parser.add_argument('--version', type=int, default=0)
+    boolean_flag(parser,  'mp_debug', default=False)
 
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
     parser.add_argument('--env-timeout', type=float, default=20.0)
+    parser.add_argument('--env-td-error-scale', type=float, default=75.0, help='Approximate scale of TD errors')
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--reach-return', type=float, default=None)
@@ -107,10 +109,10 @@ def parse_args():
     parser.add_argument('--reassess-for', type=str, default='')
 
     # Performance trackers
-    boolean_flag(parser,  'perf-td-error', default=True)
-    boolean_flag(parser,  'perf-l2-reg', default=True)
-    boolean_flag(parser,  'perf-action-grad', default=True)
-    boolean_flag(parser,  'perf-actor-grad', default=True)
+    boolean_flag(parser,  'perf-td-error', default=False)
+    boolean_flag(parser,  'perf-l2-reg', default=False)
+    boolean_flag(parser,  'perf-action-grad', default=False)
+    boolean_flag(parser,  'perf-actor-grad', default=False)
 
     # In/out options
     parser.add_argument('--output', type=str, default='default')

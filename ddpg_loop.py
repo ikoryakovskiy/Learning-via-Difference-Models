@@ -18,7 +18,7 @@ import random
 from running_mean_std import RunningMeanStd
 import json
 import pdb
-
+import time
 
 # ===========================
 # Policy saving and loading
@@ -95,6 +95,7 @@ def obs_normalize(obs, obs_rms, obs_range, o_dims, normalize_observations):
 # ===========================
 def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None, **config):
 
+    print('train: ' + config['output'] + ' started!')
     print("Noise: {} and {}".format(config["ou_sigma"], config["ou_theta"]))
     print("Actor learning rate {}".format(config["actor_lr"]))
     print("Critic learning rate {}".format(config["critic_lr"]))
@@ -167,7 +168,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         ss = 0
         terminal = 0
         terminal_info = None
-        prev_falls = 0
+        #prev_falls = 0
         ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
         ti = config["test_interval"]
         test_returns = []
@@ -191,7 +192,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
         # Export environment state
-        env.log("{:15.5f}".format(cl_threshold) if cl_threshold else '')
+        env.log("{:15.2f}".format(cl_threshold) if cl_threshold else '')
 
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
@@ -237,20 +238,24 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     td_acc += np.linalg.norm(q_i-np.reshape(y_i,newshape=(minibatch_size,1)), ord=2)
 
                 # Update the critic given the targets
-                _, _, l2_reg = critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
                 if config['perf_l2_reg']:
+                    _, _, l2_reg = critic.train_(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
                     l2_reg_acc += l2_reg
+                else:
+                    critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
 
                 # Update the actor policy using the sampled gradient
                 a_outs = actor.predict(sess, s_batch)
                 grad = critic.action_gradients(sess, s_batch, a_outs)[0]
-                _, actor_grad = actor.train(sess, s_batch, grad)
-
                 if config['perf_action_grad']:
                     action_grad_acc += np.linalg.norm(grad, ord=2)
+
                 if config['perf_actor_grad']:
+                    _, actor_grad = actor.train_(sess, s_batch, grad)
                     for ag in actor_grad:
                         actor_grad_acc += np.linalg.norm(ag, ord=2)
+                else:
+                    actor.train(sess, s_batch, grad)
 
                 ss_acc += 1
 
@@ -272,7 +277,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             if terminal and test:
 
                 # NN performance indicators
-                td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
+                td_per_step = td_acc/ss_acc if ss_acc > 0 else config["env_td_error_scale"]
                 l2_reg_per_step = l2_reg_acc/ss_acc if ss_acc > 0 else 0
                 action_grad_per_step = action_grad_acc/ss_acc if ss_acc > 0 else 0
                 actor_grad_per_step = actor_grad_acc/ss_acc if ss_acc > 0 else 0
@@ -284,15 +289,18 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 if cl_nn:
                     s = info.split()
                     # convert number of falls into a relative value
-                    norm_trial_return = trial_return / config['reach_return']
+                    #norm_trial_return = trial_return / config['reach_return']
+                    norm_td_error = td_per_step / config["env_td_error_scale"]
                     norm_duration = float(s[0]) / config["env_timeout"]
-                    falls = float(s[1])
-                    norm_damage = (falls - prev_falls) / ti
-                    indicators = [norm_trial_return, norm_duration, norm_damage]
+                    #falls = float(s[1])
+                    #norm_damage = (falls - prev_falls) / ti
+                    norm_complexity = l2_reg_per_step
+                    #indicators = [norm_trial_return, norm_duration, norm_damage]
+                    indicators = [norm_td_error, norm_complexity, norm_duration]
                     pt.add(indicators) # return, duration, damage
                     v = pt.flatten()
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
-                    prev_falls = falls
+                    #prev_falls = falls
 
                 # check if performance is satisfactory
                 test_returns.append(trial_return)
@@ -302,9 +310,11 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 more_info = ''.join('{:10.2f}'.format(perf) for perf in nn_perf)
                 more_info += "{:10.2f}".format(cl_threshold) if cl_threshold else ''
                 env.log(more_info)
-                msg = "{:>10} {:>10} {:>10.3f} {:>10}" \
-                    .format(tt, ss, trial_return, terminal)
-                print("{}".format(msg))
+
+                if not config['mp_debug']:
+                    msg = "{:>10} {:>10} {:>10.3f} {:>10}" \
+                        .format(tt, ss, trial_return, terminal)
+                    print("{}".format(msg))
 
 
             # Save NN if performance is better then before
@@ -333,6 +343,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # verify replay_buffer
         #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])
+        print('train: ' + config['output'] + ' finished!')
 
         # Save the last episode policy
         if config['save']:
@@ -355,10 +366,16 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             s = terminal_info.split()
             damage = float(s[1])
 
+    print('train: ' + config['output'] + ' returning ' + '{} {} {} {}'.format(avg_test_return, damage, ss, cl_mode_new))
+
     return (avg_test_return, damage, ss, cl_mode_new)
 
 
 def start(env, pt=None, cl_mode=None, **config):
+
+    # block warnings from tf.saver if needed
+    if config['mp_debug']:
+        tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Initialize the actor, critic and difference networks
     with tf.Graph().as_default() as ddpg:

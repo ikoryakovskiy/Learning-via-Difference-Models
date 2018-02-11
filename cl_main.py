@@ -17,16 +17,20 @@ from ptracker import PerformanceTracker
 import random
 import numpy as np
 from os.path import exists
+import yaml, io
 
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
     assert(base_cfg['reach_return'])
 
+
 #    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
 #    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
 #    return (0*random.random() + reg, 'testing')
 
+
+    print('cl_run: ' +  base_cfg['output'] + ' started!')
     ss = 0
     stage_counter = 0
     prev_config = None
@@ -68,14 +72,27 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
         cl_info += cl_mode + ' '
 
+        # DBG: export configuration
+        with io.open(config['output']+'.yaml', 'w', encoding='utf8') as file:
+            yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
+
         # run the stage
-        avg_test_return, damage_new, ss_new, cl_mode = start(env=env, pt=pt, cl_mode=cl_mode, **config)
+        avg_test_return, damage_new, ss_new, cl_mode_new = start(env=env, pt=pt, cl_mode=cl_mode, **config)
 
         damage += damage_new
         ss += ss_new
         prev_config = config.copy() # Dicts are mutable
         stage_counter += 1
         cl_info += ('{:d}'.format(ss_new)).ljust(7) + ' '
+
+        # DBG: ensure exit from the loop after the walking stage
+        print('cl_run: {} stage {} done'.format(config['output'], stage))
+        if cl_mode == 'walking':
+            print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < base_cfg["steps"], avg_test_return <= base_cfg['reach_return']))
+            break
+        # DBG end
+
+        cl_mode = cl_mode_new
 
     if env:
         env.close()
@@ -90,7 +107,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
             params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
             reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
 
-    print(base_cfg['output'] + ' finished!')
+    print('cl_run: ' +  base_cfg['output'] + ' finished!')
     if avg_test_return > base_cfg['reach_return']:
         return (damage + reg, cl_info)
     else:

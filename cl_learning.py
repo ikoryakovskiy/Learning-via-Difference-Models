@@ -7,6 +7,8 @@ from datetime import datetime
 import os
 import cma
 import numpy as np
+import sys
+import pdb
 
 from ptracker import PerformanceTracker
 from cl_main import cl_run
@@ -87,7 +89,12 @@ class Helper(object):
 
     def run(self, mp_cfgs, reeval=False):
         if self.use_mp:
-            damage_info = do_multiprocessing_pool(self.arg_cores, mp_cfgs)
+            damage_info = None
+            while not damage_info: #protection from cases when something wrong happens with learning.
+                damage_info = do_multiprocessing_pool(self.arg_cores, mp_cfgs)
+                if not damage_info:
+                    print('do_multiprocessing_pool returned None')
+                    pdb.set_trace()
             damage, info = zip(*damage_info)
         else:
             # for debug purpose
@@ -140,25 +147,30 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # important defaults
+    args['mp_debug'] = True
     args['cl_on'] = True
+    args['perf_td_error'] = True
+    args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
     args['reach_return'] = 1422.66
     args['default_damage'] = 4035.00
     args['steps'] = 300000
-    args['cl_depth'] = 2
+    args['cl_depth'] = 1
     args['cl_structure'] = '_1'
     args['cl_l2_reg'] = 10
-    args['cl_cmaes_sigma0'] = 1.0
+    args['cl_cmaes_sigma0'] = 2.0
     popsize = 15 # None
+    reeval_num0 = 5
     G = 250
     use_mp = True
     reeval = True
 
-#    args['steps'] = 1000
+#    args['steps'] = 10000
 #    popsize = 2
-#    args['seed']  = 123
-#    G = 300
-#    use_mp = False
+#    reeval_num0 = 0
+#    #args['seed']  = 123
+#    G = 3
+#    #use_mp = False
 #    #reeval = False
 
     # Parameters
@@ -188,7 +200,7 @@ def main():
     cma_inopts['popsize'] = popsize
     init = [0] * w_num
     es = cma.CMAEvolutionStrategy(init, sigma0=args['cl_cmaes_sigma0'], inopts=cma_inopts)
-    nh = MyNoiseHandler(es.N, maxevals=[0, 5, 5.01], parallel=True, aggregate=np.mean)
+    nh = MyNoiseHandler(es.N, maxevals=[0, reeval_num0, 5.01], parallel=True, aggregate=np.mean)
 
     logger = cma.CMADataLogger().register(es)
 
@@ -196,6 +208,9 @@ def main():
 
     g = 1
     while not es.stop() and g <= G:
+        if args['mp_debug']:
+            sys.stdout = open(root + "/stdout-g{:04}.log".format(g), "w")
+
         solutions = es.ask()
 
         # preparation
@@ -229,9 +244,13 @@ def mp_run(mp_cfg):
     bailing = None
     # Run the experiment
     try:
-        return cl_run(tasks, starting_task, **config)
+        ret = cl_run(tasks, starting_task, **config)
+        print('mp_run: ' +  config['output'] + ' returning ' + '{}'.format(ret))
+        return ret
     except Exception as e:
         bailing = "mp_run {}:\n{}\n".format(config['output'], traceback.format_exc())
+
+    print('mp_run: ' +  config['output'] + ' could not return correctly')
 
     # take care of fails
     if bailing:
@@ -252,6 +271,7 @@ def do_multiprocessing_pool(arg_cores, mp_cfgs):
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     pool = multiprocessing.Pool(arg_cores)
     signal.signal(signal.SIGINT, original_sigint_handler)
+    damage_info = None
     try:
         damage_info = pool.map(mp_run, mp_cfgs)
         print('Finished tasks')
