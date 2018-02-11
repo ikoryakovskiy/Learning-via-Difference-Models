@@ -82,9 +82,9 @@ class MyMonitor(Monitor):
     def log(self, more_info = None):
         eprew = sum(self.rewards)
         if self.info:
-            line = "{:15d}{:15.5f}{:15d}{}".format(self.total_steps, eprew, self.done, self.info)
+            line = "{:10d}{:10.2f}{:10d}{}".format(self.total_steps, eprew, self.done, self.info)
         else:
-            line = "{:15d}{:15.5f}{:15d}".format(self.total_steps, eprew, self.done)
+            line = "{:10d}{:10.2f}{:10d}".format(self.total_steps, eprew, self.done)
         if more_info:
             line = "{} {}".format(line, more_info)
         epinfo = {"steps-reward-terminal-info": line}

@@ -32,16 +32,16 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(10)
-    rb_min_size = [64, 1000, 5000, 10000, 15000, 20000]
-    steps = [50]
+    runs = range(2)
+    rb_min_size = [1000]
+    steps = [150]
     reassess_for = ['']
 
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
 
     configs = {
-#                "balancing" : "cfg/leo_balancing.yaml",
+                "balancing" : "cfg/leo_balancing.yaml",
               }
     L0 = rl_run(configs, alg, options, rb_save=True)
 
@@ -50,7 +50,7 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-#                "walking" : "cfg/leo_walking.yaml",
+                "walking" : "cfg/leo_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
@@ -59,7 +59,7 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
+#                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
     L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010")
 
@@ -69,13 +69,13 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
+#                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
-    L3 = [] #rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-{}-1010")
+    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-{}-1010")
     L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010", rb_load="ddpg-balancing-5000000-{}-1010")
 
     # Execute learning
-    #do_multiprocessing_pool(arg_cores, L0)
+    do_multiprocessing_pool(arg_cores, L0+L1)
     L = L1+L2+L3+L4
     random.shuffle(L)
     #do_multiprocessing_pool(arg_cores, L)

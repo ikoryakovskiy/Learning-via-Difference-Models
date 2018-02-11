@@ -107,7 +107,10 @@ def parse_args():
     parser.add_argument('--reassess-for', type=str, default='')
 
     # Performance trackers
-    boolean_flag(parser,  'gpg', default=True) # Gradient prediction gain
+    boolean_flag(parser,  'perf-td-error', default=True)
+    boolean_flag(parser,  'perf-l2-reg', default=True)
+    boolean_flag(parser,  'perf-action-grad', default=True)
+    boolean_flag(parser,  'perf-actor-grad', default=True)
 
     # In/out options
     parser.add_argument('--output', type=str, default='default')

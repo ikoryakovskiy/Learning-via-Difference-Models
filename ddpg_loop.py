@@ -168,6 +168,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         terminal = 0
         terminal_info = None
         prev_falls = 0
+        ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
         ti = config["test_interval"]
         test_returns = []
         avg_test_return = config['reach_return']
@@ -231,13 +232,27 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     else:
                         y_i.append(r_batch[k] + config["gamma"] * target_q[k][0]) # target_q: list -> float
 
+                if config['perf_td_error']:
+                    q_i = critic.predict_target(sess, s_batch, a_batch)
+                    td_acc += np.linalg.norm(q_i-np.reshape(y_i,newshape=(minibatch_size,1)), ord=2)
+
                 # Update the critic given the targets
-                critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
+                _, _, l2_reg = critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
+                if config['perf_l2_reg']:
+                    l2_reg_acc += l2_reg
 
                 # Update the actor policy using the sampled gradient
                 a_outs = actor.predict(sess, s_batch)
                 grad = critic.action_gradients(sess, s_batch, a_outs)[0]
-                actor.train(sess, s_batch, grad)
+                _, actor_grad = actor.train(sess, s_batch, grad)
+
+                if config['perf_action_grad']:
+                    action_grad_acc += np.linalg.norm(grad, ord=2)
+                if config['perf_actor_grad']:
+                    for ag in actor_grad:
+                        actor_grad_acc += np.linalg.norm(ag, ord=2)
+
+                ss_acc += 1
 
                 # Update target networks
                 actor.update_target_network(sess)
@@ -255,6 +270,16 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
             # Logging performance at the end of the testing trial
             if terminal and test:
+
+                # NN performance indicators
+                td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
+                l2_reg_per_step = l2_reg_acc/ss_acc if ss_acc > 0 else 0
+                action_grad_per_step = action_grad_acc/ss_acc if ss_acc > 0 else 0
+                actor_grad_per_step = actor_grad_acc/ss_acc if ss_acc > 0 else 0
+                nn_perf = [td_per_step, l2_reg_per_step, action_grad_per_step,
+                           actor_grad_per_step]
+                ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
+
                 # update PerformanceTracker
                 if cl_nn:
                     s = info.split()
@@ -263,7 +288,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     norm_duration = float(s[0]) / config["env_timeout"]
                     falls = float(s[1])
                     norm_damage = (falls - prev_falls) / ti
-                    pt.add([norm_trial_return, norm_duration, norm_damage]) # return, duration, damage
+                    indicators = [norm_trial_return, norm_duration, norm_damage]
+                    pt.add(indicators) # return, duration, damage
                     v = pt.flatten()
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
                     prev_falls = falls
@@ -273,9 +299,11 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
 
                 # report
-                env.log("{:15.5f}".format(cl_threshold) if cl_threshold else '')
-                msg = "{:>11} {:>11} {:>11.3f} {:>11.3f} {:>11}" \
-                    .format(tt, ss, trial_return, max_trial_return, terminal)
+                more_info = ''.join('{:10.2f}'.format(perf) for perf in nn_perf)
+                more_info += "{:10.2f}".format(cl_threshold) if cl_threshold else ''
+                env.log(more_info)
+                msg = "{:>10} {:>10} {:>10.3f} {:>10}" \
+                    .format(tt, ss, trial_return, terminal)
                 print("{}".format(msg))
 
 

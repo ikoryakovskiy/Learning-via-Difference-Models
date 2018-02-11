@@ -47,9 +47,9 @@ class CriticNetwork(object):
         self.predicted_q_value = tf.placeholder(tf.float32, [None, 1])
 
         # Define loss and optimization Op
-        var = tf.add_n([ tf.nn.l2_loss(v) for v in self.network_params if 'bias' not in v.name ]) * self.l2
+        self.l2_reg = tf.add_n([ tf.nn.l2_loss(v) for v in self.network_params if 'bias' not in v.name ]) * self.l2
 
-        self.loss = tflearn.mean_square(self.predicted_q_value, self.out) + var
+        self.loss = tflearn.mean_square(self.predicted_q_value, self.out) + self.l2_reg
         self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
         # Get the gradient of the net w.r.t. the action
@@ -89,7 +89,7 @@ class CriticNetwork(object):
         return inputs, action, critic_output
 
     def train(self, sess, inputs, action, predicted_q_value):
-        return sess.run([self.out, self.optimize], feed_dict={
+        return sess.run([self.out, self.optimize, self.l2_reg], feed_dict={
             self.inputs: inputs,
             self.action: action,
             self.predicted_q_value: predicted_q_value

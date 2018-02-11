@@ -80,7 +80,7 @@ class ActorNetwork(object):
         return inputs, actor_output, scaled_output
 
     def train(self, sess, inputs, a_gradient):
-        sess.run(self.optimizer, feed_dict={
+        return sess.run([self.optimizer, self.actor_gradients], feed_dict={
             self.inputs: inputs,
             self.action_gradient: a_gradient
         })

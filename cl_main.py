@@ -53,6 +53,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
         # every stage happens when environment is switched over, thus we initialise it every stage
         if env:
             env.close()
+            env = None
         env = Leo(config['cfg'])
         env = MyMonitor(env, config['output'], report='all')
 
