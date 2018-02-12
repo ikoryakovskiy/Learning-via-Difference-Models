@@ -32,25 +32,38 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(2)
+    runs = range(10)
     rb_min_size = [1000]
-    steps = [150]
     reassess_for = ['']
 
+    # Torso balancing rehab
+    steps = [20]
+    options = []
+    for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
+
+    configs = {
+                "balancing_tf" : "cfg/leo_balancing_tf.yaml",
+              }
+    L00 = rl_run(configs, alg, options, rb_save=True)
+
+    # torso balancing
+    steps = [30]
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
 
     configs = {
                 "balancing" : "cfg/leo_balancing.yaml",
               }
-    L0 = rl_run(configs, alg, options, rb_save=True)
+#    L01 = rl_run(configs, alg, options, rb_save=True, load_file="ddpg-balancing_tf-2000000-{}-1010")
+    L02 = rl_run(configs, alg, options, rb_save=True, load_file="ddpg-balancing_tf-2000000-{}-1010",
+                 rb_load="ddpg-balancing_tf-2000000-{}-1010")
 
     ## Zero-shot walking
     steps = [300]
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking" : "cfg/leo_walking.yaml",
+#                "walking" : "cfg/leo_walking.yaml",
               }
     L1 = rl_run(configs, alg, options)
 
@@ -59,9 +72,9 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-#                "walking_after_balancing" : "cfg/leo_walking.yaml",
+                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
-    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010")
+    L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-3000000-{}-1111")
 
     ## Replay buffer
     steps = [250]
@@ -69,16 +82,22 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-#                "walking_after_balancing" : "cfg/leo_walking.yaml",
+                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
-    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-5000000-{}-1010")
-    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-5000000-{}-1010", rb_load="ddpg-balancing-5000000-{}-1010")
+#    L3 = rl_run(configs, alg, options, rb_load="ddpg-balancing-3000000-{}-1111")
+    L4 = rl_run(configs, alg, options, load_file="ddpg-balancing-3000000-{}-1111", rb_load="ddpg-balancing-3000000-{}-1111")
 
     # Execute learning
-    do_multiprocessing_pool(arg_cores, L0+L1)
-    L = L1+L2+L3+L4
-    random.shuffle(L)
+    #do_multiprocessing_pool(arg_cores, L0+L1)
+    #L = L1+L2+L3+L4
+    #random.shuffle(L)
     #do_multiprocessing_pool(arg_cores, L)
+
+    do_multiprocessing_pool(arg_cores, L00)
+    do_multiprocessing_pool(arg_cores, L02)
+    L = L2 + L4
+    random.shuffle(L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
