@@ -68,7 +68,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
             config['rb_load_filename'] = prev_config['rb_save_filename']
 
         if cl_mode == 'walking':
-            config['cl_on'] = False # forbid loading curriculum
+            config['cl_on'] = 0 # forbid loading curriculum
 
         cl_info += cl_mode + ' '
 
@@ -105,7 +105,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
     if base_cfg['cl_l2_reg']:
         if exists(base_cfg["cl_load"]+'.npy'):
             params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
-            reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
+            reg = base_cfg['cl_l2_reg'] * np.abs(1-np.linalg.norm(params, ord=2))
 
     print('cl_run: ' +  base_cfg['output'] + ' finished!')
     if avg_test_return > base_cfg['reach_return']:

@@ -75,6 +75,7 @@ class Helper(object):
         self.starting_task = starting_task
         self.arg_cores = arg_cores
         self.use_mp = use_mp
+        self.reeval_damage_info = None
 
     def gen_cfg(self, solutions, g, begin=0):
         mp_cfgs = []
@@ -128,7 +129,7 @@ class Helper(object):
             for i, di in enumerate(self.damage_info):
                 f.write('{:2d}'.format(i).rjust(3) + ': ' +  str(di) + '\n')
 
-            if nh:
+            if nh and self.reeval_damage_info:
                 f.write('\n')
                 for i, di in enumerate(self.reeval_damage_info):
                     f.write('{:2d}'.format(nh.mp_idxs[i]).rjust(3) + ': ' +  str(di) + '\n')
@@ -148,7 +149,7 @@ def main():
 
     # important defaults
     args['mp_debug'] = True
-    args['cl_on'] = True
+    args['cl_on'] = 2
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
@@ -157,21 +158,21 @@ def main():
     args['steps'] = 300000
     args['cl_depth'] = 1
     args['cl_structure'] = '_1'
-    args['cl_l2_reg'] = 10
-    args['cl_cmaes_sigma0'] = 2.0
+    args['cl_l2_reg'] = 1000 # well-posing problem
+    args['cl_cmaes_sigma0'] = 1.0
     popsize = 15 # None
     reeval_num0 = 5
     G = 250
     use_mp = True
     reeval = True
 
-#    args['steps'] = 10000
+#    args['steps'] = 1500
 #    popsize = 2
 #    reeval_num0 = 0
 #    #args['seed']  = 123
 #    G = 3
-#    #use_mp = False
-#    #reeval = False
+#    use_mp = False
+#    reeval = False
 
     # Parameters
     starting_task = 'balancing'
@@ -198,6 +199,7 @@ def main():
     else:
         cma_inopts['seed'] = args['seed'] + 1 # cma treats 0 as a random seed
     cma_inopts['popsize'] = popsize
+    cma_inopts['bounds'] = [-1, 1]
     init = [0] * w_num
     es = cma.CMAEvolutionStrategy(init, sigma0=args['cl_cmaes_sigma0'], inopts=cma_inopts)
     nh = MyNoiseHandler(es.N, maxevals=[0, reeval_num0, 5.01], parallel=True, aggregate=np.mean)

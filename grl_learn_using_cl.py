@@ -6,7 +6,7 @@ from cl_main import cl_run
 from cl_learning import Helper
 args = parse_args()
 
-args['cl_on'] = True
+args['cl_on'] = 2
 args['rb_min_size'] = 1000
 args['reach_return'] = 1422.66
 args['default_damage'] = 4035.00

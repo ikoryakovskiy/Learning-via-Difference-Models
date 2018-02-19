@@ -29,10 +29,9 @@ class MyMonitor(Monitor):
         self.allow_early_resets = allow_early_resets
         self.rewards = None
         self.needs_reset = True
-        #self.episode_rewards = []
-        #self.episode_lengths = []
         self.done = 0
-        self.info = {}
+        self.step_info = {}             # info per every step
+        self.episode_info = {}          # info at the episode end
         self.total_steps = 0
         self.current_reset_info = {} # extra info about the current episode, that was passed in during reset()
         self.test = False
@@ -49,27 +48,15 @@ class MyMonitor(Monitor):
     def _step(self, action):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
-        ob, rew, self.done, self.info = self.env.step(action)
+        ob, rew, self.done, self.step_info = self.env.step(action)
         self.rewards.append(rew)
         if not self.test:
             self.total_steps += 1 # account for learning steps only
         if self.done:
             self.needs_reset = True
-#            eprew = sum(self.rewards)
-#            eplen = len(self.rewards)
-#            if info:
-#                line = "{:15d}{:15.5f}{:15d}{}".format(self.total_steps, eprew, done, info)
-#            else:
-#                line = "{:15d}{:15.5f}{:15d}".format(self.total_steps, eprew, done)
-#            epinfo = {"steps-reward-terminal-info": line}
-#            epinfo.update(self.current_reset_info)
-#            log_ok = self.test
-#            if self.logger and log_ok:
-#                self.logger.writerow(epinfo)
-#                self.f.flush()
-#            self.episode_rewards.append(eprew)
-#            self.episode_lengths.append(eplen)
-        return (ob, rew, self.done, self.info)
+            self.episode_info = self.step_info
+        return (ob, rew, self.done, self.step_info)
+
 
     # own
     def reconfigure(self, d=None):
@@ -79,10 +66,19 @@ class MyMonitor(Monitor):
         except AttributeError:
             print("reconfigure method is not supported by the environment")
 
+
+    def get_latest_info(self):
+        if self.step_info:
+            return self.step_info
+        else:
+            return self.episode_info
+
+
     def log(self, more_info = None):
         eprew = sum(self.rewards)
-        if self.info:
-            line = "{:10d}{:10.2f}{:10d}{}".format(self.total_steps, eprew, self.done, self.info)
+        info = self.get_latest_info()
+        if info:
+            line = "{:10d}{:10.2f}{:10d}{}".format(self.total_steps, eprew, self.done, info)
         else:
             line = "{:10d}{:10.2f}{:10d}".format(self.total_steps, eprew, self.done)
         if more_info:
@@ -92,6 +88,7 @@ class MyMonitor(Monitor):
         if self.logger:
             self.logger.writerow(epinfo)
             self.f.flush()
+
 
     def _dict_to_string(self, rowdict):
         return (rowdict.get(key, self.restval) for key in self.fieldnames)

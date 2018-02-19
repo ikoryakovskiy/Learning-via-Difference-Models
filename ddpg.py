@@ -62,7 +62,7 @@ def parse_args():
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
     parser.add_argument('--env-timeout', type=float, default=20.0)
-    parser.add_argument('--env-td-error-scale', type=float, default=75.0, help='Approximate scale of TD errors')
+    parser.add_argument('--env-td-error-scale', type=float, default=600.0, help='Approximate scale of TD errors')
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--reach-return', type=float, default=None)
@@ -72,7 +72,7 @@ def parse_args():
     boolean_flag(parser,  'render', default=False)
 
     # Curriculum
-    boolean_flag(parser,  'cl-on', default=False)
+    parser.add_argument('--cl-on', choices=[0,2,3], default=0)
     parser.add_argument('--cl-load', type=str, default='')
     parser.add_argument('--cl-structure', type=str, default='relu_3;tanh_1')
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)

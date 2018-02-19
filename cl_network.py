@@ -23,6 +23,7 @@ class CurriculumNetwork(object):
         self.learning_rate = config["cl_lr"]
         self.batch_norm = config["cl_batch_norm"]
         self.l2 = config["cl_l2_reg"]
+        self.cl_on = config['cl_on']
         self.w_num = 0          # total number of weights
 
         self.nn_i_dim = [self.i_dim]
@@ -135,7 +136,7 @@ class CurriculumNetwork(object):
             idx = int(r[0] > 0)
         else:
             eps = 1E-7
-            bins = np.linspace(-1-eps, 1+eps, len(modes)+1) # forces NN output to be tanh
+            bins = np.linspace(-1-eps, 1+eps, len(modes)+1) # requires tanh output layer of NN
             idx = np.digitize(r, bins, right=True)[0] - 1 # index starts at 1, and include 0 as a left bin
         return modes[idx], r[0]
 

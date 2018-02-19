@@ -144,7 +144,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # decide mode
         cl_mode_new = None
         cl_threshold = None
-        if config['cl_on']:
+        if config['cl_on'] > 0:
             v = pt.flatten()
             cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
 
@@ -167,8 +167,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         tt = 0
         ss = 0
         terminal = 0
-        terminal_info = None
-        #prev_falls = 0
+        more_info = None
         ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
         ti = config["test_interval"]
         test_returns = []
@@ -197,7 +196,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
               (config["steps"]  == 0 or ss < config["steps"]) and \
-              (not config['cl_on']   or cl_mode_new == cl_mode ) and \
+              (config['cl_on']  == 0 or cl_mode_new == cl_mode ) and \
               (not config['reach_return'] or avg_test_return <= config['reach_return']):
 
             # Compute OU noise and action
@@ -235,7 +234,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
                 if config['perf_td_error']:
                     q_i = critic.predict_target(sess, s_batch, a_batch)
-                    td_acc += np.linalg.norm(q_i-np.reshape(y_i,newshape=(minibatch_size,1)), ord=2)
+                    td_acc += np.sum(np.abs(q_i-np.reshape(y_i,newshape=(minibatch_size,1))))
 
                 # Update the critic given the targets
                 if config['perf_l2_reg']:
@@ -339,7 +338,11 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 terminal = 0
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
-                terminal_info = info
+
+        # export final performance, but when curriculum is not used.
+        # Becasue data is always exported when curriculum is switched over
+        if config['cl_on'] == 0:
+            env.log(more_info)
 
         # verify replay_buffer
         #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])
@@ -362,8 +365,9 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # extract damage from the last step
         damage = 0
-        if terminal_info:
-            s = terminal_info.split()
+        info = env.get_latest_info()
+        if info:
+            s = info.split()
             damage = float(s[1])
 
     print('train: ' + config['output'] + ' returning ' + '{} {} {} {}'.format(avg_test_return, damage, ss, cl_mode_new))
@@ -400,7 +404,7 @@ def start(env, pt=None, cl_mode=None, **config):
 
         # create curriculum switching network
         cl_nn = None
-        if config["cl_on"]:
+        if config["cl_on"] > 0:
             cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config)
 
     return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)
