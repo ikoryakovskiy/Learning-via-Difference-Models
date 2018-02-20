@@ -93,11 +93,11 @@ def main():
     #random.shuffle(L)
     #do_multiprocessing_pool(arg_cores, L)
 
-#    do_multiprocessing_pool(arg_cores, L00)
-#    do_multiprocessing_pool(arg_cores, L02)
+    do_multiprocessing_pool(arg_cores, L00)
+    do_multiprocessing_pool(arg_cores, L02)
     L = L4
     random.shuffle(L)
-#    do_multiprocessing_pool(arg_cores, L)
+    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
