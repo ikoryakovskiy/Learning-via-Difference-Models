@@ -96,16 +96,17 @@ class Helper(object):
                 if not damage_info:
                     print('do_multiprocessing_pool returned None')
                     pdb.set_trace()
-            damage, info = zip(*damage_info)
+            damage, info, params = zip(*damage_info)
         else:
             # for debug purpose
-            damage, info = [], []
+            damage, info, params = [], [], []
             for cfg in mp_cfgs:
                 config, tasks, starting_task = cfg
-                (damage0, cl_info0) = cl_run(tasks, starting_task, **config)
+                (damage0, cl_info0, params0) = cl_run(tasks, starting_task, **config)
                 damage.append(damage0)
                 info.append(cl_info0)
-            damage_info = zip(damage, info)
+                params.append(params0)
+            damage_info = zip(damage, info, params)
 
         if not reeval:
             self.damage_info = list(damage_info).copy()
@@ -171,8 +172,8 @@ def main():
 #    reeval_num0 = 0
 #    #args['seed']  = 123
 #    G = 3
-#    use_mp = False
-#    reeval = False
+#    #use_mp = False
+#    #reeval = False
 
     # Parameters
     starting_task = 'balancing'

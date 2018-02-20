@@ -32,7 +32,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(10)
+    runs = range(2)
     rb_min_size = [1000]
     reassess_for = ['']
 
@@ -72,7 +72,7 @@ def main():
     options = []
     for r in itertools.product(steps, rb_min_size, reassess_for, runs): options.append(r)
     configs = {
-                "walking_after_balancing" : "cfg/leo_walking.yaml",
+#                "walking_after_balancing" : "cfg/leo_walking.yaml",
               }
     L2 = rl_run(configs, alg, options, load_file="ddpg-balancing-3000000-{}-1111")
 
@@ -93,11 +93,11 @@ def main():
     #random.shuffle(L)
     #do_multiprocessing_pool(arg_cores, L)
 
-    do_multiprocessing_pool(arg_cores, L00)
-    do_multiprocessing_pool(arg_cores, L02)
-    L = L2 + L4
+#    do_multiprocessing_pool(arg_cores, L00)
+#    do_multiprocessing_pool(arg_cores, L02)
+    L = L4
     random.shuffle(L)
-    do_multiprocessing_pool(arg_cores, L)
+#    do_multiprocessing_pool(arg_cores, L)
 
 ######################################################################################
 def opt_to_str(opt):
@@ -138,6 +138,8 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             list_of_new_cfgs.append( "{}/{}-{}-{}.yaml".format(loc, alg, key, str_o) )
 
             args['cfg'] = cfg
+            args['perf_td_error'] = True
+            args['perf_l2_reg'] = True
             args['steps'] = o[0]*1000
             args['rb_min_size'] = o[1]
             str_rb_min_size = "{:06d}".format(int(round(100000*o[1])))

@@ -196,7 +196,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
               (config["steps"]  == 0 or ss < config["steps"]) and \
-              (config['cl_on']  == 0 or cl_mode_new == cl_mode ) and \
+              (config['cl_on']  == 0 or cl_mode_new == cl_mode) and \
               (not config['reach_return'] or avg_test_return <= config['reach_return']):
 
             # Compute OU noise and action
@@ -276,7 +276,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             if terminal and test:
 
                 # NN performance indicators
-                td_per_step = td_acc/ss_acc if ss_acc > 0 else config["env_td_error_scale"]
+                td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
                 l2_reg_per_step = l2_reg_acc/ss_acc if ss_acc > 0 else 0
                 action_grad_per_step = action_grad_acc/ss_acc if ss_acc > 0 else 0
                 actor_grad_per_step = actor_grad_acc/ss_acc if ss_acc > 0 else 0
@@ -341,7 +341,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # export final performance, but when curriculum is not used.
         # Becasue data is always exported when curriculum is switched over
-        if config['cl_on'] == 0:
+        if (config['cl_on']  == 0 or cl_mode_new == cl_mode):
             env.log(more_info)
 
         # verify replay_buffer

@@ -102,16 +102,17 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
     # add solution regularization
     reg = 0
-    if base_cfg['cl_l2_reg']:
-        if exists(base_cfg["cl_load"]+'.npy'):
-            params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
+    params = []
+    if exists(base_cfg["cl_load"]+'.npy'):
+        params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
+        if base_cfg['cl_l2_reg']:
             reg = base_cfg['cl_l2_reg'] * np.abs(1-np.linalg.norm(params, ord=2))
 
     print('cl_run: ' +  base_cfg['output'] + ' finished!')
     if avg_test_return > base_cfg['reach_return']:
-        return (damage + reg, cl_info)
+        return (damage + reg, cl_info, list(params))
     else:
-        return (max([walking_avg_damage, damage]) + reg, cl_info)
+        return (max([walking_avg_damage, damage]) + reg, cl_info, list(params))
 
 
 
