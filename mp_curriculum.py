@@ -32,7 +32,7 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # Parameters
-    runs = range(2)
+    runs = range(4)
     rb_min_size = [1000]
     reassess_for = ['']
 
@@ -140,6 +140,7 @@ def rl_run(dict_of_cfgs, alg, options, save=True, load_file='', rb_save=False, r
             args['cfg'] = cfg
             args['perf_td_error'] = True
             args['perf_l2_reg'] = True
+            args['env_report'] = 'all'
             args['steps'] = o[0]*1000
             args['rb_min_size'] = o[1]
             str_rb_min_size = "{:06d}".format(int(round(100000*o[1])))

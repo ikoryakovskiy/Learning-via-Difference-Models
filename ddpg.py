@@ -42,7 +42,7 @@ def run(cfg, **config):
         import roboschool
         env = gym.make(cfg)
 
-    env = MyMonitor(env, config['output'])
+    env = MyMonitor(env, config['output'], report=args['env_report'])
 
     start_time = time.time()
     start(env=env, **config)
@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
     parser.add_argument('--env-timeout', type=float, default=20.0)
     parser.add_argument('--env-td-error-scale', type=float, default=600.0, help='Approximate scale of TD errors')
+    parser.add_argument('--env-report', type=str, default='test')
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--reach-return', type=float, default=None)

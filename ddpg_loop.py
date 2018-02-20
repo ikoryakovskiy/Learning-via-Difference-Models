@@ -339,8 +339,9 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
 
-        # export final performance, but when curriculum is not used.
-        # Becasue data is always exported when curriculum is switched over
+        # Bxport final performance, but when curriculum is not used or terminated
+        # not due to the curriculum swithch.
+        # Becasue data is always exported when curriculum is switched over.
         if (config['cl_on']  == 0 or cl_mode_new == cl_mode):
             env.log(more_info)
 
