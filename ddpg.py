@@ -42,7 +42,7 @@ def run(cfg, **config):
         import roboschool
         env = gym.make(cfg)
 
-    env = MyMonitor(env, config['output'], report=args['env_report'])
+    env = MyMonitor(env, config['output'], report=config['env_report'])
 
     start_time = time.time()
     start(env=env, **config)
