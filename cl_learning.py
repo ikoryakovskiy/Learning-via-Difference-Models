@@ -13,6 +13,7 @@ import pdb
 from ptracker import PerformanceTracker
 from cl_main import cl_run
 from ddpg import parse_args
+from logger import Logger
 
 random.seed(datetime.now())
 
@@ -173,7 +174,7 @@ def main():
 #    #args['seed']  = 123
 #    G = 3
 #    #use_mp = False
-#    #reeval = False
+#    reeval = False
 
     # Parameters
     starting_task = 'balancing'
@@ -212,7 +213,8 @@ def main():
     g = 1
     while not es.stop() and g <= G:
         if args['mp_debug']:
-            sys.stdout = open(root + "/stdout-g{:04}.log".format(g), "w")
+            sys.stdout = Logger(root + "/stdout-g{:04}.log".format(g))
+            print("Should work")
 
         solutions = es.ask()
 
@@ -263,8 +265,7 @@ def mp_run(mp_cfg):
         finally:
             f.close()
 
-    return (4035.00, 'failed')
-
+    return None
 
 ######################################################################################
 def do_multiprocessing_pool(arg_cores, mp_cfgs):
@@ -280,11 +281,16 @@ def do_multiprocessing_pool(arg_cores, mp_cfgs):
         print('Finished tasks')
     except KeyboardInterrupt:
         pool.terminate()
+        print('Termination complete')
     else:
         pool.close()
         print('Closing complete')
     pool.join()
     print('Joining complete')
+
+    # Protection against a list with any None => treat whole list as none
+    if damage_info and None in damage_info:
+        damage_info = None
     return damage_info
 
 
