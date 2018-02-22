@@ -1,0 +1,6 @@
+#!/bin/bash
+
+docker run -it --rm -p 5900 -v /home/ivan/work/Project/Software/drl/:/drl -v /home/ivan/work/Project/Software/grl:/grl dbl/tensorflow_cpu_gui:latest /bin/bash
+
+# -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -u $(id -u $USER):$(id -g $USER)
+#-v /tmp/.X11-unix:/tmp/.X11-unix:ro -e DISPLAY=unix$DISPLAY

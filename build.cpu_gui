@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker build -f Dockerfile.cpu_gui -t dbl/tensorflow_cpu_gui .

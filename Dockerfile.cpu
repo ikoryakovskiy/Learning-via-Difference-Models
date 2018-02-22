@@ -56,48 +56,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         apt-get clean && \
         rm -rf /var/lib/apt/lists/*
 
-#============================
-# Graphical interface
-#============================
-# Display configuration options
-ENV SCREEN_WIDTH 1920
-ENV SCREEN_HEIGHT 1080
-ENV SCREEN_DEPTH 24
-ENV DISPLAY :0
-
-# VNC, locale, fonts, fluxbox (a fast, lightweight and responsive window manager)
-RUN apt-get update -qqy \
-  && apt-get -qqy install \
-    x11vnc xvfb dbus \
-    locales language-pack-en \
-    fonts-ipafont-gothic xfonts-100dpi xfonts-75dpi xfonts-cyrillic xfonts-scalable \
-    fluxbox \
-  && rm -rf /var/lib/apt/lists/* \
-  && mkdir -p ~/.vnc
-
-# Fixing Warning: D-Bus library appears to be incorrectly set up; failed to read machine uuid: Failed to open “/var/lib/dbus/machine-id”
-# http://www.torkwrench.com/2011/12/16/d-bus-library-appears-to-be-incorrectly-set-up-failed-to-read-machine-uuid-failed-to-open-varlibdbusmachine-id/
-RUN dbus-uuidgen > /etc/machine-id
-
-# Fixing errors like: "Failed to read: session.screen0.tab.width"
-# https://sourceforge.net/p/fluxbox/mailman/fluxbox-users/thread/NEBBIAHCLNICCIFIKLCHGECKFDAA.chrys@cs.ualberta.ca/
-RUN cp -R /etc/X11/fluxbox ~/.fluxbox
-RUN cp -R /etc/X11/fluxbox /home/.fluxbox
-
-# Locale settings
-ENV LANGUAGE en_US.UTF-8
-ENV LANG en_US.UTF-8
-RUN locale-gen en_US.UTF-8 \
-  && dpkg-reconfigure --frontend noninteractive locales
-#============================
-# Graphical interface (END)
-#============================
 
 
 #============================
 # Tensorflow and OpenAI
 #============================
 
+# CPU Version
 RUN wget https://github.com/lakshayg/tensorflow-build/raw/master/tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
 RUN pip3 install --ignore-installed --upgrade tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
 
@@ -109,6 +74,7 @@ RUN git clone https://github.com/ikoryakovskiy/gym.git \
 
 RUN pip3 --no-cache-dir install \
         scipy \
+        scikit-optimize \
         tqdm \
         joblib \
         zmq \
