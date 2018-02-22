@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 
 LABEL maintainer="Ivan Koryakovskiy <i.koryakovskiy@tudelft.nl>"
 
@@ -62,8 +62,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Tensorflow and OpenAI
 #============================
 
-RUN wget https://github.com/lakshayg/tensorflow-build/raw/master/tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
-RUN pip3 install --ignore-installed --upgrade tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
+# CPU Docker
+#RUN wget https://github.com/lakshayg/tensorflow-build/raw/master/tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
+#RUN pip3 install --ignore-installed --upgrade tensorflow-1.4.0-cp35-cp35m-linux_x86_64.whl
+
+# GPU Docker
+RUN pip3 --no-cache-dir install wheel
+RUN wget https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.5.0-cp35-cp35m-linux_x86_64.whl
+RUN pip3 install --ignore-installed --upgrade tensorflow_gpu-1.5.0-cp35-cp35m-linux_x86_64.whl
+
+#RUN pip3 --no-cache-dir install tensorflow-gpu
 
 # Install OpenAI Gum
 ADD https://api.github.com/repos/ikoryakovskiy/gym/git/refs/heads/master version.json
