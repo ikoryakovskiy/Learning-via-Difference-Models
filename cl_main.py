@@ -25,9 +25,9 @@ def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg['reach_return'])
 
 
-#    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
-#    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
-#    return (0*random.random() + reg, 'testing')
+    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
+    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
+    return (0*random.random() + reg, 'testing', [])
 
 
     print('cl_run: ' +  base_cfg['output'] + ' started!')
