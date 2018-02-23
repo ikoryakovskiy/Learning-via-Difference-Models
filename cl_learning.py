@@ -14,6 +14,7 @@ from cl_main import cl_run
 from ddpg import parse_args
 
 from opt_cmaes import opt_cmaes
+from opt_bo import opt_bo
 
 from logger import Logger
 
@@ -108,18 +109,18 @@ def main():
     args['cl_cmaes_sigma0'] = 1.0
     popsize = 15 # None
     reeval_num0 = 5
-    G = 250
+    G = 500
     use_mp = True
     reeval = True
 
-    args['mp_debug'] = False
-    args['steps'] = 1500
-    popsize = 2
-    reeval_num0 = 2
-    args['seed']  = 1
-    G = 3
-    use_mp = False
-    reeval = False
+#    args['mp_debug'] = False
+#    args['steps'] = 1500
+#    popsize = 2
+#    reeval_num0 = 2
+#    #args['seed']  = 1
+#    G = 2
+#    use_mp = False
+#    reeval = False
 
     # Tasks
     tasks = {
@@ -142,11 +143,13 @@ def main():
         w_num += fan_in*int(size) + int(size)
         fan_in = int(size)
 
-    opt = opt_cmaes(args, w_num, popsize, reeval_num0)
+    #opt = opt_cmaes(args, w_num, popsize, reeval_num0)
+    opt = opt_bo(args, w_num, popsize)
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
     g = 1
+    #opt.load(root, 'opt.pkl')
     while not opt.stop() and g <= G:
         if args['mp_debug']:
             sys.stdout = Logger(root + "/stdout-g{:04}.log".format(g))
@@ -169,6 +172,7 @@ def main():
 
         # logging
         opt.log(root, alg, g, hp.damage_info, hp.reeval_damage_info)
+        opt.save(root, 'opt.pkl')
 
         # new iteration
         g += 1

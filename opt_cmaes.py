@@ -105,3 +105,9 @@ class opt_cmaes(object):
                 for i, di in enumerate(reeval_damage_info):
                     f.write('{:2d}'.format(self.nh.mp_idxs[i]).rjust(3) + ': ' +  str(di) + '\n')
                 f.write('\n' + self.nh.print() + '\n')
+
+    def save(self, fname):
+        pass
+
+    def load(self, fname):
+        pass
