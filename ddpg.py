@@ -74,6 +74,7 @@ def parse_args():
 
     # Curriculum
     parser.add_argument('--cl-on', choices=[0,2,3], default=0)
+    parser.add_argument('--cl-constraints', type=str, default='monotonic')
     parser.add_argument('--cl-load', type=str, default='')
     parser.add_argument('--cl-structure', type=str, default='relu_3;tanh_1')
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)

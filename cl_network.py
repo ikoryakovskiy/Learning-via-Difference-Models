@@ -17,38 +17,59 @@ class CurriculumNetwork(object):
     Input to the network is the performance characteristics, output is the prediction switcher.
     """
 
-    def __init__(self, input_dim, output_dim, config):
+    def __init__(self, input_dim, output_dim, config, cl_mode_init):
         self.i_dim = input_dim
         self.o_dim = output_dim
-        self.learning_rate = config["cl_lr"]
-        self.batch_norm = config["cl_batch_norm"]
-        self.l2 = config["cl_l2_reg"]
-        self.cl_on = config['cl_on']
-        self.w_num = 0          # total number of weights
+        self.learning_rate  = config["cl_lr"]
+        self.batch_norm     = config["cl_batch_norm"]
+        self.l2             = config["cl_l2_reg"]
+        self.cl_on          = config['cl_on']
+        self.cl_constraints = config["cl_constraints"]
 
-        self.nn_i_dim = [self.i_dim]
-        self.nn_activation = []
-        self.nn_size = []
+        # learning modes
+        if self.cl_on == 2:
+            self.modes = ['balancing', 'walking']
+        else:
+            self.modes = ['balancing_tf', 'balancing', 'walking']
+
+        if cl_mode_init:
+            self.current_idx = self.modes.index(cl_mode_init)
+        else:
+            self.current_idx = 0
+
+        self.layer_i_dim = [self.i_dim]
+        self.layer_activation = []
+        self.layer_size = []
+        self.w_num = 0          # total number of weights in NN
         for layer in config["cl_structure"].split(";"):
             activation, size = layer.split("_")
-            self.w_num += self.nn_i_dim[-1]*int(size) + int(size)
-            self.nn_activation.append(activation)
-            self.nn_size.append(int(size))
-            self.nn_i_dim.append(int(size)) # for the next layer
+            self.w_num += self.layer_i_dim[-1]*int(size) + int(size)
+            self.layer_activation.append(activation)
+            self.layer_size.append(int(size))
+            self.layer_i_dim.append(int(size)) # for the next layer
 
-        self.norm_int = False
-        if self.nn_activation[-1] == 'tanh':
+        if self.layer_activation[-1] == 'tanh':
             self.norm_int = True
+        else:
+            self.norm_int = False
 
-        self.num_layers = len(self.nn_size)
+        if self.layer_activation[-1] == 'softmax':
+            self.supervised_learning = True
+        else:
+            self.supervised_learning = False
+
+        if not self.supervised_learning:
+            assert(self.cl_on == self.layer_size[-1]+1)
+
+        self.num_layers = len(self.layer_size)
 
         # Create the curriculum switching network
         self.inputs, self.out = self.create_curriculum_network()
         self.network_params = [v for v in tf.trainable_variables() if 'curriculum' in v.name]
 
         # supervised training
-        if self.nn_activation[-1] == 'softmax':
-            self.labels = tf.placeholder("float", [None, self.nn_size[-1]])
+        if self.layer_activation[-1] == 'softmax':
+            self.labels = tf.placeholder("float", [None, self.layer_size[-1]])
             var = tf.add_n([ tf.nn.l2_loss(v) for v in self.network_params if 'bias' not in v.name ]) * self.l2
             self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels) + var)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.cost)
@@ -58,15 +79,15 @@ class CurriculumNetwork(object):
 
         layer = inputs
         for i in range(self.num_layers):
-            weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.nn_i_dim[i]), maxval=1/sqrt(self.nn_i_dim[i]))
-            new_layer = tflearn.fully_connected(layer, self.nn_size[i], name="curriculumLayer{}".format(i), weights_init=weights_init)
+            weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.layer_i_dim[i]), maxval=1/sqrt(self.layer_i_dim[i]))
+            new_layer = tflearn.fully_connected(layer, self.layer_size[i], name="curriculumLayer{}".format(i), weights_init=weights_init)
 
             if self.batch_norm:
                 new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
 
-            if self.nn_activation[i] == 'relu':
+            if self.layer_activation[i] == 'relu':
                 new_layer = tflearn.activations.relu(new_layer)
-            elif self.nn_activation[i] == 'tanh':
+            elif self.layer_activation[i] == 'tanh':
                 new_layer = tflearn.activations.tanh(new_layer)
 
             if i < self.num_layers-1:
@@ -127,16 +148,25 @@ class CurriculumNetwork(object):
     def predict(self, sess, inputs):
         r = sess.run(self.out, feed_dict={self.inputs: inputs})[0]
 
-        modes = ['balancing', 'walking']
-
-        if len(modes) == 2 and self.nn_activation[-1] == 'softmax':
+        # supervised learning
+        if self.cl_on == 2 and self.supervised_learning:
             return int(r[0] > r[1])
 
-        if len(modes) == 2 and not self.norm_int:
+        # meta-heuristic
+        if self.cl_on == 2 and not self.norm_int:
             idx = int(r[0] > 0)
+        elif self.cl_on == 3 and not self.norm_int:
+            idx = int(r[0] > 0) + 2*int(r[1] > 0)
         else:
             eps = 1E-7
-            bins = np.linspace(-1-eps, 1+eps, len(modes)+1) # requires tanh output layer of NN
+            bins = np.linspace(-1-eps, 1+eps, len(self.modes)+1) # requires tanh output layer of NN
             idx = np.digitize(r, bins, right=True)[0] - 1 # index starts at 1, and include 0 as a left bin
-        return modes[idx], r[0]
+
+        # do not allow to go backwards in the curriculum
+        idx = min([len(self.modes)-1, idx])
+        if self.cl_constraints == 'monotonic':
+            idx = max([self.current_idx, idx])
+
+        self.current_idx = idx
+        return self.modes[idx], r
 

@@ -191,7 +191,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
         # Export environment state
-        env.log("{:15.2f}".format(cl_threshold) if cl_threshold else '')
+        env.log(''.join("{:10.2f}".format(th) for th in cl_threshold) if cl_threshold is not None else '')
 
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
@@ -307,7 +307,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
                 # report
                 more_info = ''.join('{:10.2f}'.format(perf) for perf in nn_perf)
-                more_info += "{:10.2f}".format(cl_threshold) if cl_threshold else ''
+                more_info += ''.join("{:10.2f}".format(th) for th in cl_threshold) if cl_threshold is not None else ''
                 env.log(more_info)
 
                 if not config['mp_debug']:
@@ -406,6 +406,6 @@ def start(env, pt=None, cl_mode=None, **config):
         # create curriculum switching network
         cl_nn = None
         if config["cl_on"] > 0:
-            cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config)
+            cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config, cl_mode)
 
     return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)

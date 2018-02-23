@@ -20,8 +20,6 @@ from logger import Logger
 random.seed(datetime.now())
 
 
-
-
 class Helper(object):
     def __init__(self, base_cfg, root, alg, tasks, starting_task, arg_cores, use_mp=True):
         self.base_cfg = base_cfg
@@ -88,8 +86,17 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     # important defaults
+    # 2-stage curriculum
+#    args['cl_on'] = 2
+#    args['cl_structure'] = '_1'
+#    starting_task = 'balancing'
+
+    # 3-stage curriculum
+    args['cl_on'] = 3
+    args['cl_structure'] = '_2'
+    starting_task = 'balancing_tf'
+
     args['mp_debug'] = True
-    args['cl_on'] = 2
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
@@ -97,7 +104,6 @@ def main():
     args['default_damage'] = 4035.00
     args['steps'] = 300000
     args['cl_depth'] = 1
-    args['cl_structure'] = '_1'
     args['cl_l2_reg'] = 1000 # well-posing problem
     args['cl_cmaes_sigma0'] = 1.0
     popsize = 15 # None
@@ -106,17 +112,21 @@ def main():
     use_mp = True
     reeval = True
 
+    args['mp_debug'] = False
     args['steps'] = 1500
     popsize = 2
     reeval_num0 = 2
-    #args['seed']  = 123
+    args['seed']  = 1
     G = 3
     use_mp = False
-    reeval = True
+    reeval = False
 
-    # Parameters
-    starting_task = 'balancing'
-    tasks = {'balancing': 'cfg/leo_balancing.yaml', 'walking': 'cfg/leo_walking.yaml'}
+    # Tasks
+    tasks = {
+            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
+            'balancing':    'cfg/leo_balancing.yaml',
+            'walking':      'cfg/leo_walking.yaml'
+            }
 
     root = "cl"
     if not os.path.exists(root):
