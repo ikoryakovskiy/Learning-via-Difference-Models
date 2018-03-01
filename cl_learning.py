@@ -8,6 +8,7 @@ import os
 import numpy as np
 import sys
 import pdb
+import time
 
 from ptracker import PerformanceTracker
 from cl_main import cl_run
@@ -108,19 +109,21 @@ def main():
     args['cl_l2_reg'] = 1000 # well-posing problem
     args['cl_cmaes_sigma0'] = 1.0
     popsize = 15 # None
+    resample = 1
     reeval_num0 = 5
     G = 500
     use_mp = True
     reeval = True
 
-#    args['mp_debug'] = False
-#    args['steps'] = 1500
-#    popsize = 2
-#    reeval_num0 = 2
-#    #args['seed']  = 1
-#    G = 2
-#    use_mp = False
-#    reeval = False
+    args['mp_debug'] = False
+    args['steps'] = 1500
+    popsize = 2
+    resample = 3
+    #reeval_num0 = 2
+    #args['seed']  = 1
+    G = 3
+    #use_mp = False
+    reeval = False
 
     # Tasks
     tasks = {
@@ -144,12 +147,11 @@ def main():
         fan_in = int(size)
 
     #opt = opt_cmaes(args, w_num, popsize, reeval_num0)
-    opt = opt_bo(args, w_num, popsize)
+    opt = opt_bo(args, w_num, popsize, resample)
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
     g = 1
-    #opt.load(root, 'opt.pkl')
     while not opt.stop() and g <= G:
         if args['mp_debug']:
             sys.stdout = Logger(root + "/stdout-g{:04}.log".format(g))
@@ -179,15 +181,16 @@ def main():
 
 
 ######################################################################################
-def mp_run(mp_cfg):
-    config, tasks, starting_task = mp_cfg
+def mp_run(mp_run):
+    config, tasks, starting_task = mp_run
     bailing = None
+    time.sleep(3*random.random())
     # Run the experiment
     try:
         ret = cl_run(tasks, starting_task, **config)
         print('mp_run: ' +  config['output'] + ' returning ' + '{}'.format(ret))
         return ret
-    except Exception as e:
+    except Exception:
         bailing = "mp_run {}:\n{}\n".format(config['output'], traceback.format_exc())
 
     print('mp_run: ' +  config['output'] + ' could not return correctly')
@@ -200,7 +203,8 @@ def mp_run(mp_cfg):
         finally:
             f.close()
 
-    return None
+    return (None, None, None)
+
 
 ######################################################################################
 def do_multiprocessing_pool(arg_cores, mp_cfgs):
@@ -223,8 +227,8 @@ def do_multiprocessing_pool(arg_cores, mp_cfgs):
     pool.join()
     print('Joining complete')
 
-    # Protection against a list with any None => treat whole list as none
-    if damage_info and None in damage_info:
+    # Protection against a list with all None
+    if damage_info and all(di[0] is None for di in damage_info):
         damage_info = None
     return damage_info
 

@@ -24,10 +24,14 @@ def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["steps"]  != 0)
     assert(base_cfg['reach_return'])
 
-#
+#    print(base_cfg['seed'])
 #    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
 #    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
-#    return (0*random.random() + reg, 'testing', [])
+#    if random.random() > 0.8:
+#        return (1000*random.random() + reg, 'testing', [])
+#    else:
+#        1/0
+#        return (None, None, None)
 
 
     print('cl_run: ' +  base_cfg['output'] + ' started!')

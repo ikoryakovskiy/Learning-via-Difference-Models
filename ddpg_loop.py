@@ -388,9 +388,9 @@ def start(env, pt=None, cl_mode=None, **config):
         # setup random number generators for predicatbility
         print("Random seed ", config['seed'])
         random.seed(config['seed'])
-        np.random.seed(random.randint(0, 10000))
-        tf.set_random_seed(random.randint(0, 10000))
-        env.seed(random.randint(0, 10000))
+        np.random.seed(random.randint(0, 1000000))
+        tf.set_random_seed(random.randint(0, 1000000))
+        env.seed(random.randint(0, 1000000))
 
         obs_dim = env.observation_space.shape[-1]
         act_dim = env.action_space.shape[-1]

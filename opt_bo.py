@@ -5,7 +5,6 @@ Created on Fri Feb 23 08:53:20 2018
 
 @author: ivan
 """
-import time
 import numpy as np
 import pickle
 
@@ -14,8 +13,9 @@ from skopt.learning import GaussianProcessRegressor
 from skopt.space import Real
 
 class opt_bo(object):
-    def __init__(self, config, w_num, popsize):
+    def __init__(self, config, w_num, popsize, resample):
         self.popsize = popsize
+        self.resample = resample
         self.optimizer = Optimizer(
             dimensions=[Real(-1.0, 1.0)] * w_num,
             random_state=1, # use the same seed for repeatability
@@ -27,12 +27,24 @@ class opt_bo(object):
         return False
 
     def ask(self):
-        return self.optimizer.ask(n_points=self.popsize)
+        x = self.optimizer.ask(n_points=self.popsize)
+        x = [xx for xx in x for i in range(self.resample)]
+        return x
 
     def tell(self, solutions, damage):
-        tell_time = time.time()
-        res = self.optimizer.tell(solutions, damage)
-        print('tell time: {}s'.format(time.time() - tell_time))
+        solutions = solutions[::self.resample]
+        damage = chunks_(damage, self.resample)
+        X, Y = [], []
+        for batch_id, batch in enumerate(damage):
+            valid_batch = [x for x in batch if x is not None]
+            if len(valid_batch) > 0:
+                batch_mean = np.mean(valid_batch)
+                X.append(solutions[batch_id])
+                Y.append(batch_mean)
+            # else if all batch damages are None then we hope tell() will not
+            # compalin about missing sample (according to manual, should be ok)
+
+        res = self.optimizer.tell(X, Y)
         return res
 
     def reeval(self, g, solutions, damage, hp):
@@ -60,3 +72,6 @@ class opt_bo(object):
         with open(root+'/'+fname, 'rb') as f:
             self.optimizer = pickle.load(f)
 
+def chunks_(l, n):
+    n = max(1, n)
+    return (l[i:i+n] for i in range(0, len(l), n))
