@@ -108,7 +108,7 @@ def main():
     args['cl_depth'] = 1
     args['cl_l2_reg'] = 1000 # well-posing problem
     args['cl_cmaes_sigma0'] = 1.0
-    popsize = 16
+    popsize = 4
     resample = 4
     reeval_num0 = 5
     G = 500

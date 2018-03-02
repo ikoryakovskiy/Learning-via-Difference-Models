@@ -19,7 +19,7 @@ class opt_bo(object):
         self.optimizer = Optimizer(
             dimensions=[Real(search_space[0], search_space[1])] * w_num,
             random_state=1, # use the same seed for repeatability
-            n_initial_points=self.popsize,
+            n_initial_points=self.popsize*self.resample, # if self.resample > 1, then we will continue ask-tell cycles self.resample times
             acq_optimizer_kwargs = {'n_points':10000} # 'n_jobs' slows down, 'noise' seem not to be used
         )
 
