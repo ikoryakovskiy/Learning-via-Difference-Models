@@ -83,6 +83,7 @@ def parse_args():
     boolean_flag(parser,  'cl-batch-norm', default=False)
     boolean_flag(parser,  'cl-input-norm', default=False)
     parser.add_argument('--cl-depth', type=int, default=3)
+    parser.add_argument('--cl-reparam', type=str, default='spherical')
     parser.add_argument('--cl-save', type=str, default='')
 
 
@@ -105,7 +106,7 @@ def parse_args():
     # Replay Buffer options
     parser.add_argument('--minibatch-size', type=int, default=64)
     parser.add_argument('--rb-max-size', type=int, default=300000)
-    parser.add_argument('--rb-min-size', type=int, default=20000)
+    parser.add_argument('--rb-min-size', type=int, default=1000)
     parser.add_argument('--rb-save-filename', type=str, default='')
     parser.add_argument('--rb-load-filename', type=str, default='')
     parser.add_argument('--reassess-for', type=str, default='')

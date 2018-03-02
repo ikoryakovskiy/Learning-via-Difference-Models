@@ -16,7 +16,7 @@ from ddpg import parse_args
 
 from opt_cmaes import opt_cmaes
 from opt_bo import opt_bo
-
+from spherical import cart2sph
 from logger import Logger
 
 random.seed(datetime.now())
@@ -108,22 +108,22 @@ def main():
     args['cl_depth'] = 1
     args['cl_l2_reg'] = 1000 # well-posing problem
     args['cl_cmaes_sigma0'] = 1.0
-    popsize = 15 # None
-    resample = 1
+    popsize = 16
+    resample = 4
     reeval_num0 = 5
     G = 500
     use_mp = True
     reeval = True
 
-    args['mp_debug'] = False
-    args['steps'] = 1500
-    popsize = 2
-    resample = 3
-    #reeval_num0 = 2
-    #args['seed']  = 1
-    G = 3
-    #use_mp = False
-    reeval = False
+#    args['mp_debug'] = False
+#    args['steps'] = 1500
+#    popsize = 4
+#    resample = 2
+#    #reeval_num0 = 2
+#    #args['seed']  = 1
+#    G = 3
+#    #use_mp = False
+#    reeval = False
 
     # Tasks
     tasks = {
@@ -147,7 +147,8 @@ def main():
         fan_in = int(size)
 
     #opt = opt_cmaes(args, w_num, popsize, reeval_num0)
-    opt = opt_bo(args, w_num, popsize, resample)
+    search_space = (-1.0, 1.0)
+    opt = opt_bo(args, w_num, popsize, resample, search_space)
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
@@ -159,13 +160,20 @@ def main():
 
         solutions = opt.ask()
 
+        if args["cl_reparam"] == "spherical":
+            resol = []
+            for s in solutions:
+                resol.append(cart2sph(s))
+        elif args["cl_reparam"] == "cartesian":
+            resol = solutions
+
         # preparation
-        mp_cfgs = hp.gen_cfg(solutions, g)
+        mp_cfgs = hp.gen_cfg(resol, g)
 
         # evaluating
         damage = hp.run(mp_cfgs)
 
-        # update cma
+        # update cma using *original* solutions
         opt.tell(solutions, damage)
 
         # reevaluation to prevent prepature convergence

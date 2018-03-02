@@ -101,8 +101,23 @@ def cl_run(tasks, cl_mode, **base_cfg):
     if env:
         env.close()
 
+    # notify
+    print('cl_run: ' +  base_cfg['output'] + ' finished!')
+
     # calculate final performance
     walking_avg_damage = base_cfg['default_damage']
+
+    # remove outliers
+    if damage > 2*walking_avg_damage:
+        return (None, None, None)
+
+    # penalize if target performance was not reached
+    if avg_test_return < base_cfg['reach_return']:
+        damage = max([walking_avg_damage, damage])
+
+    # penalize absence of walking stage
+    if "walking" not in cl_info:
+        damage = 2*walking_avg_damage
 
     # add solution regularization
     reg = 0
@@ -110,14 +125,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
     if exists(base_cfg["cl_load"]+'.npy'):
         params = np.load(base_cfg["cl_load"]+'.npy').squeeze()
         if base_cfg['cl_l2_reg']:
-            reg = base_cfg['cl_l2_reg'] * np.abs(1-np.linalg.norm(params, ord=2))
+            reg = base_cfg['cl_l2_reg'] * np.square(1-np.linalg.norm(params, ord=2))
 
-    print('cl_run: ' +  base_cfg['output'] + ' finished!')
-    if avg_test_return > base_cfg['reach_return']:
-        return (damage + reg, cl_info, list(params))
-    else:
-        return (max([walking_avg_damage, damage]) + reg, cl_info, list(params))
-
-
-
-
+    # return final performance
+    return (damage + reg, cl_info, list(params))

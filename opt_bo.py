@@ -13,11 +13,11 @@ from skopt.learning import GaussianProcessRegressor
 from skopt.space import Real
 
 class opt_bo(object):
-    def __init__(self, config, w_num, popsize, resample):
+    def __init__(self, config, w_num, popsize, resample, search_space):
         self.popsize = popsize
         self.resample = resample
         self.optimizer = Optimizer(
-            dimensions=[Real(-1.0, 1.0)] * w_num,
+            dimensions=[Real(search_space[0], search_space[1])] * w_num,
             random_state=1, # use the same seed for repeatability
             n_initial_points=self.popsize,
             acq_optimizer_kwargs = {'n_points':10000} # 'n_jobs' slows down, 'noise' seem not to be used
