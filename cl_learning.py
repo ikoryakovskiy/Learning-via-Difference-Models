@@ -118,11 +118,11 @@ def main():
 #    args['mp_debug'] = False
 #    args['steps'] = 1500
 #    popsize = 4
-#    resample = 2
+#    resample = 4
 #    #reeval_num0 = 2
 #    #args['seed']  = 1
-#    G = 3
-#    #use_mp = False
+#    G = 10
+#    use_mp = False
 #    reeval = False
 
     # Tasks
@@ -173,15 +173,15 @@ def main():
         # evaluating
         damage = hp.run(mp_cfgs)
 
-        # update cma using *original* solutions
-        opt.tell(solutions, damage)
+        # update using *original* solutions
+        _, rejected = opt.tell(solutions, damage)
 
         # reevaluation to prevent prepature convergence
         if reeval:
             opt.reeval(g, solutions, damage, hp)
 
         # logging
-        opt.log(root, alg, g, hp.damage_info, hp.reeval_damage_info)
+        opt.log(root, alg, g, hp.damage_info, hp.reeval_damage_info, rejected)
         opt.save(root, 'opt.pkl')
 
         # new iteration

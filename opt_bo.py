@@ -11,6 +11,7 @@ import pickle
 from skopt import Optimizer
 from skopt.learning import GaussianProcessRegressor
 from skopt.space import Real
+from outliers import dixon_test
 
 class opt_bo(object):
     def __init__(self, config, w_num, popsize, resample, search_space):
@@ -34,23 +35,28 @@ class opt_bo(object):
     def tell(self, solutions, damage):
         solutions = solutions[::self.resample]
         damage = chunks_(damage, self.resample)
-        X, Y = [], []
+        X, Y, rejected = [], [], []
         for batch_id, batch in enumerate(damage):
             valid_batch = [x for x in batch if x is not None]
+            valid_batch, outliers = dixon_test(valid_batch, pres=-1)
             if len(valid_batch) > 0:
                 batch_mean = np.mean(valid_batch)
                 X.append(solutions[batch_id])
                 Y.append(batch_mean)
             # else if all batch damages are None then we hope tell() will not
             # compalin about missing sample (according to manual, should be ok)
+            if outliers:
+                outliers = [x + self.resample*batch_id for x in outliers]
+                rejected.append(outliers)
 
         res = self.optimizer.tell(X, Y)
-        return res
+        rejected = [y for x in rejected for y in x] # flatten list
+        return res, rejected
 
     def reeval(self, g, solutions, damage, hp):
         pass
 
-    def log(self, root, alg, g, damage_info, reeval_damage_info):
+    def log(self, root, alg, g, damage_info, reeval_damage_info, rejected):
         ibest = np.argmin(self.optimizer.yi)
 
         with open('{}/opt_bo.txt'.format(root), 'w') as f:
@@ -62,7 +68,8 @@ class opt_bo(object):
             f.write(str(self.optimizer.Xi[ibest])+'\n\n\n')
 
             for i, di in enumerate(damage_info):
-                f.write('{:2d}'.format(i).rjust(3) + ': ' +  str(di) + '\n')
+                rej_symb = '*' if i in rejected else ' '
+                f.write('{:2d}'.format(i).rjust(3) + ': ' + rej_symb +  str(di) + '\n')
 
     def save(self, root, fname):
         with open(root+'/'+fname, 'wb') as f:

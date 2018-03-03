@@ -19,18 +19,18 @@ import numpy as np
 from os.path import exists
 import yaml, io
 
+
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
     assert(base_cfg['reach_return'])
 
-#    print(base_cfg['seed'])
 #    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
 #    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
-#    if random.random() > 0.8:
+#    if random.random() > 0.:
 #        return (1000*random.random() + reg, 'testing', [])
 #    else:
-#        1/0
+#        #1/0
 #        return (None, None, None)
 
 
@@ -108,8 +108,8 @@ def cl_run(tasks, cl_mode, **base_cfg):
     walking_avg_damage = base_cfg['default_damage']
 
     # remove outliers
-    if damage > 2*walking_avg_damage:
-        return (None, None, None)
+    #if damage > 2*walking_avg_damage:
+    #    return (None, None, None)
 
     # penalize if target performance was not reached
     if avg_test_return < base_cfg['reach_return']:
