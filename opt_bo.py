@@ -50,7 +50,7 @@ class opt_bo(object):
                 rejected.append(outliers)
 
         res = self.optimizer.tell(X, Y)
-        rejected = [y for x in rejected for y in x] # flatten list
+        rejected = [y for x in rejected for y in x] # flatten list of rejected episodes' indexes
         return res, rejected
 
     def reeval(self, g, solutions, damage, hp):

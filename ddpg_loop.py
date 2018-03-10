@@ -18,7 +18,6 @@ import random
 from running_mean_std import RunningMeanStd
 import json
 import pdb
-import time
 
 # ===========================
 # Policy saving and loading
@@ -142,11 +141,12 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             obs_rms = None
 
         # decide mode
-        cl_mode_new = None
-        cl_threshold = None
-        if config['cl_on'] > 0:
+        if cl_nn:
             v = pt.flatten()
             cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
+        else:
+            cl_mode_new = cl_mode
+            cl_threshold = None
 
         # Initialize constants for exploration noise
         ou_sigma = config["ou_sigma"]
@@ -339,7 +339,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 trial_return = 0
                 noise = np.zeros(actor.a_dim)
 
-        # Bxport final performance, but when curriculum is not used or terminated
+        # Export final performance, but when curriculum is not used or terminated
         # not due to the curriculum swithch.
         # Becasue data is always exported when curriculum is switched over.
         if (config['cl_on']  == 0 or cl_mode_new == cl_mode):

@@ -23,7 +23,7 @@ import yaml, io
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
-    assert(base_cfg['reach_return'])
+    #assert(base_cfg['reach_return'])
 
 #    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
 #    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
@@ -35,6 +35,14 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
 
     print('cl_run: ' +  base_cfg['output'] + ' started!')
+
+    if isinstance(base_cfg["steps"], list) or isinstance(base_cfg["steps"], tuple):
+        steps = sum(base_cfg["steps"])
+        step_based_cl_switching = True
+    else:
+        steps = base_cfg["steps"]
+        step_based_cl_switching = False
+
     ss = 0
     stage_counter = 0
     prev_config = None
@@ -45,12 +53,15 @@ def cl_run(tasks, cl_mode, **base_cfg):
     cl_info = ''
     avg_test_return = base_cfg['reach_return']
 
-    while ss < base_cfg["steps"] and avg_test_return <= base_cfg['reach_return']:
+    while ss < steps and (not base_cfg['reach_return'] or avg_test_return <= base_cfg['reach_return']):
         stage = '-{:02d}_'.format(stage_counter) + cl_mode
         config = base_cfg.copy() # Dicts are mutable
 
         config['cfg'] = tasks[cl_mode]
-        config['steps']   = base_cfg["steps"] - ss
+        if step_based_cl_switching:
+            config['steps'] = base_cfg["steps"][stage_counter]
+        else:
+            config['steps']   = steps - ss
         config['output']  = base_cfg['output']  + stage
         config['save']    = base_cfg['output']  + stage
         config['cl_save'] = base_cfg['cl_save'] + stage
@@ -92,10 +103,14 @@ def cl_run(tasks, cl_mode, **base_cfg):
         # DBG: ensure exit from the loop after the walking stage
         print('cl_run: {} stage {} done'.format(config['output'], stage))
         if cl_mode == 'walking':
-            print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < base_cfg["steps"], avg_test_return <= base_cfg['reach_return']))
+            print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < steps, avg_test_return <= base_cfg['reach_return']))
             break
         # DBG end
 
+        if step_based_cl_switching:
+            task_sequence = ('balancing_tf', 'balancing', 'walking')
+            idx = [idx for idx, ts in enumerate(task_sequence) if ts == cl_mode][0]
+            cl_mode_new = task_sequence[idx+1]
         cl_mode = cl_mode_new
 
     if env:
@@ -106,10 +121,6 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
     # calculate final performance
     walking_avg_damage = base_cfg['default_damage']
-
-    # remove outliers
-    #if damage > 2*walking_avg_damage:
-    #    return (None, None, None)
 
     # penalize if target performance was not reached
     if avg_test_return < base_cfg['reach_return']:
