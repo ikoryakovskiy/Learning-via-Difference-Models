@@ -10,7 +10,7 @@ import sys
 import pdb
 import time
 from logger import Logger
-
+import math
 
 from ptracker import PerformanceTracker
 from cl_main import cl_run
@@ -37,7 +37,7 @@ def main():
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
     steps       = 300000
-    steps_ub    = 100001
+    steps_ub    = 100000
     steps_delta =   5000
     popsize = 16*6
     G = 100
@@ -45,7 +45,7 @@ def main():
 
 #    args['mp_debug'] = False
 ##    steps       = 3000
-##    steps_ub    = 1001
+##    steps_ub    = 1000
 ##    steps_delta =  500
 #    G = 10
 #    use_mp = False
@@ -64,10 +64,14 @@ def main():
 
     #opt = opt_ce.load(root, 'opt.pkl')
 
-    categories = list(range(0, steps_ub, steps_delta))
+    categories = range(21) #list(range(0, steps_ub, steps_delta))
     opt = opt_ce(popsize, categories)
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
+
+    balancing_tf = np.array(categories)/max(categories)
+    balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
+    balancing = np.array(categories) * steps_delta
 
     g = 1
     while not opt.stop() and g <= G:
@@ -81,6 +85,8 @@ def main():
         resol = []
         for s in solutions:
             a, b = s
+            a = balancing_tf[a]
+            b = balancing[b]
             if   a == 0 and b == 0:
                 rs = (-1, -1, steps)
             elif a == 0 and b > 0:
