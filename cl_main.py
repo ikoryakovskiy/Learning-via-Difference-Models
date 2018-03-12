@@ -23,18 +23,6 @@ import yaml, io
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
-    #assert(base_cfg['reach_return'])
-
-#    params = np.load(base_cfg['cl_load']+'.npy').squeeze()
-#    reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
-#    if random.random() > 0.:
-#        return (1000*random.random() + reg, 'testing', [])
-#    else:
-#        #1/0
-#        return (None, None, None)
-
-
-    print('cl_run: ' +  base_cfg['output'] + ' started!')
 
     if isinstance(base_cfg["steps"], list) or isinstance(base_cfg["steps"], tuple):
         steps = sum(base_cfg["steps"])
@@ -42,6 +30,23 @@ def cl_run(tasks, cl_mode, **base_cfg):
     else:
         steps = base_cfg["steps"]
         step_based_cl_switching = False
+
+#    ################
+#    if step_based_cl_switching:
+#        ss = base_cfg["steps"]
+#        damage = 0.0001 * (abs(ss[0]-20000) + abs(ss[1]-30000))
+#        return (9*random.random() + damage, 'testing', [])
+#    else:
+#        params = np.load(base_cfg['cl_load']+'.npy').squeeze()
+#        reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)
+#        if random.random() > 0.:
+#            return (1000*random.random() + reg, 'testing', [])
+#        else:
+#            #1/0
+#            return (None, None, None)
+#    ################
+
+    print('cl_run: ' +  base_cfg['output'] + ' started!')
 
     ss = 0
     stage_counter = 0

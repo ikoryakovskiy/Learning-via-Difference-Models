@@ -44,6 +44,17 @@ class Helper(object):
             mp_cfgs.append( (cpy_cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 
+    def gen_cfg_steps(self, solutions, g, begin=0):
+        mp_cfgs = []
+        for run, solution in enumerate(solutions):
+            cpy_cfg = self.base_cfg.copy()
+            cpy_cfg['output']  = '{}/{}-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
+            cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
+            cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, begin+run)
+            cpy_cfg['steps'] = solution
+            mp_cfgs.append( (cpy_cfg, self.tasks, self.starting_task) )
+        return mp_cfgs
+
     def run(self, mp_cfgs, reeval=False):
         if self.use_mp:
             damage_info = None
