@@ -33,6 +33,8 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     args['mp_debug'] = True
+    args['reach_return'] = 1422.66
+    args['default_damage'] = 4035.00
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
