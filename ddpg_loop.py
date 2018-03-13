@@ -196,7 +196,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Main loop over steps or trials
         while (config["trials"] == 0 or tt < config["trials"]) and \
               (config["steps"]  == 0 or ss < config["steps"]) and \
-              (config['cl_on']  == 0 or cl_mode_new == cl_mode) and \
+              (not cl_nn or cl_mode_new == cl_mode) and \
               (not config['reach_return'] or avg_test_return <= config['reach_return']):
 
             # Compute OU noise and action
@@ -342,7 +342,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Export final performance, but when curriculum is not used or terminated
         # not due to the curriculum swithch.
         # Becasue data is always exported when curriculum is switched over.
-        if (config['cl_on']  == 0 or cl_mode_new == cl_mode):
+        if (not cl_nn or cl_mode_new == cl_mode):
             env.log(more_info)
 
         # verify replay_buffer
@@ -404,8 +404,10 @@ def start(env, pt=None, cl_mode=None, **config):
             tf.summary.FileWriter(dir_path, ddpg)
 
         # create curriculum switching network
-        cl_nn = None
-        if config["cl_on"] > 0:
-            cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config, cl_mode)
+        if not config["cl_structure"] or not config["cl_stages"]:
+            cl_nn = None
+        else:
+            cl_nn = CurriculumNetwork(pt.get_v_size(), config, cl_mode)
 
     return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)
+

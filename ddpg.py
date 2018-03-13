@@ -73,10 +73,9 @@ def parse_args():
     boolean_flag(parser,  'render', default=False)
 
     # Curriculum
-    parser.add_argument('--cl-on', choices=[0,2,3], default=0)
-    parser.add_argument('--cl-constraints', type=str, default='monotonic')
+    parser.add_argument('--cl-structure', type=str, default='') # cl:relu_3;tanh_1
+    parser.add_argument('--cl-stages', type=str, default='balancing_tf;balancing;walking:monotonic')
     parser.add_argument('--cl-load', type=str, default='')
-    parser.add_argument('--cl-structure', type=str, default='relu_3;tanh_1')
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)
     parser.add_argument('--cl-lr', type=float, default=0.001)
     parser.add_argument('--cl-cmaes-sigma0', type=float, default=4.0)

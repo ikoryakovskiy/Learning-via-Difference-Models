@@ -100,13 +100,11 @@ def main():
 
     # important defaults
     # 2-stage curriculum
-#    args['cl_on'] = 2
-#    args['cl_structure'] = '_1'
+#    args['cl_structure'] = 'cl:_1'
 #    starting_task = 'balancing'
 
     # 3-stage curriculum
-    args['cl_on'] = 3
-    args['cl_structure'] = '_2'
+    args['cl_structure'] = 'cl:_2'
     starting_task = 'balancing_tf'
 
     args['mp_debug'] = True

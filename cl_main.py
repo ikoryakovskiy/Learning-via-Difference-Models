@@ -64,7 +64,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
         config['cfg'] = tasks[cl_mode]
         if step_based_cl_switching:
-            config['steps'] = base_cfg["steps"][stage_counter]
+            config['steps'] = int(base_cfg["steps"][stage_counter])
         else:
             config['steps']   = steps - ss
         config['output']  = base_cfg['output']  + stage
@@ -88,7 +88,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
             config['rb_load_filename'] = prev_config['rb_save_filename']
 
         if cl_mode == 'walking':
-            config['cl_on'] = 0 # forbid loading curriculum
+            config['cl_structure'] = '' # forbid loading curriculum
 
         cl_info += cl_mode + ' '
 
@@ -105,12 +105,10 @@ def cl_run(tasks, cl_mode, **base_cfg):
         stage_counter += 1
         cl_info += ('{:d}'.format(ss_new)).ljust(7) + ' '
 
-        # DBG: ensure exit from the loop after the walking stage
         print('cl_run: {} stage {} done'.format(config['output'], stage))
         if cl_mode == 'walking':
             print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < steps, avg_test_return <= base_cfg['reach_return']))
             break
-        # DBG end
 
         if step_based_cl_switching:
             task_sequence = ('balancing_tf', 'balancing', 'walking')
