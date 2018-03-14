@@ -11,6 +11,8 @@ import tflearn
 from os.path import exists
 from math import sqrt
 import numpy as np
+import collections
+import pickle
 
 ###############################################################################
 class NeuralNetwork(object):
@@ -41,7 +43,7 @@ class NeuralNetwork(object):
 
 
     def _decode(self):
-        self.layer_size = [self.i_dim] # includes input layer
+        self.layer_size = [self.i_dim[-1]] # includes input layer
         self.layer_type = ['']
         self.layer_activation = ['']
         self.w_num = 0 # total number of weights in NN
@@ -56,7 +58,8 @@ class NeuralNetwork(object):
 
 
     def _create(self):
-        inputs = tflearn.input_data(shape=[None, self.i_dim])
+        shape = [None] + [i for i in self.i_dim]
+        inputs = tflearn.input_data(shape=shape)
         layer = inputs
         for i in range(self.num_hidden_layers):
             weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.layer_size[i]), maxval=1/sqrt(self.layer_size[i]))
@@ -64,9 +67,11 @@ class NeuralNetwork(object):
             if self.layer_type[i+1] == 'fc':
                 new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init)
             elif self.layer_type[i+1] == 'rnn':
-                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init,
+                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i),
+                                               weights_init=weights_init,
                                                return_seq=False,
-                                               activation = 'linear')
+                                               activation = 'linear'
+                                               dynamic=True)
 
             if self.batch_norm:
                 new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
@@ -134,7 +139,7 @@ class FeedForwardCurriculumNetwork(NeuralNetwork):
         return idx, rr
 
 
-    def train(self, sess, batch_x, batch_y):
+    def train(self, sess, batch_x, batch_y, **kwargs):
         # curriculum network is trained by metaheuristic
         pass
 
@@ -158,12 +163,12 @@ class FeedForwardSupervisedClassificationNetwork(NeuralNetwork):
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.cost)
 
 
-    def predict(self, sess, inputs):
+    def predict(self, sess, inputs, stages):
         rr = sess.run(self.out, feed_dict={self.inputs: inputs})[0]
         return int(rr[0] > rr[1]), rr
 
 
-    def train(self, sess, batch_x, batch_y):
+    def train(self, sess, batch_x, batch_y, **kwargs):
         return sess.run([self.optimizer, self.cost], feed_dict={
                 self.inputs: batch_x,
                 self.labels: batch_y
@@ -182,15 +187,17 @@ class RecurrentNeuralRegressionNetwork(NeuralNetwork):
         self.optimizer = tflearn.regression(self.out, optimizer='adam', loss='mean_square', learning_rate=self.learning_rate)
 
 
-    def predict(self, sess, inputs):
+    def predict(self, sess, inputs, stages):
         outputs = self.model.predict(inputs)
         return outputs
 
 
-    def train(self, sess, batch_x, batch_y):
+    def train(self, sess, batch_x, batch_y, **kwargs):
         self.model = tflearn.DNN(self.optimizer, clip_gradients=0.0, tensorboard_verbose=0)
-        self.model.fit(batch_x, batch_y, n_epoch=150, validation_set=0.1, show_metric=True, batch_size=64)
+        self.model.fit(batch_x, batch_y, **kwargs)
 
+    def validate(self, num_stages):
+        pass
 
 ###############################################################################
 class CurriculumNetwork(object):
@@ -198,6 +205,8 @@ class CurriculumNetwork(object):
     Input to the network is the performance characteristics, output is the prediction switcher.
     """
     def __init__(self, input_dim, config, cl_mode_init = None):
+        if not isinstance(input_dim, collections.Sequence):
+            input_dim = [input_dim]
         network_type = config["cl_structure"].split(":")[0]
         if network_type == 'cl':
             self.network = FeedForwardCurriculumNetwork(input_dim, config)
@@ -220,9 +229,9 @@ class CurriculumNetwork(object):
         self.network.validate(len(self.stages))
 
 
-    def train(self, sess, batch_x, batch_y):
+    def train(self, sess, batch_x, batch_y, **kwargs):
         if self.network:
-            self.network.train(sess, batch_x, batch_y)
+            self.network.train(sess, batch_x, batch_y, **kwargs)
 
 
     def predict(self, sess, inputs):
@@ -236,6 +245,11 @@ class CurriculumNetwork(object):
 
             self.stage = stage
             return self.stages[stage], rr
+
+
+    def predict_direct(self, sess, inputs):
+        if self.network:
+            return self.network.predict(sess, inputs, len(self.stages))
 
 
     def load(self, sess, fname):
