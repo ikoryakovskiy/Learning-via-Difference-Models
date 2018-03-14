@@ -35,7 +35,11 @@ def cl_run(tasks, cl_mode, **base_cfg):
 #    if step_based_cl_switching:
 #        ss = base_cfg["steps"]
 #        damage = 0.0001 * (abs(ss[0]-20000) + abs(ss[1]-30000))
-#        return (9*random.random() + damage, 'testing', [])
+#        if random.random() > 0.:
+#            return (9*random.random() + damage, 'testing', [])
+#        else:
+#            1/0
+#            return (None, None, None)
 #    else:
 #        params = np.load(base_cfg['cl_load']+'.npy').squeeze()
 #        reg = base_cfg['cl_l2_reg'] * np.linalg.norm(params, ord=2)

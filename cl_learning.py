@@ -104,7 +104,7 @@ def main():
 #    starting_task = 'balancing'
 
     # 3-stage curriculum
-    args['cl_structure'] = 'cl:_2'
+    args['cl_structure'] = 'cl:fc__2'
     starting_task = 'balancing_tf'
 
     args['mp_debug'] = True

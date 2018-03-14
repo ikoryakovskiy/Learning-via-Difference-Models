@@ -26,9 +26,9 @@ def main():
     config['cl_depth'] = 2
     config["cl_l2_reg"] = 0.01
 
-    pt = PerformanceTracker(depth=config['cl_depth'], input_norm=config["cl_input_norm"])
+    pt = PerformanceTracker(depth=config['cl_depth'], dim=4, input_norm=config["cl_input_norm"])
     with tf.Graph().as_default() as sa:
-        cl_nn = CurriculumNetwork(pt.get_v_size(), 1, config)
+        cl_nn = CurriculumNetwork(pt.get_v_size(), config)
 
     N = None
     P = None

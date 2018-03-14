@@ -11,8 +11,8 @@ import pdb
 import time
 from logger import Logger
 import math
+import pickle
 
-from ptracker import PerformanceTracker
 from cl_main import cl_run
 from ddpg import parse_args
 from cl_learning import Helper
@@ -64,10 +64,11 @@ def main():
     if not os.path.exists(root):
         os.makedirs(root)
 
-    #opt = opt_ce.load(root, 'opt.pkl')
-
-    categories = range(21) #list(range(0, steps_ub, steps_delta))
+    categories = range(21)
     opt = opt_ce(popsize, categories)
+    g = 1
+    #opt = opt_ce.load(root, 'opt.pkl')
+    #g = 2
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
@@ -75,7 +76,6 @@ def main():
     balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
     balancing = np.array(categories) * steps_delta
 
-    g = 1
     while not opt.stop() and g <= G:
         if args['mp_debug']:
             sys.stdout = Logger(root + "/stdout-g{:04}.log".format(g))
@@ -105,11 +105,21 @@ def main():
         # preparation
         mp_cfgs = hp.gen_cfg_steps(resol, g)
 
-        # evaluating
+        # evaluate and backup immediately
         damage = hp.run(mp_cfgs)
+        with open(root+'/damage.pkl', 'wb') as f:
+            pickle.dump(damage, f, 2)
+
+        # remove None elements
+        notnonel = np.where(np.array(damage)!=None)[0]
+        damage = [d for i,d in enumerate(damage) if i in notnonel]
+        solutions = [d for i,d in enumerate(solutions) if i in notnonel]
 
         # update using *original* solutions
         best = opt.tell(solutions, damage)
+
+        # back-project to array incluing None elements
+        best = [notnonel[i] for i in best]
 
         # logging
         opt.log(root, alg, g, hp.damage_info, hp.reeval_damage_info, best)

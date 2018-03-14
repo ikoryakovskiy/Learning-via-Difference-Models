@@ -81,7 +81,7 @@ def parse_args():
     parser.add_argument('--cl-cmaes-sigma0', type=float, default=4.0)
     boolean_flag(parser,  'cl-batch-norm', default=False)
     boolean_flag(parser,  'cl-input-norm', default=False)
-    parser.add_argument('--cl-depth', type=int, default=3)
+    parser.add_argument('--cl-depth', type=int, default=1)
     parser.add_argument('--cl-reparam', type=str, default='spherical')
     parser.add_argument('--cl-save', type=str, default='')
 

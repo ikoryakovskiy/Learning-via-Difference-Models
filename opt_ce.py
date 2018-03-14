@@ -8,6 +8,7 @@ Created on Fri Feb 23 08:53:20 2018
 import numpy as np
 import pickle
 import pdb
+import traceback
 
 def _rejection_sampling(p, categories, n):
     x = []
@@ -49,20 +50,28 @@ class opt_ce(object):
 
     def tell(self, solutions, damage):
         # sort damage
-        idxs =np.argsort(damage) # minimum first
-        quantile_idx = idxs[:int(len(damage)*0.1)]
-        best = [solutions[x] for x in quantile_idx]
-        besta, bestb = zip(*best)
-        for i in range(self.psize):
-            cc = self.categories[i]
-            pa_hat = sum([1 for x in besta if x==cc]) / len(besta)
-            pb_hat = sum([1 for x in bestb if x==cc]) / len(bestb)
-            self.pa[i] = self.alpha * self.pa[i] + (1-self.alpha) * pa_hat
-            self.pb[i] = self.alpha * self.pb[i] + (1-self.alpha) * pb_hat
-        self.pa = [ x/sum(self.pa) for x in self.pa]
-        self.pb = [ x/sum(self.pb) for x in self.pb]
-        self.Xi += solutions
-        self.Yi += damage
+        try:
+            idxs =np.argsort(np.array(damage)) # minimum first
+            quantile_idx = idxs[:int(len(damage)*0.1)]
+            if len(quantile_idx) > 0: # if there are enough samples
+                best = [solutions[x] for x in quantile_idx]
+                besta, bestb = zip(*best)
+                for i in range(self.psize):
+                    cc = self.categories[i]
+                    pa_hat = sum([1 for x in besta if x==cc]) / len(besta)
+                    pb_hat = sum([1 for x in bestb if x==cc]) / len(bestb)
+                    self.pa[i] = self.alpha * self.pa[i] + (1-self.alpha) * pa_hat
+                    self.pb[i] = self.alpha * self.pb[i] + (1-self.alpha) * pb_hat
+                self.pa = [ x/sum(self.pa) for x in self.pa]
+                self.pb = [ x/sum(self.pb) for x in self.pb]
+                self.Xi += solutions
+                self.Yi += damage
+            else:
+                print('Not enough samples? Maybe damage is None everywhere.')
+                pdb.set_trace()
+        except Exception as e:
+            print('Something went wrong in tell():\n{}\n{}'.format(e, traceback.format_exc()))
+            pdb.set_trace()
         return quantile_idx
 
     def reeval(self, g, solutions, damage, hp):

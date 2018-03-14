@@ -13,7 +13,7 @@ from math import sqrt
 import numpy as np
 
 ###############################################################################
-class FeedForwardNetwork(object):
+class NeuralNetwork(object):
     def __init__(self, input_dim, config):
         self.i_dim = input_dim
         self.learning_rate = config["cl_lr"]
@@ -42,12 +42,14 @@ class FeedForwardNetwork(object):
 
     def _decode(self):
         self.layer_size = [self.i_dim] # includes input layer
-        self.layer_activation = []
+        self.layer_type = ['']
+        self.layer_activation = ['']
         self.w_num = 0 # total number of weights in NN
         network_description = self.structure.split(":")[1].split(";")
         for layer in network_description:
-            activation, size = layer.split("_")
+            ltype, activation, size = layer.split("_")
             self.w_num += self.layer_size[-1]*int(size) + int(size)
+            self.layer_type.append(ltype)
             self.layer_activation.append(activation)
             self.layer_size.append(int(size))
         self.num_hidden_layers = len(self.layer_size)-1
@@ -58,15 +60,25 @@ class FeedForwardNetwork(object):
         layer = inputs
         for i in range(self.num_hidden_layers):
             weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.layer_size[i]), maxval=1/sqrt(self.layer_size[i]))
-            new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init)
+
+            if self.layer_type[i+1] == 'fc':
+                new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init)
+            elif self.layer_type[i+1] == 'rnn':
+                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init,
+                                               return_seq=False,
+                                               activation = 'linear')
 
             if self.batch_norm:
                 new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
 
-            if self.layer_activation[i] == 'relu':
+            if self.layer_activation[i+1] == 'linear':
+                new_layer = tflearn.activations.linear(new_layer)
+            elif self.layer_activation[i+1] == 'relu':
                 new_layer = tflearn.activations.relu(new_layer)
-            elif self.layer_activation[i] == 'tanh':
+            elif self.layer_activation[i+1] == 'tanh':
                 new_layer = tflearn.activations.tanh(new_layer)
+            elif self.layer_activation[i+1] == 'sigmoid':
+                new_layer = tflearn.activations.sigmoid(new_layer)
 
             if i < self.num_hidden_layers-1:
                 layer = new_layer
@@ -101,12 +113,7 @@ class FeedForwardNetwork(object):
 
 
 ###############################################################################
-class RecurrentNeuralNetwork(object):
-    def __init__(self, input_dim, output_dim, config, cl_mode_init):
-        pass
-
-###############################################################################
-class FeedForwardCurriculumNetwork(FeedForwardNetwork):
+class FeedForwardCurriculumNetwork(NeuralNetwork):
     def __init__(self, input_dim, config):
         super().__init__(input_dim, config)
 
@@ -139,7 +146,7 @@ class FeedForwardCurriculumNetwork(FeedForwardNetwork):
 
 
 ###############################################################################
-class FeedForwardSupervisedClassificationNetwork(FeedForwardNetwork):
+class FeedForwardSupervisedClassificationNetwork(NeuralNetwork):
     def __init__(self, input_dim, config):
         super().__init__(input_dim, config)
         self.l2 = config["cl_l2_reg"]
@@ -167,17 +174,38 @@ class FeedForwardSupervisedClassificationNetwork(FeedForwardNetwork):
         assert(self.layer_activation[-1] == 'softmax') # classification supports only softmax
         assert(self.layer_size[-1] == 2 and num_stages == 2) # Supports only 2-stage curriculum => 2 softmax outputs
 
+
+###############################################################################
+class RecurrentNeuralRegressionNetwork(NeuralNetwork):
+    def __init__(self, input_dim, config):
+        super().__init__(input_dim, config)
+        self.optimizer = tflearn.regression(self.out, optimizer='adam', loss='mean_square', learning_rate=self.learning_rate)
+
+
+    def predict(self, sess, inputs):
+        outputs = self.model.predict(inputs)
+        return outputs
+
+
+    def train(self, sess, batch_x, batch_y):
+        self.model = tflearn.DNN(self.optimizer, clip_gradients=0.0, tensorboard_verbose=0)
+        self.model.fit(batch_x, batch_y, n_epoch=150, validation_set=0.1, show_metric=True, batch_size=64)
+
+
 ###############################################################################
 class CurriculumNetwork(object):
     """
     Input to the network is the performance characteristics, output is the prediction switcher.
     """
-    def __init__(self, input_dim, config, cl_mode_init):
+    def __init__(self, input_dim, config, cl_mode_init = None):
         network_type = config["cl_structure"].split(":")[0]
         if network_type == 'cl':
             self.network = FeedForwardCurriculumNetwork(input_dim, config)
-        if network_type == 'ffsc':
+        elif network_type == 'ffsc':
             self.network = FeedForwardSupervisedClassificationNetwork(input_dim, config)
+        elif network_type == 'rnnr':
+            self.network = RecurrentNeuralRegressionNetwork(input_dim, config)
+
 
         cl_stages = config["cl_stages"]
         self.stages = cl_stages.split(":")[0].split(";")

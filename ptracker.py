@@ -12,8 +12,8 @@ from running_mean_std import RunningMeanStd
 
 class PerformanceTracker(object):
 
-    def __init__(self, depth=3, input_norm=True):
-        self.dim = 3
+    def __init__(self, depth=3, input_norm=True, dim=3):
+        self.dim = dim
         self.depth = depth
         self.db = deque()
         self.count = 0
