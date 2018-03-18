@@ -24,15 +24,16 @@ ss = 3 # curriculum stage
 
 def read_file(f, cl_mode=0):
     try:
-        data = np.loadtxt(f, skiprows=3, usecols=(3, 11, 12, 4))
+        data = np.loadtxt(f, skiprows=3, usecols=(3, 11, 12, 4, 5))
     except IndexError:
         return None
     except Exception as e:
         print(e)
     length = data.shape[0]
-    damage = data[:, -1,np.newaxis]
+    damage = data[:,3,np.newaxis]
+    distance = data[:,4,np.newaxis]
     data = np.hstack((data[:,0:3], cl_mode*np.ones((length,1))))
-    return {'data':data, 'damage':damage}
+    return {'data':data, 'damage':damage, 'distance':distance}
 
 
 def concat(first, second, first_no_damage=0):
@@ -43,7 +44,8 @@ def concat(first, second, first_no_damage=0):
     damage1 = (1-first_no_damage)*first['damage']
     damage2 = damage1[-1] + second['damage']
     damage = np.vstack((damage1, damage2))
-    return {'data': data, 'damage': damage}
+    distance = np.vstack((first['distance'], second['distance']))
+    return {'data':data, 'damage':damage, 'distance':distance}
 
 
 def load_data(path, params, gmax = 1):
@@ -69,11 +71,14 @@ def clean_dataset(dd, params):
     for d in dd:
         data = d['data']
         damage = d['damage']
-        if damamge_threshold and damage[-1] < damamge_threshold:
+        distance = d['distance']
+        walked = any(distance > 10.0) # walked more then 10 m
+        if walked and damamge_threshold and damage[-1] < damamge_threshold:
             if all(data[-1,1:] == data[-2,1:]): # last export was not due to the end of testing
                 data = data[:-1, :]
                 damage = damage[:-1, :]
             dd_new.append({'data': data, 'damage': damage})
+    print('Percentage = {}'.format(len(dd_new)/len(dd)))
     return dd_new
 
 
@@ -231,7 +236,7 @@ def main():
     #config['cl_structure'] = 'ffcritic:fc_relu_2;fc_relu_2;fc_relu_1'
     config["cl_batch_norm"] = True
     config['cl_dropout_keep'] = 0.7
-    config["cl_l2_reg"] = 0.1
+    config["cl_l2_reg"] = 0.001
     config["minibatch_size"] = 128
 
     dd = load_data('leo_supervised_learning_regression/', params, gmax = 6)
@@ -277,7 +282,7 @@ def main():
         sess.run(tf.global_variables_initializer())
 
         minibatch_size = config["minibatch_size"]
-        for i in range(1000):
+        for i in range(200000):
             s_batch, a_batch, r_batch, t_batch, s2_batch = rb_train.sample_batch(minibatch_size)
 
             # Calculate targets
@@ -332,7 +337,9 @@ def main():
                 plt.plot(x, test_td_error_, 'k')
                 plt.pause(0.05)
 
-        critic.save(sess, 'cl_network')
+                if i%5000 == 0:
+                    critic.save(sess, 'cl_network', global_step=i)
+
     plt.show(block=True)
 
 

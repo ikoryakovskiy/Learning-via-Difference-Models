@@ -45,7 +45,7 @@ class NeuralNetwork(object):
 
 
     def save(self, sess, fname, global_step = None):
-        saver = tf.train.Saver(self.network_params)
+        saver = tf.train.Saver(self.network_params, max_to_keep=None)
         saver.save(sess, "./" + fname, global_step)
 
 
