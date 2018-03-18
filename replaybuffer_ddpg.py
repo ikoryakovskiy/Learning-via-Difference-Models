@@ -11,17 +11,15 @@ import pickle
 import os
 
 class ReplayBuffer(object):
-    def __init__(self, config, o_dims = None):
+    def __init__(self, config, o_dims):
         """
         The right side of the deque contains the most recent experiences
         """
         self.buffer_size = config["rb_max_size"]
-        self.buffer_size_file = 0
         self.replay_buffer_count = 0
         self.replay_buffer = deque()
         self.save_filename = config['rb_save_filename']
         self.load_filename = config['rb_load_filename']
-        self.buffer_size_file = config['rb_max_size']
         self.o_dims = o_dims
 
         print("Replay Buffer save = '{}', load = '{}'".format(

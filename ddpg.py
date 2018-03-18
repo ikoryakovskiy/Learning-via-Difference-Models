@@ -78,6 +78,7 @@ def parse_args():
     parser.add_argument('--cl-load', type=str, default='')
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)
     parser.add_argument('--cl-lr', type=float, default=0.001)
+    parser.add_argument('--cl-dropout-keep', type=float, default=1.0)
     parser.add_argument('--cl-cmaes-sigma0', type=float, default=4.0)
     boolean_flag(parser,  'cl-batch-norm', default=False)
     boolean_flag(parser,  'cl-input-norm', default=False)
