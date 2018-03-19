@@ -21,31 +21,45 @@ class NeuralNetwork(object):
         self.a_dim = action_dim
         self.learning_rate = config["cl_lr"]
         self.l2 = config["cl_l2_reg"]
+        self.tau = config["cl_tau"]
         self.dropout = config["cl_dropout_keep"]
         self.batch_norm = config["cl_batch_norm"]
         self.structure = config["cl_structure"]
         self.network_type = config["cl_structure"].split(":")[0]
         self._decode()
         if 'critic' in self.network_type:
-            self.inputs, self.action, self.out = self._create_critic()
+            self.inputs, self.action, self.out = self._create_critic('curriculum')
         else:
-            self.inputs, self.out = self._create()
+            self.inputs, self.out = self._create('curriculum')
         self.network_params = [v for v in tf.trainable_variables() if 'curriculum' in v.name]
 
+        if 'critic' in self.network_type and config["cl_target"]:
+            self.target_inputs, self.target_action, self.target_out = self._create_critic(prefix='cltg')
+            self.target_network_params = [v for v in tf.trainable_variables() if 'cltg' in v.name]
+            self.update_target_network_params = \
+                [self.target_network_params[i].assign(
+                    tf.multiply(self.network_params[i], self.tau) + tf.multiply(self.target_network_params[i],
+                                                                                1. - self.tau))
+                 for i in range(len(self.target_network_params))]
 
     def load(self, sess, fname):
         if exists(fname+'.npy'):
             params = np.load(fname+'.npy').squeeze()
             self._set_params(sess, params)
         else:
-            saver = tf.train.Saver(self.network_params)
+            toload = self.target_network_params + self.network_params
+            saver = tf.train.Saver(toload)
             saver.restore(sess, fname)
+            #self.network_params = [v for v in tf.trainable_variables() if 'curriculum' in v.name]
+            #self.target_network_params = [v for v in tf.trainable_variables() if 'target' in v.name]
         print("Loaded curriculum from {}".format(fname))
         return sess
 
 
+
     def save(self, sess, fname, global_step = None):
-        saver = tf.train.Saver(self.network_params, max_to_keep=None)
+        tosave = self.target_network_params + self.network_params
+        saver = tf.train.Saver(tosave, max_to_keep=None)
         saver.save(sess, "./" + fname, global_step)
 
 
@@ -67,7 +81,7 @@ class NeuralNetwork(object):
         self.num_hidden_layers = len(self.layer_size)-1
 
 
-    def _create(self):
+    def _create(self, prefix=''):
         shape = [None] + [i for i in self.i_dim]
         inputs = tflearn.input_data(shape=shape)
         layer = inputs
@@ -80,9 +94,9 @@ class NeuralNetwork(object):
                 dropout = None
 
             if self.layer_type[i+1] == 'fc':
-                new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init)
+                new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i), weights_init=weights_init)
             elif self.layer_type[i+1] == 'rnn':
-                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i),
+                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),
                                                weights_init=weights_init,
                                                return_seq=False,
                                                activation='linear',
@@ -92,7 +106,7 @@ class NeuralNetwork(object):
                 raise ValueError('Unsupported layer {}'.format(i))
 
             if self.batch_norm:
-                new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
+                new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="{}Layer{}_norm".format(prefix,i))
 
             if self.layer_activation[i+1] == 'linear':
                 new_layer = tflearn.activations.linear(new_layer)
@@ -108,7 +122,7 @@ class NeuralNetwork(object):
         return inputs, new_layer
 
 
-    def _create_critic(self):
+    def _create_critic(self, prefix=''):
         inputs_shape = [None] + [i for i in self.i_dim]
         inputs = tflearn.input_data(shape=inputs_shape)
 
@@ -125,9 +139,9 @@ class NeuralNetwork(object):
                 dropout = None
 
             if self.layer_type[i+1] == 'fc':
-                new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i), weights_init=weights_init)
+                new_layer = tflearn.fully_connected(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i), weights_init=weights_init)
             elif self.layer_type[i+1] == 'rnn':
-                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="curriculumLayer{}".format(i),
+                new_layer = tflearn.simple_rnn(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),
                                                weights_init=weights_init,
                                                return_seq=False,
                                                activation='linear',
@@ -140,7 +154,7 @@ class NeuralNetwork(object):
                  break
 
             if self.batch_norm:
-                new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="curriculumLayer{}_norm".format(i))
+                new_layer = tflearn.layers.normalization.batch_normalization(new_layer, name="{}Layer{}_norm".format(prefix,i))
 
             if self.layer_activation[i+1] == 'linear':
                 new_layer = tflearn.activations.linear(new_layer)
@@ -157,7 +171,7 @@ class NeuralNetwork(object):
         action_init = tflearn.initializations.uniform(minval=-1/sqrt(self.layer_size[-3]),
                                                                      maxval=1/sqrt(self.layer_size[-3]))
         if self.layer_type[-1] == 'fc':
-            action_layer = tflearn.fully_connected(action, self.layer_size[-1], name="curriculumLayerAction", weights_init=action_init)
+            action_layer = tflearn.fully_connected(action, self.layer_size[-1], name="{}LayerAction".format(prefix), weights_init=action_init)
         else:
             raise ValueError('Unsupported actor layer')
 
@@ -170,10 +184,16 @@ class NeuralNetwork(object):
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        new_layer = tflearn.fully_connected(net, 1, weights_init=w_init, name="curriculumOutput")
+        new_layer = tflearn.fully_connected(net, 1, weights_init=w_init, name="{}Output".format(prefix))
 
         return inputs, action, new_layer
 
+    def predict_target_(self, sess, batch_x, **kwargs):
+        pass
+
+
+    def update_target_network(self, sess):
+        pass
 
     def _set_params(self, sess, params):
         v_vars = self.network_params
@@ -311,19 +331,35 @@ class FeedForwardCriticNetwork(NeuralNetwork):
     def predict(self, sess, inputs):
         rr = []
         for action in range(self.num_stages):
-            rr.append(self.predict_(sess, inputs, action-1))
+            action = np.reshape(action-1, [-1, 1])
+            rr.append(self.predict_target_(sess, inputs, action=action))
 
-        # take curriculum which leads to the least damage
-        idx = np.argmin(rr)
+        # take curriculum which leads to the higherst return (least damage)
+        idx = np.argmax(rr)
+        rr = np.reshape(rr, [-1])
         return idx, rr
 
     def predict_(self, sess, batch_x, **kwargs):
+#        action = kwargs['action']
+#        outputs = sess.run(self.out, feed_dict={
+#            self.inputs: batch_x,
+#            self.action: action
+#        })
+#        return outputs
+        pass
+
+
+    def predict_target_(self, sess, batch_x, **kwargs):
         action = kwargs['action']
-        outputs = sess.run(self.out, feed_dict={
-            self.inputs: batch_x,
-            self.action: action
+        return sess.run(self.target_out, feed_dict={
+            self.target_inputs: batch_x,
+            self.target_action: action
         })
-        return outputs
+
+
+    def update_target_network(self, sess):
+        sess.run(self.update_target_network_params)
+
 
     def train(self, sess, batch_x, batch_y, **kwargs):
         action = kwargs['action']
@@ -378,7 +414,7 @@ class CurriculumNetwork(object):
 
     def predict(self, sess, inputs):
         if self.network:
-            stage, rr = self.network.predict(sess, inputs, len(self.stages))
+            stage, rr = self.network.predict(sess, inputs)
 
             stage = min([len(self.stages)-1, stage])
 
@@ -392,6 +428,13 @@ class CurriculumNetwork(object):
     def predict_(self, sess, inputs, **kwargs):
         if self.network:
             return self.network.predict_(sess, inputs, **kwargs)
+
+    def predict_target_(self, sess, batch_x, **kwargs):
+        if self.network:
+            return self.network.predict_target_(sess, batch_x, **kwargs)
+
+    def update_target_network(self, sess):
+        self.network.update_target_network(sess)
 
 
     def load(self, sess, fname):

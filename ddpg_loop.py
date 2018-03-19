@@ -144,6 +144,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         if cl_nn:
             v = pt.flatten()
             cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
+            #cl_threshold = pt.denormalize(cl_threshold)
         else:
             cl_mode_new = cl_mode
             cl_threshold = None
@@ -288,18 +289,15 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 if cl_nn:
                     s = info.split()
                     # convert number of falls into a relative value
-                    #norm_trial_return = trial_return / config['reach_return']
                     norm_td_error = td_per_step / config["env_td_error_scale"]
                     norm_duration = float(s[0]) / config["env_timeout"]
-                    #falls = float(s[1])
-                    #norm_damage = (falls - prev_falls) / ti
                     norm_complexity = l2_reg_per_step
-                    #indicators = [norm_trial_return, norm_duration, norm_damage]
-                    indicators = [norm_td_error, norm_complexity, norm_duration]
+                    #indicators = [norm_td_error, norm_complexity, norm_duration]
+                    indicators = [norm_duration, norm_td_error, norm_complexity]
                     pt.add(indicators) # return, duration, damage
                     v = pt.flatten()
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
-                    #prev_falls = falls
+                    #cl_threshold = pt.denormalize(cl_threshold)
 
                 # check if performance is satisfactory
                 test_returns.append(trial_return)

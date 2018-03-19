@@ -243,7 +243,7 @@ def main():
             dd_train, dd_test = pickle.load(f)
 
     # prepare for training
-    pt = PerformanceTracker(depth=config['cl_depth'], input_norm=config["cl_input_norm"], dim=dim)
+    pt = PerformanceTracker(depth=config['cl_depth'], input_norm=config["cl_running_norm"], dim=dim)
     cl_nn = CurriculumNetwork((params['steps_of_history'], pt.get_v_size()), config)
 
     cl_nn.train(None, dd_train['seq_data'], dd_train['seq_damage'], n_epoch=2,

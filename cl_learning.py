@@ -33,25 +33,27 @@ class Helper(object):
         self.use_mp = use_mp
         self.reeval_damage_info = None
 
-    def gen_cfg(self, solutions, g, begin=0):
+    def gen_cfg(self, solutions=None, g=1, begin=0):
         mp_cfgs = []
         for run, solution in enumerate(solutions):
             cpy_cfg = self.base_cfg.copy()
             cpy_cfg['output']  = '{}/{}-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
             cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
             cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, begin+run)
-            np.save(cpy_cfg['cl_load'], solution)
+            if solution:
+                np.save(cpy_cfg['cl_load'], solution)
             mp_cfgs.append( (cpy_cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 
-    def gen_cfg_steps(self, solutions, g, begin=0):
+    def gen_cfg_steps(self, solutions=None, g=1, begin=0):
         mp_cfgs = []
         for run, solution in enumerate(solutions):
             cpy_cfg = self.base_cfg.copy()
             cpy_cfg['output']  = '{}/{}-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
             cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, begin+run)
             cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, begin+run)
-            cpy_cfg['steps'] = solution
+            if solution:
+                cpy_cfg['steps'] = solution
             mp_cfgs.append( (cpy_cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 
@@ -146,7 +148,7 @@ def main():
         os.makedirs(root)
 
     # calulate number of weights
-    pt = PerformanceTracker(depth=args['cl_depth'], input_norm=args["cl_input_norm"])
+    pt = PerformanceTracker(depth=args['cl_depth'], input_norm=args["cl_running_norm"])
     input_dim = pt.get_v_size()
     w_num = 0
     fan_in = input_dim

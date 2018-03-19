@@ -16,11 +16,11 @@ from ptracker import PerformanceTracker
 from cl_network import CurriculumNetwork
 from ddpg import parse_args
 
-tt = 0 # duration
-ee = 1 # td error
-cc = 2 # complexity
-ss = 3 # curriculum stage
-
+tt  = 0 # duration
+ee  = 1 # td error
+cc  = 2 # complexity
+ss  = 3 # curriculum stage
+dim = 4
 
 def read_file(f, cl_mode=0):
     try:
@@ -65,61 +65,40 @@ def load_data(path, params, gmax = 1):
     return dd
 
 
-def clean_dataset(dd, params):
+def clean_data(dd, params):
     damamge_threshold = params['damamge_threshold']
     dd_new = []
     for d in dd:
         data = d['data']
         damage = d['damage']
         distance = d['distance']
-        walked = any(distance > 10.0) # walked more then 10 m
+        walked = True #any(distance > 20.0) # walked more then 10 m
         if walked and damamge_threshold and damage[-1] < damamge_threshold:
             if all(data[-1,1:] == data[-2,1:]): # last export was not due to the end of testing
                 data = data[:-1, :]
                 damage = damage[:-1, :]
-            dd_new.append({'data': data, 'damage': damage})
+            dd_new.append({'data': data, 'damage': damage, 'distance':distance})
     print('Percentage = {}'.format(len(dd_new)/len(dd)))
     return dd_new
 
 
-def process_data(dd, config, params, zero_padding_after=1):
-    steps_of_history = params['steps_of_history']
+def process_data(dd, config):
     dd_new = []
     for d in dd:
-        norm_duration = d['data'][:, 0, np.newaxis] / config['env_timeout']
-        norm_duration = np.vstack((np.zeros((steps_of_history, 1)), norm_duration))
-        norm_duration = np.vstack((norm_duration, np.zeros((zero_padding_after, 1))))
-
-        norm_td_error = d['data'][:, 1, np.newaxis] / config["env_td_error_scale"]
-        norm_td_error = np.vstack((np.zeros((steps_of_history, 1)), norm_td_error))
-        norm_td_error = np.vstack((norm_td_error, np.zeros((zero_padding_after, 1))))
-
-        norm_complexity = d['data'][:, 2, np.newaxis]
-        norm_complexity = np.vstack((np.zeros((steps_of_history, 1)), norm_complexity))
-        norm_complexity = np.vstack((norm_complexity, np.zeros((zero_padding_after, 1))))
-
-        cl_mode = (d['data'][:, 3, np.newaxis] + 1)/10
-        cl_mode = np.vstack((np.ones((steps_of_history, 1))*cl_mode[0], cl_mode))
-        cl_mode = np.vstack((cl_mode, np.zeros((zero_padding_after, 1))))
-
-        data = np.hstack((norm_duration, norm_td_error, norm_complexity, cl_mode))
-
-        damage = (d['damage'][-1] - d['damage']) / config['default_damage']
-        damage0 = d['damage'][-1] / config['default_damage']
-        damage = np.vstack((np.ones((steps_of_history, 1))*damage0, damage))
-        damage = np.vstack((damage, np.zeros((zero_padding_after, 1)))) # No padding of damage?
-
-        dd_new.append({'data': data, 'damage': damage})
-
+        data = d['data'] / np.array([config['env_timeout'], config["env_td_error_scale"], 1, 1])
+        damage = d['damage'] #/ 1000.0 #/ config['default_damage']
+        dd_new.append({'data':data, 'damage':damage, 'distance':d['distance']})
     return dd_new
+
 
 def normalize(data, mean_data=None, std_data=None):
     if mean_data is None:
         mean_data = np.mean(data, axis=0)
     if std_data is None:
         std_data = np.std(data, axis=0)
-    norm_data = (data-mean_data[np.newaxis,:]) / std_data[np.newaxis,:]
+    norm_data = (data-mean_data) / std_data
     return norm_data, mean_data, std_data
+
 
 def normalize_data(dd, config, params, data_norm=None, damage_norm=None):
     steps_of_history = params['steps_of_history']
@@ -131,49 +110,58 @@ def normalize_data(dd, config, params, data_norm=None, damage_norm=None):
         data = []
         damage = []
         for d in dd:
-            data.append(d['data'])
-            damage_ = d['damage'][-1] - d['damage']
-            damage0 = np.array(d['damage'][-1])
-            damage.append(np.vstack((damage0, damage_)))
+            data_ = np.vstack((np.zeros((steps_of_history, dim)), d['data'], np.zeros((zero_padding_after, dim))))
+            data_[0:steps_of_history, 3] = data_[steps_of_history, 3]
+            data.append(data_)
+            if params['damage_norm'] == 'to_reward':
+                damage_ = -np.diff(d['damage'], axis=0)
+                damage0 = -d['damage'][0]
+                damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_, np.zeros((1,1))))
+            else:
+                damage_ = d['damage'][-1] - d['damage']
+                damage0 = np.array(d['damage'][-1])
+                damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_, np.zeros((1,1))))
+            damage_ = np.vstack((damage_, np.zeros((zero_padding_after, 1))))
+            damage.append(damage_)
         data, data_mean, data_std = normalize(np.concatenate(data))
         damage, damage_mean, damage_std = normalize(np.concatenate(damage))
         assert(len(np.where(~data.any(axis=1))[0]) == 0)    # assert no 0 rows in data, which is important for dynamic RNN
-        assert(len(np.where(~damage.any(axis=1))[0]) == 0)
+        #assert(len(np.where(~damage.any(axis=1))[0]) == 0)
     else:
         data_mean, data_std = data_norm
         damage_mean, damage_std = damage_norm
 
     # apply normalization to each episode
-    dim = len(data_mean)
     for d in dd:
+        data_ = np.vstack((np.zeros((steps_of_history, dim)), d['data'], np.zeros((zero_padding_after, dim))))
+        data_[0:steps_of_history, 3] = data_[steps_of_history, 3]
         if params['indi_norm']:
-            data, _, _ = normalize(d['data'], data_mean, data_std)
-        else:
-            data = d['data']
-        data = np.vstack((np.zeros((steps_of_history, dim)), data, np.zeros((zero_padding_after, dim))))
-        data[0:steps_of_history, 3] = data[steps_of_history, 3]
+            data_, _, _ = normalize(data_, data_mean, data_std)
 
         if params['damage_norm'] == 'to_reward':
-            damage = -np.diff(d['damage'], axis=0)
-            damage = np.vstack((np.zeros((steps_of_history,1)), damage, np.zeros((1,1))))
+            damage_ = -np.diff(d['damage'], axis=0)
+            damage0 = -d['damage'][0]
+            damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_, np.zeros((1,1))))
         else:
-            damage = (d['damage'][-1] - d['damage'])
+            damage_ = (d['damage'][-1] - d['damage'])
             damage0 = d['damage'][-1]
-            damage = np.vstack((np.ones((steps_of_history, 1))*damage0, damage))
-            damage, _, _ = normalize(damage, damage_mean, damage_std)
-        damage = np.vstack((damage, np.zeros((zero_padding_after, 1)))) # No padding of damage?
+            damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_))
+        damage_ = np.vstack((damage_, np.zeros((zero_padding_after, 1))))
 
-        stage = d['data'][:, ss, np.newaxis]
+        if 'norm' in params['damage_norm']:
+            damage_, _, _ = normalize(damage_, damage_mean, damage_std)
+
+        stage_ = d['data'][:, ss, np.newaxis]
         if params['stage_norm'] == 'cetered':
-            stage = stage - 1
-        stage = np.vstack((np.ones((steps_of_history, 1))*stage[0], stage, -1*np.ones((zero_padding_after, 1))))
+            stage_ = stage_ - 1
+        stage_ = np.vstack((np.ones((steps_of_history, 1))*stage_[0], stage_, np.zeros((zero_padding_after, 1))))
 
-        dd_new.append({'data': data, 'damage': damage, 'stage':stage})
+        dd_new.append({'data': data_, 'damage': damage_, 'stage':stage_})
 
     return dd_new, (data_mean, data_std), (damage_mean, damage_std)
 
 
-def seq_cut(dd, params, dim):
+def seq_cut(dd, params):
     steps_of_history = params['steps_of_history']
     data_ = []
     damage_ = []
@@ -228,22 +216,24 @@ def main():
     params['damage_norm'] = 'to_reward'
     params['stage_norm'] = 'cetered'
     params['neg_damage'] = True
-    dim = 4
 
     config = parse_args()
-    config["cl_lr"] = 0.0001
+    config['default_damage'] = 4035.00
+    config["cl_lr"] = 0.01
+    config["cl_tau"] = 0.001
     config['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
     #config['cl_structure'] = 'ffcritic:fc_relu_2;fc_relu_2;fc_relu_1'
     config["cl_batch_norm"] = True
     config['cl_dropout_keep'] = 0.7
+    config["cl_target"] = True
     config["cl_l2_reg"] = 0.001
     config["minibatch_size"] = 128
 
     dd = load_data('leo_supervised_learning_regression/', params, gmax = 6)
 
     # Rule-based processing before splitting
-    dd = clean_dataset(dd, params)
-    #dd = process_data(dd, config, params, zero_padding_after)
+    dd = clean_data(dd, params)
+    dd = process_data(dd, config)
 
     # split into training and testing sets
     test_percentage = 0.3
@@ -257,9 +247,17 @@ def main():
     dd_train, data_norm, damage_norm = normalize_data(dd_train, config, params)
     dd_test, _, _ = normalize_data(dd_test, config, params, data_norm, damage_norm)
 
+    # save means and std for usage in RL
+    pt = PerformanceTracker(depth=config['cl_depth'],
+                            running_norm=config["cl_running_norm"],
+                            input_norm=data_norm,
+                            output_norm=damage_norm,
+                            dim=3)
+    pt.save('data_damage_norms.pkl')
+
     # get stat
-    seq_cut(dd_train, params, dim)
-    seq_cut(dd_test, params, dim)
+    seq_cut(dd_train, params)
+    seq_cut(dd_test, params)
 
     # fill in replay beuffer
     rb_train = fill_replay_buffer(dd_train, config)
@@ -268,9 +266,9 @@ def main():
     #config["minibatch_size"] = rb_train.replay_buffer_count
 
     with tf.Graph().as_default() as ddpg_graph:
-        #pt = PerformanceTracker(depth=config['cl_depth'], input_norm=config["cl_input_norm"], dim=dim)
+        #pt = PerformanceTracker(depth=config['cl_depth'], running_norm=config["cl_running_norm"], dim=dim)
         #critic = CurriculumNetwork((params['steps_of_history'], pt.get_v_size()), config)
-        critic = CurriculumNetwork(3, config)
+        critic = CurriculumNetwork(pt.get_v_size(), config)
         #critic_div = CriticNetwork(3, 1, config, 0)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
@@ -289,7 +287,7 @@ def main():
             qq_val = []
             for stage in range(0,3):
                 a_max = (stage-1)*np.ones((minibatch_size,1))
-                qq_val.append(critic.predict_(sess, s2_batch, action=a_max))
+                qq_val.append(critic.predict_target_(sess, s2_batch, action=a_max))
             q_val = np.concatenate(qq_val, axis=1)
             q_max = np.max(q_val, axis=1)
             q_max = np.reshape(q_max,newshape=(minibatch_size,1))
@@ -302,12 +300,13 @@ def main():
                     y_i.append(r_batch[k] + config["gamma"] * q_max[k][0]) # target_q: list -> float
 
             if i%500 == 0:
-                q_i = critic.predict_(sess, s_batch, action=a_batch)
+                q_i = critic.predict_target_(sess, s_batch, action=a_batch)
                 td_error = np.sum(np.abs(q_i-np.reshape(y_i,newshape=(minibatch_size,1)))) / minibatch_size
 
             critic.train(sess, s_batch, np.reshape(y_i, (minibatch_size,1)), action=a_batch)
             #critic_div.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size,1)))
 
+            critic.update_target_network(sess)
 
             # testing
             if i%500 == 0:
@@ -349,7 +348,7 @@ def calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_b
     qq_val = []
     for stage in range(0,3):
         a_max = (stage-1)*np.ones((size,1))
-        qq_val.append(critic.predict_(sess, s2_batch, action=a_max))
+        qq_val.append(critic.predict_target_(sess, s2_batch, action=a_max))
     q_val = np.concatenate(qq_val, axis=1)
     q_max = np.max(q_val, axis=1)
 
@@ -360,7 +359,7 @@ def calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_b
         else:
             y_i.append(r_batch[k] + config["gamma"] * q_max[k]) # target_q: list -> float
 
-    q_i = critic.predict_(sess, s_batch, action=a_batch)
+    q_i = critic.predict_target_(sess, s_batch, action=a_batch)
     td_error = np.sum(np.abs(q_i-np.reshape(y_i,newshape=(size,1))))
     td_error = td_error / size
     return td_error
