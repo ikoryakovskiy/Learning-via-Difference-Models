@@ -207,6 +207,50 @@ def fill_replay_buffer(dd, config):
     assert(replay_buffer.replay_buffer_count < config["rb_max_size"])
     return replay_buffer
 
+
+class cl(object):
+    def __init__(self, size, config):
+        self.network = CurriculumNetwork(size, config)
+    def save(self, sess, name, global_step):
+        self.network.save(sess, 'cl_network', global_step=global_step)
+    def network_params(self):
+        return self.network.network.network_params
+
+
+class cl_critic(cl):
+    def __init__(self, size, config):
+        config['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
+        super().__init__(size, config)
+    def predict(self, sess, s_batch, a_batch):
+        return self.network.predict_(sess, s_batch, action=a_batch)
+    def train(self, sess, s_batch, y_i, a_batch):
+        self.network.train(sess, s_batch, y_i, action=a_batch)
+
+
+class cl_critic_target(cl):
+    def __init__(self, size, config):
+        config["cl_target"] = True
+        config['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
+        super().__init__(size, config)
+    def predict(self, sess, s_batch, a_batch):
+        return self.network.predict_target_(sess, s_batch, action=a_batch)
+    def train(self, sess, s_batch, y_i, a_batch):
+        self.network.train(sess, s_batch, y_i, action=a_batch)
+        self.network.update_target_network(sess)
+
+class cl_ff_regression(cl):
+    def __init__(self, size, config):
+        #config['cl_structure'] = 'ffr:fc_relu_;fc_linear_1'
+        config['cl_structure'] = 'ffr:fc_linear_1'
+        super().__init__(size+1, config) # action included to state
+    def predict(self, sess, s_batch, a_batch):
+        s_batch_new = np.concatenate((s_batch, a_batch), axis=1)
+        return self.network.predict_(sess, s_batch_new)
+    def train(self, sess, s_batch, y_i, a_batch):
+        s_batch_new = np.concatenate((s_batch, a_batch), axis=1)
+        self.network.train(sess, s_batch_new, y_i)
+
+
 def main():
     params = {}
     params['steps_of_history'] = 1
@@ -221,12 +265,10 @@ def main():
     config['default_damage'] = 4035.00
     config["cl_lr"] = 0.01
     config["cl_tau"] = 0.001
-    config['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
     #config['cl_structure'] = 'ffcritic:fc_relu_2;fc_relu_2;fc_relu_1'
-    config["cl_batch_norm"] = True
+#    config["cl_batch_norm"] = True
     config['cl_dropout_keep'] = 0.7
-    config["cl_target"] = True
-    config["cl_l2_reg"] = 0.001
+    config["cl_l2_reg"] = 0.000001
     config["minibatch_size"] = 128
 
     dd = load_data('leo_supervised_learning_regression/', params, gmax = 6)
@@ -266,10 +308,10 @@ def main():
     #config["minibatch_size"] = rb_train.replay_buffer_count
 
     with tf.Graph().as_default() as ddpg_graph:
-        #pt = PerformanceTracker(depth=config['cl_depth'], running_norm=config["cl_running_norm"], dim=dim)
-        #critic = CurriculumNetwork((params['steps_of_history'], pt.get_v_size()), config)
-        critic = CurriculumNetwork(pt.get_v_size(), config)
-        #critic_div = CriticNetwork(3, 1, config, 0)
+        #cl_nn = cl_critic(pt.get_v_size(), config)
+        #cl_nn = cl_critic_target(pt.get_v_size(), config)
+        cl_nn = cl_ff_regression(pt.get_v_size(), config)
+
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     x, td_error_, mb_td_error_, train_td_error_, test_td_error_ = [], [], [], [], []
@@ -287,7 +329,7 @@ def main():
             qq_val = []
             for stage in range(0,3):
                 a_max = (stage-1)*np.ones((minibatch_size,1))
-                qq_val.append(critic.predict_target_(sess, s2_batch, action=a_max))
+                qq_val.append(cl_nn.predict(sess, s2_batch, a_batch=a_max))
             q_val = np.concatenate(qq_val, axis=1)
             q_max = np.max(q_val, axis=1)
             q_max = np.reshape(q_max,newshape=(minibatch_size,1))
@@ -300,28 +342,25 @@ def main():
                     y_i.append(r_batch[k] + config["gamma"] * q_max[k][0]) # target_q: list -> float
 
             if i%500 == 0:
-                q_i = critic.predict_target_(sess, s_batch, action=a_batch)
+                q_i = cl_nn.predict(sess, s_batch, a_batch=a_batch)
                 td_error = np.sum(np.abs(q_i-np.reshape(y_i,newshape=(minibatch_size,1)))) / minibatch_size
 
-            critic.train(sess, s_batch, np.reshape(y_i, (minibatch_size,1)), action=a_batch)
-            #critic_div.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size,1)))
-
-            critic.update_target_network(sess)
+            cl_nn.train(sess, s_batch, np.reshape(y_i, (minibatch_size,1)), a_batch=a_batch)
 
             # testing
             if i%500 == 0:
-                not_biases = [ v for v in critic.network.network_params if '/b:' not in v.name ]
+                not_biases = [ v for v in cl_nn.network_params() if '/b:' not in v.name ]
                 print(sess.run(not_biases))
 
                 print(min(q_max))
 
-                mb_td_error = calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_batch, minibatch_size)
+                mb_td_error = calc_td_error(sess, cl_nn, config, s_batch, a_batch, r_batch, t_batch, s2_batch, minibatch_size)
 
                 s_batch, a_batch, r_batch, t_batch, s2_batch = rb_train.sample_batch(rb_train.replay_buffer_count)
-                train_td_error = calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_batch, rb_train.replay_buffer_count)
+                train_td_error = calc_td_error(sess, cl_nn, config, s_batch, a_batch, r_batch, t_batch, s2_batch, rb_train.replay_buffer_count)
 
                 s_batch, a_batch, r_batch, t_batch, s2_batch = rb_test.sample_batch(rb_test.replay_buffer_count)
-                test_td_error = calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_batch, rb_test.replay_buffer_count)
+                test_td_error = calc_td_error(sess, cl_nn, config, s_batch, a_batch, r_batch, t_batch, s2_batch, rb_test.replay_buffer_count)
 
                 print(td_error, mb_td_error, train_td_error, test_td_error)
                 x.append(i)
@@ -337,18 +376,18 @@ def main():
                 plt.pause(0.05)
 
                 if i%5000 == 0:
-                    critic.save(sess, 'cl_network', global_step=i)
+                    cl_nn.save(sess, 'cl_network', global_step=i)
 
     plt.show(block=True)
 
 
 
-def calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_batch, size):
+def calc_td_error(sess, cl_nn, config, s_batch, a_batch, r_batch, t_batch, s2_batch, size):
     # Calculate targets
     qq_val = []
     for stage in range(0,3):
         a_max = (stage-1)*np.ones((size,1))
-        qq_val.append(critic.predict_target_(sess, s2_batch, action=a_max))
+        qq_val.append(cl_nn.predict(sess, s2_batch, a_batch=a_max))
     q_val = np.concatenate(qq_val, axis=1)
     q_max = np.max(q_val, axis=1)
 
@@ -359,7 +398,7 @@ def calc_td_error(sess, critic, config, s_batch, a_batch, r_batch, t_batch, s2_b
         else:
             y_i.append(r_batch[k] + config["gamma"] * q_max[k]) # target_q: list -> float
 
-    q_i = critic.predict_target_(sess, s_batch, action=a_batch)
+    q_i = cl_nn.predict(sess, s_batch, a_batch=a_batch)
     td_error = np.sum(np.abs(q_i-np.reshape(y_i,newshape=(size,1))))
     td_error = td_error / size
     return td_error

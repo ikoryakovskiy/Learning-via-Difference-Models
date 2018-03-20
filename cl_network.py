@@ -16,6 +16,9 @@ import pickle
 
 ###############################################################################
 class NeuralNetwork(object):
+    target_network_params = []
+    network_params = []
+
     def __init__(self, input_dim, action_dim, config):
         self.i_dim = input_dim
         self.a_dim = action_dim
@@ -285,6 +288,46 @@ class FeedForwardSupervisedClassificationNetwork(NeuralNetwork):
         assert(self.layer_activation[-1] == 'softmax') # classification supports only softmax
         assert(self.layer_size[-1] == 2 and self.num_stages == 2) # Supports only 2-stage curriculum => 2 softmax outputs
 
+###############################################################################
+class FeedForwardRegressionNetwork(NeuralNetwork):
+    def __init__(self, input_dim, config, num_stages):
+        super().__init__(input_dim, [0], config)
+        self.num_stages = num_stages
+        # Network target (y_i)
+        self.predicted_q_value = tf.placeholder(tf.float32, [None, 1])
+
+        # Define loss and optimization Op
+        self.l2_reg = tf.add_n([ tf.nn.l2_loss(v) for v in self.network_params if '/b:' not in v.name ]) * self.l2
+
+        self.loss = tflearn.mean_square(self.predicted_q_value, self.out) + self.l2_reg
+        self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+
+    def predict(self, sess, inputs):
+        rr = []
+        for action in range(self.num_stages):
+            action = np.reshape(action-1, [-1, 1])
+            inputs_new = np.concatenate((inputs, action), axis=1)
+            rr.append(self.predict_(sess, inputs_new))
+
+        # take curriculum which leads to the higherst return (least damage)
+        idx = np.argmax(rr)
+        rr = np.reshape(rr, [-1])
+        return idx, rr
+
+    def predict_(self, sess, batch_x, **kwargs):
+        outputs = sess.run(self.out, feed_dict={
+            self.inputs: batch_x
+        })
+        return outputs
+
+    def train(self, sess, batch_x, batch_y, **kwargs):
+        return sess.run([self.out, self.optimize], feed_dict={
+            self.inputs: batch_x,
+            self.predicted_q_value: batch_y
+        })
+
+    def validate(self):
+        pass
 
 ###############################################################################
 class RecurrentNeuralRegressionNetwork(NeuralNetwork):
@@ -332,7 +375,7 @@ class FeedForwardCriticNetwork(NeuralNetwork):
         rr = []
         for action in range(self.num_stages):
             action = np.reshape(action-1, [-1, 1])
-            rr.append(self.predict_target_(sess, inputs, action=action))
+            rr.append(self.predict_(sess, inputs, action=action))
 
         # take curriculum which leads to the higherst return (least damage)
         idx = np.argmax(rr)
@@ -340,13 +383,12 @@ class FeedForwardCriticNetwork(NeuralNetwork):
         return idx, rr
 
     def predict_(self, sess, batch_x, **kwargs):
-#        action = kwargs['action']
-#        outputs = sess.run(self.out, feed_dict={
-#            self.inputs: batch_x,
-#            self.action: action
-#        })
-#        return outputs
-        pass
+        action = kwargs['action']
+        outputs = sess.run(self.out, feed_dict={
+            self.inputs: batch_x,
+            self.action: action
+        })
+        return outputs
 
 
     def predict_target_(self, sess, batch_x, **kwargs):
@@ -390,6 +432,8 @@ class CurriculumNetwork(object):
             self.network = FeedForwardCurriculumNetwork(input_dim, config, num_stages)
         elif network_type == 'ffsc':
             self.network = FeedForwardSupervisedClassificationNetwork(input_dim, config, num_stages)
+        elif network_type == 'ffr':
+            self.network = FeedForwardRegressionNetwork(input_dim, config, num_stages)
         elif network_type == 'rnnr':
             self.network = RecurrentNeuralRegressionNetwork(input_dim, config, num_stages)
         elif network_type == 'rnncritic':
