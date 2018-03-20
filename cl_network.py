@@ -288,6 +288,43 @@ class FeedForwardSupervisedClassificationNetwork(NeuralNetwork):
         assert(self.layer_activation[-1] == 'softmax') # classification supports only softmax
         assert(self.layer_size[-1] == 2 and self.num_stages == 2) # Supports only 2-stage curriculum => 2 softmax outputs
 
+
+###############################################################################
+class RecurrentNeuralClassificationNetwork(NeuralNetwork):
+    def __init__(self, input_dim, config, num_stages):
+        super().__init__(input_dim, [0], config)
+        self.num_stages = num_stages
+        self.l2 = config["cl_l2_reg"]
+        self.learning_rate = config["cl_lr"]
+
+        self.labels = tf.placeholder("float", [None, self.layer_size[-1]])
+        not_bias = [v for v in self.network_params if ('/Bias:' not in v.name and '/b:' not in v.name)]
+        var = tf.add_n([tf.nn.l2_loss(v) for v in not_bias]) * self.l2
+
+        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels) + var)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.cost)
+
+
+    def predict(self, sess, inputs):
+        rr = self.predict_(sess, inputs)
+        label = np.argmax(rr)
+        return label, rr
+
+    def predict_(self, sess, inputs, **kwargs):
+        rr = sess.run(self.out, feed_dict={self.inputs: inputs})[0]
+        return rr
+
+    def train(self, sess, batch_x, batch_y, **kwargs):
+        return sess.run([self.optimizer, self.cost], feed_dict={
+                self.inputs: batch_x,
+                self.labels: batch_y
+               })
+
+    def validate(self):
+        assert(self.layer_activation[-1] == 'linear') # classification supports only logits
+        #assert(self.layer_size[-1] == 2 and self.num_stages == 2) # Supports only 2-stage curriculum => 2 softmax outputs
+
+
 ###############################################################################
 class FeedForwardRegressionNetwork(NeuralNetwork):
     def __init__(self, input_dim, config, num_stages):
@@ -432,6 +469,8 @@ class CurriculumNetwork(object):
             self.network = FeedForwardCurriculumNetwork(input_dim, config, num_stages)
         elif network_type == 'ffsc':
             self.network = FeedForwardSupervisedClassificationNetwork(input_dim, config, num_stages)
+        elif network_type == 'rnnc':
+            self.network = RecurrentNeuralClassificationNetwork(input_dim, config, num_stages)
         elif network_type == 'ffr':
             self.network = FeedForwardRegressionNetwork(input_dim, config, num_stages)
         elif network_type == 'rnnr':
@@ -453,7 +492,7 @@ class CurriculumNetwork(object):
 
     def train(self, sess, batch_x, batch_y, **kwargs):
         if self.network:
-            self.network.train(sess, batch_x, batch_y, **kwargs)
+            return self.network.train(sess, batch_x, batch_y, **kwargs)
 
 
     def predict(self, sess, inputs):

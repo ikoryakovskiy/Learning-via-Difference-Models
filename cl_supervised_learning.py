@@ -28,7 +28,7 @@ def main():
 
     pt = PerformanceTracker(depth=config['cl_depth'], dim=4, input_norm=config["cl_running_norm"])
     with tf.Graph().as_default() as sa:
-        cl_nn = CurriculumNetwork(pt.get_v_size(), config)
+#       cl_nn = CurriculumNetwork(pt.get_v_size(), config)
 
     N = None
     P = None
