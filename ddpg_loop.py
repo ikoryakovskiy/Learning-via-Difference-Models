@@ -405,7 +405,7 @@ def start(env, pt=None, cl_mode=None, **config):
         if not config["cl_structure"] or not config["cl_stages"]:
             cl_nn = None
         else:
-            cl_nn = CurriculumNetwork(pt.get_v_size()+1, config, cl_mode)
+            cl_nn = CurriculumNetwork(pt.get_v_size(), config, cl_mode)
 
     return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)
 

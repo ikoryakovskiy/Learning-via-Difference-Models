@@ -15,8 +15,9 @@ args['steps'] = 300000
 #args["cl_batch_norm"] = True
 #args['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
 args["cl_batch_norm"] = False
-args['cl_structure'] = 'ffr:fc_relu_8;fc_relu_8;fc_linear_1'
-args['cl_depth'] = 1
+args['cl_structure'] = 'rnnc:rnn_tanh_6_dropout;fc_linear_3'
+args['cl_depth'] = 2
+args['cl_pt_shape'] = (2,3)
 
 #args["cl_target"] = True
 args["cl_pt_load"] = "data_damage_norms.pkl"
@@ -32,5 +33,5 @@ hp = Helper(args, 'cl', 'ddpg', tasks, starting_task, 1, use_mp=False)
 
 # Run actual script.
 config, tasks, starting_task = hp.gen_cfg([None], 1)[0]
-config["cl_load"] = "cl_network-40000"
+config["cl_load"] = "cl_sl3"
 cl_run(tasks, starting_task, **config)

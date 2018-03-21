@@ -89,6 +89,7 @@ def parse_args():
     boolean_flag(parser,  'cl-target', default=False)
     parser.add_argument('--cl-save', type=str, default='')
     parser.add_argument('--cl-pt-load', type=str, default='')
+    parser.add_argument('--cl-pt-shape', type=tuple, default=(1,1))
 
 
     # Learning algorithm options

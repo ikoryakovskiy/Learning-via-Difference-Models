@@ -57,7 +57,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
     prev_config = None
     damage = 0
     env = None
-    pt = PerformanceTracker(depth=base_cfg['cl_depth'], running_norm=base_cfg["cl_running_norm"])
+    pt = PerformanceTracker(base_cfg)
     if base_cfg["cl_pt_load"]:
         pt.load(base_cfg["cl_pt_load"])
 

@@ -13,18 +13,21 @@ from running_mean_std import RunningMeanStd
 
 class PerformanceTracker(object):
 
-    def __init__(self, depth=3, running_norm=False, input_norm=None, output_norm=None, dim=3):
-        self.dim = dim
-        self.depth = depth
+    def __init__(self, cfg, input_norm=None, output_norm=None):
+        self.depth=cfg['cl_depth']
+        self.running_norm=cfg["cl_running_norm"]
+        self.cl_pt_shape=cfg['cl_pt_shape']
+
+        self.dim = self.cl_pt_shape[1]
         self.db = deque()
         self.count = 0
-        self.running_norm = running_norm
+        self.flatten_shape = [-1] + [i for i in self.cl_pt_shape]
         if self.running_norm:
             self.input_rms = RunningMeanStd(self.dim)
 
         if input_norm:
-            self.in_mean = input_norm[0][:dim]
-            self.in_std  = input_norm[1][:dim]
+            self.in_mean = input_norm[0][:self.dim]
+            self.in_std  = input_norm[1][:self.dim]
         else:
             self.in_mean = None
             self.in_std  = None
@@ -43,7 +46,7 @@ class PerformanceTracker(object):
 
 
     def get_v_size(self):
-        return self.dim*self.depth
+        return self.cl_pt_shape
 
 
     def add(self, indicators):
@@ -69,14 +72,14 @@ class PerformanceTracker(object):
             v = np.empty(self.get_v_size())
             for i in range(self.depth):
                 v[i*self.dim:i*self.dim+self.dim] = np.clip(self._normalize(self.db[i], self.input_rms.mean, self.input_rms.std), -5, 5)
-            return np.array(v).reshape((-1, self.get_v_size()))
+            return np.array(v).reshape(self.cl_pt_shape)
         elif self.in_mean is not None and self.in_std is not None:
-            v = np.empty(self.get_v_size())
+            v = []
             for i in range(self.depth):
-                v[i*self.dim:i*self.dim+self.dim] = self._normalize(self.db[i], self.in_mean, self.in_std)
-            return np.array(v).reshape((-1, self.get_v_size()))
+                v.append(self._normalize(self.db[i], self.in_mean, self.in_std))
+            return np.reshape(v, self.flatten_shape)
         else:
-            return np.array(self.db).reshape((-1, self.get_v_size()))
+            return np.array(self.db).reshape(self.cl_pt_shape)
 
 
     def save(self, filename):

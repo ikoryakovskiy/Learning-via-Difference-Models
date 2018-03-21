@@ -105,6 +105,20 @@ class NeuralNetwork(object):
                                                activation='linear',
                                                dropout=dropout,
                                                dynamic=True)
+            elif self.layer_type[i+1] == 'gru':
+                new_layer = tflearn.gru(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),
+                                               weights_init=weights_init,
+                                               return_seq=False,
+                                               activation='linear',
+                                               dropout=dropout,
+                                               dynamic=True)
+            elif self.layer_type[i+1] == 'lstm':
+                new_layer = tflearn.lstm(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),
+                                               weights_init=weights_init,
+                                               return_seq=False,
+                                               activation='linear',
+                                               dropout=dropout,
+                                               dynamic=True)
             else:
                 raise ValueError('Unsupported layer {}'.format(i))
 
@@ -298,10 +312,17 @@ class RecurrentNeuralClassificationNetwork(NeuralNetwork):
         self.learning_rate = config["cl_lr"]
 
         self.labels = tf.placeholder("float", [None, self.layer_size[-1]])
-        not_bias = [v for v in self.network_params if ('/Bias:' not in v.name and '/b:' not in v.name)]
-        var = tf.add_n([tf.nn.l2_loss(v) for v in not_bias]) * self.l2
+        self.class_weight = tf.placeholder("float", [None, 1])
+        #not_bias = [v for v in self.network_params if ('/Bias:' not in v.name and '/b:' not in v.name)]
+        #var = tf.add_n([tf.nn.l2_loss(v) for v in not_bias]) * self.l2
 
-        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels) + var)
+        # Take the cost like normal
+        error = tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels)
+
+        # Scale the cost by the class weights
+        scaled_error = tf.multiply(error, self.class_weight)
+
+        self.cost = tf.reduce_mean(scaled_error)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.cost)
 
 
@@ -315,9 +336,11 @@ class RecurrentNeuralClassificationNetwork(NeuralNetwork):
         return rr
 
     def train(self, sess, batch_x, batch_y, **kwargs):
+        class_weight = kwargs['class_weight']
         return sess.run([self.optimizer, self.cost], feed_dict={
                 self.inputs: batch_x,
-                self.labels: batch_y
+                self.labels: batch_y,
+                self.class_weight: class_weight
                })
 
     def validate(self):
