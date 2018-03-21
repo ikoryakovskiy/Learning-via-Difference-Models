@@ -88,6 +88,11 @@ class NeuralNetwork(object):
         shape = [None] + [i for i in self.i_dim]
         inputs = tflearn.input_data(shape=shape)
         layer = inputs
+
+#        init_state = tf.get_variable('{}Initstate'.format(prefix), [1, 6],
+#                                 initializer=tf.constant_initializer(0.0))
+#        init_state = tf.tile(init_state, [2, 1])
+
         for i in range(self.num_hidden_layers):
             weights_init = tflearn.initializations.uniform(minval=-1/sqrt(self.layer_size[i]), maxval=1/sqrt(self.layer_size[i]))
 
@@ -104,6 +109,7 @@ class NeuralNetwork(object):
                                                return_seq=False,
                                                activation='linear',
                                                dropout=dropout,
+                                               #initial_state=init_state,
                                                dynamic=True)
             elif self.layer_type[i+1] == 'gru':
                 new_layer = tflearn.gru(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),
@@ -111,6 +117,7 @@ class NeuralNetwork(object):
                                                return_seq=False,
                                                activation='linear',
                                                dropout=dropout,
+                                               #initial_state=init_state,
                                                dynamic=True)
             elif self.layer_type[i+1] == 'lstm':
                 new_layer = tflearn.lstm(layer, self.layer_size[i+1], name="{}Layer{}".format(prefix,i),

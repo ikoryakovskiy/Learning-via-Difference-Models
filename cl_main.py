@@ -18,19 +18,24 @@ import random
 import numpy as np
 from os.path import exists
 import yaml, io
+import collections
 
 
 def cl_run(tasks, cl_mode, **base_cfg):
     assert(base_cfg["trials"] == 0)
     assert(base_cfg["steps"]  != 0)
 
-    if isinstance(base_cfg["steps"], list) or isinstance(base_cfg["steps"], tuple):
+    if (isinstance(base_cfg["steps"], list) or isinstance(base_cfg["steps"], tuple)) and len(base_cfg['steps']) >= len(tasks.keys()):
         steps = sum(base_cfg["steps"])
         step_based_cl_switching = True
     else:
         steps = base_cfg["steps"]
         step_based_cl_switching = False
 
+    if isinstance(base_cfg['reach_timeout'], collections.Sequence) and len(base_cfg['reach_timeout']) >= len(tasks.keys()):
+        reach_timeout_based_cl_switching = True
+    else:
+        reach_timeout_based_cl_switching = False
 #    ################
 #    if step_based_cl_switching:
 #        ss = base_cfg["steps"]
@@ -77,6 +82,8 @@ def cl_run(tasks, cl_mode, **base_cfg):
         config['save']    = base_cfg['output']  + stage
         config['cl_save'] = base_cfg['cl_save'] + stage
         config['rb_save_filename'] = base_cfg['output']  + stage
+        if reach_timeout_based_cl_switching:
+            config['reach_timeout'] = base_cfg['reach_timeout'][stage_counter]
         if config['seed'] == None:
             config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
 
@@ -116,7 +123,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
             print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < steps, avg_test_return <= base_cfg['reach_return']))
             break
 
-        if step_based_cl_switching:
+        if step_based_cl_switching or reach_timeout_based_cl_switching:
             task_sequence = ('balancing_tf', 'balancing', 'walking')
             idx = [idx for idx, ts in enumerate(task_sequence) if ts == cl_mode][0]
             cl_mode_new = task_sequence[idx+1]

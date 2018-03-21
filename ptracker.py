@@ -9,40 +9,42 @@ from collections import deque
 import numpy as np
 import pickle
 from running_mean_std import RunningMeanStd
-
+import warnings
 
 class PerformanceTracker(object):
 
     def __init__(self, cfg, input_norm=None, output_norm=None):
-        self.depth=cfg['cl_depth']
-        self.running_norm=cfg["cl_running_norm"]
-        self.cl_pt_shape=cfg['cl_pt_shape']
-
-        self.dim = self.cl_pt_shape[1]
-        self.db = deque()
-        self.count = 0
-        self.flatten_shape = [-1] + [i for i in self.cl_pt_shape]
-        if self.running_norm:
-            self.input_rms = RunningMeanStd(self.dim)
-
-        if input_norm:
-            self.in_mean = input_norm[0][:self.dim]
-            self.in_std  = input_norm[1][:self.dim]
+        self.depth = cfg['cl_depth']
+        self.running_norm = cfg["cl_running_norm"]
+        self.cl_pt_shape = cfg['cl_pt_shape']
+        if self.cl_pt_shape == None:
+            warnings.warn("PerformanceTracker will not be used")
         else:
-            self.in_mean = None
-            self.in_std  = None
+            self.dim = self.cl_pt_shape[1]
+            self.db = deque()
+            self.count = 0
+            self.flatten_shape = [-1] + [i for i in self.cl_pt_shape]
+            if self.running_norm:
+                self.input_rms = RunningMeanStd(self.dim)
 
-        if output_norm:
-            self.out_mean = output_norm[0]
-            self.out_std  = output_norm[1]
-        else:
-            self.out_mean = None
-            self.out_std  = None
+            if input_norm:
+                self.in_mean = input_norm[0][:self.dim]
+                self.in_std  = input_norm[1][:self.dim]
+            else:
+                self.in_mean = None
+                self.in_std  = None
 
-        # fill in with zeros
-        for i in range(self.depth):
-            self.db.append(np.zeros((1, self.dim)))
-            self.count += 1
+            if output_norm:
+                self.out_mean = output_norm[0]
+                self.out_std  = output_norm[1]
+            else:
+                self.out_mean = None
+                self.out_std  = None
+
+            # fill in with zeros
+            for i in range(self.depth):
+                self.db.append(np.zeros((1, self.dim)))
+                self.count += 1
 
 
     def get_v_size(self):
