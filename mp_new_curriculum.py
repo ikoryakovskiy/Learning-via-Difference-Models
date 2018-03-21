@@ -69,7 +69,7 @@ def do_network_based(base_args, cores, name, nn_params, runs):
     args['perf_l2_reg'] = True
     args['steps'] = 300000
     args["cl_batch_norm"] = False
-    args['cl_structure'] = 'rnnc:rnn_tanh_6_dropout;fc_linear_3'
+    args['cl_structure'] = 'rnnc:gru_tanh_6_dropout;fc_linear_3'
     args['cl_depth'] = 2
     args['cl_pt_shape'] = (2,3)
     args["cl_pt_load"] = nn_params[1]
