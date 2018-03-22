@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument('--env-report', type=str, default='test')
     parser.add_argument('--trials', type=int, default=0)
     parser.add_argument('--steps', type=int, default=1000) #
-    parser.add_argument('--reach_duration', type=float, default=0, help='Finish if trial happend to be longer then reach_balance twice in a row. 0 means desabled')
+    parser.add_argument('--reach_timeout', type=float, default=0, help='Finish if trial happend to be longer then reach_balance twice in a row. 0 means desabled')
     parser.add_argument('--reach-return', type=float, default=None)
     parser.add_argument('--default-damage', type=float, default=None)
     parser.add_argument('--test-interval', type=int, default=30)
