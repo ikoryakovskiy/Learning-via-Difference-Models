@@ -18,9 +18,9 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(1)
-    model = 'perturbed'
-    #model = 'idealized'
+    runs = range(16, 32)
+    #model = 'perturbed'
+    model = 'idealized'
 
     if model == 'idealized':
         tasks = {
@@ -39,19 +39,19 @@ def main():
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
     mp_cfgs = []
-#    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-#    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
-#
-#    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_short', nn_params=nn_params, **misc)
+    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
 
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), **misc)
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-w',   steps=(   -1,    -1, 300000), **misc)
+    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_short', nn_params=nn_params, **misc)
+
+    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)
+    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), **misc)
+    mp_cfgs += do_steps_based(args, cores, name='ddpg-w',   steps=(   -1,    -1, 300000), **misc)
 
     # naive switching after achieving the balancing for n number of seconds happening twice. 0 means not used
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55', reach_timeout=(5.0, 5.0, 0.0), **misc)
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb5', reach_timeout=(-1.0, 5.0, 0.0), **misc)
+    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55', reach_timeout=(5.0, 5.0, 0.0), **misc)
+    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb5', reach_timeout=(-1.0, 5.0, 0.0), **misc)
 
     mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(20.0, 20.0, 0.0), **misc)
     mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb20', reach_timeout=(-1.0, 20.0, 0.0), **misc)
