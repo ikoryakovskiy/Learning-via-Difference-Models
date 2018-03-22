@@ -17,24 +17,44 @@ def main():
         cores = min(cpu_count(), 16)
     print('Using {} cores.'.format(cores))
 
-    runs = range(16)
+    # Parameters
+    runs = range(1)
+    model = 'perturbed'
+    #model = 'idealized'
+
+    if model == 'idealized':
+        tasks = {
+                'balancing_tf': 'cfg/leo_balancing_tf.yaml',
+                'balancing':    'cfg/leo_balancing.yaml',
+                'walking':      'cfg/leo_walking.yaml'
+                }
+    else:
+        tasks = {
+                'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
+                'balancing':    'cfg/leo_perturbed_balancing.yaml',
+                'walking':      'cfg/leo_perturbed_walking.yaml'
+                }
+
+    starting_task = 'balancing_tf'
+    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
     mp_cfgs = []
-    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, runs=runs)
+#    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+#    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
+#
+#    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_short', nn_params=nn_params, **misc)
 
-    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_short', nn_params=nn_params, runs=runs)
-
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), runs=runs)
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), runs=runs)
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-w',   steps=(   -1,    -1, 300000), runs=runs)
+#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)
+#    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), **misc)
+#    mp_cfgs += do_steps_based(args, cores, name='ddpg-w',   steps=(   -1,    -1, 300000), **misc)
 
     # naive switching after achieving the balancing for n number of seconds happening twice. 0 means not used
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55', reach_timeout=(5.0, 5.0, 0.0), runs=runs)
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb5', reach_timeout=(-1.0, 5.0, 0.0), runs=runs)
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(20.0, 20.0, 0.0), runs=runs)
-#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(-1.0, 20.0, 0.0), runs=runs)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55', reach_timeout=(5.0, 5.0, 0.0), **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb5', reach_timeout=(-1.0, 5.0, 0.0), **misc)
+
+    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(20.0, 20.0, 0.0), **misc)
+    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb20', reach_timeout=(-1.0, 20.0, 0.0), **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
@@ -48,17 +68,10 @@ def main():
     #cl_run(tasks, starting_task, **config)
 
 
-def do_steps_based(base_args, cores, name, steps, runs):
+def do_steps_based(base_args, cores, name, steps, runs, tasks, starting_task):
     args = base_args.copy()
     args['steps'] = steps
 
-    # Parameters
-    starting_task = 'balancing_tf'
-    tasks = {
-            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-            'balancing':    'cfg/leo_balancing.yaml',
-            'walking':      'cfg/leo_walking.yaml'
-            }
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
     # Weights of the NN
@@ -69,18 +82,11 @@ def do_steps_based(base_args, cores, name, steps, runs):
     return mp_cfgs
 
 
-def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs):
+def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, tasks, starting_task):
     args = base_args.copy()
     args['reach_timeout'] = reach_timeout
     args['steps'] = 300000
 
-    # Parameters
-    starting_task = 'balancing_tf'
-    tasks = {
-            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-            'balancing':    'cfg/leo_balancing.yaml',
-            'walking':      'cfg/leo_walking.yaml'
-            }
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
     # Weights of the NN
@@ -91,7 +97,7 @@ def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs):
     return mp_cfgs
 
 
-def do_network_based(base_args, cores, name, nn_params, runs):
+def do_network_based(base_args, cores, name, nn_params, runs, tasks, starting_task):
     args = base_args.copy()
     args['rb_min_size'] = 1000
     args['default_damage'] = 4035.00
@@ -105,13 +111,6 @@ def do_network_based(base_args, cores, name, nn_params, runs):
     args["cl_pt_load"] = nn_params[1]
     cl_load = nn_params[0]
 
-    # Parameters
-    starting_task = 'balancing_tf'
-    tasks = {
-            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-            'balancing':    'cfg/leo_balancing.yaml',
-            'walking':      'cfg/leo_walking.yaml'
-            }
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
     # Weights of the NN
@@ -126,6 +125,8 @@ def do_network_based(base_args, cores, name, nn_params, runs):
         copy_config["cl_load"] = cl_load
         mp_cfgs_new.append( (copy_config, tasks, starting_task) )
     return mp_cfgs_new
+
+
 
 def export_cfg(mp_cfgs):
     for cfg in mp_cfgs:
