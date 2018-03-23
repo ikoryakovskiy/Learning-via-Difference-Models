@@ -18,9 +18,9 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(16, 32)
-    #model = 'perturbed'
-    model = 'idealized'
+    runs = range(32)
+    model = 'perturbed'
+    #model = 'idealized'
 
     if model == 'idealized':
         tasks = {
