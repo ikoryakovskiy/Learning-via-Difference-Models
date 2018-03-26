@@ -205,7 +205,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
               (config["steps"]  == 0 or ss < config["steps"]) and \
               (not cl_nn or cl_mode_new == cl_mode) and \
               (not config['reach_return'] or avg_test_return <= config['reach_return']) and \
-              (not config['reach_timeout'] or (config['reach_timeout'] >= 0 and reach_timeout_twice < 2)):
+              (not config['reach_timeout'] or (config['reach_timeout'] > 0 and reach_timeout_twice < 2)):
 
             # Compute OU noise and action
             if not test:

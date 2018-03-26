@@ -36,8 +36,9 @@ class Helper(object):
     def gen_base_(self, g, mp):
         cpy_cfg = self.base_cfg.copy()
         cpy_cfg['output']  = '{}/{}-g{:04}-mp{}'.format(self.root, self.alg, g, mp)
-        cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, mp)
-        cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, mp)
+        if cpy_cfg['cl_structure']:
+            cpy_cfg['cl_save'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g, mp)
+            cpy_cfg['cl_load'] = '{}/{}-nn-g{:04}-mp{}'.format(self.root, self.alg, g-1, mp)
         if cpy_cfg['seed'] == None:
             cpy_cfg['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
         return cpy_cfg
@@ -46,7 +47,7 @@ class Helper(object):
         mp_cfgs = []
         for run, solution in enumerate(solutions):
             cfg = self.gen_base_(g, begin+run)
-            if solution:
+            if solution and cfg['cl_load']:
                 np.save(cfg['cl_load'], solution)
             mp_cfgs.append( (cfg, self.tasks, self.starting_task) )
         return mp_cfgs

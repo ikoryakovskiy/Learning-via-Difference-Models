@@ -58,6 +58,7 @@ def parse_args():
     boolean_flag(parser,  'tensorboard', default=False)
     parser.add_argument('--version', type=int, default=0)
     boolean_flag(parser,  'mp_debug', default=False)
+    parser.add_argument('--options', type=dict, default=None, help='Options which specify what to reload at each curriculum stage')
 
     # Task execution
     parser.add_argument('--cfg', type=str, default='cfg/rbdl_py_balancing.yaml')
@@ -75,7 +76,7 @@ def parse_args():
 
     # Curriculum
     parser.add_argument('--cl-structure', type=str, default='') # cl:relu_3;tanh_1
-    parser.add_argument('--cl-stages', type=str, default='balancing_tf;balancing;walking:monotonic')
+    parser.add_argument('--cl-stages', type=str, default='') # balancing_tf;balancing;walking:monotonic
     parser.add_argument('--cl-load', type=str, default='')
     parser.add_argument('--cl-l2-reg', type=float, default=0.001)
     parser.add_argument('--cl-tau', type=float, default=0.001)

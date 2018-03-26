@@ -68,24 +68,26 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
     cl_info = ''
     avg_test_return = base_cfg['reach_return']
+    task_sequence = ('balancing_tf', 'balancing', 'walking')
 
     while ss < steps and (not base_cfg['reach_return'] or avg_test_return <= base_cfg['reach_return']):
         stage = '-{:02d}_'.format(stage_counter) + cl_mode
         config = base_cfg.copy() # Dicts are mutable
 
         config['cfg'] = tasks[cl_mode]
+        config['output']  = base_cfg['output']  + stage
+        config['save']    = base_cfg['output']  + stage
+        config['rb_save_filename'] = base_cfg['output']  + stage
+        if config['seed'] == None:
+            config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
+        if base_cfg['cl_save']:
+            config['cl_save'] = base_cfg['cl_save'] + stage
         if step_based_cl_switching:
             config['steps'] = int(base_cfg["steps"][stage_counter])
         else:
             config['steps']   = steps - ss
-        config['output']  = base_cfg['output']  + stage
-        config['save']    = base_cfg['output']  + stage
-        config['cl_save'] = base_cfg['cl_save'] + stage
-        config['rb_save_filename'] = base_cfg['output']  + stage
         if reach_timeout_based_cl_switching:
             config['reach_timeout'] = base_cfg['reach_timeout'][stage_counter]
-        if config['seed'] == None:
-            config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
 
         # every stage happens when environment is switched over, thus we initialise it every stage
         if env:
@@ -97,11 +99,22 @@ def cl_run(tasks, cl_mode, **base_cfg):
         # load previous stage actor, critic and curriculum
         if prev_config:
             config['cl_load'] = prev_config['cl_save']
-            config['load_file'] = prev_config['output']
-            config['rb_load_filename'] = prev_config['rb_save_filename']
+            if not base_cfg['options']:
+                config['load_file'] = prev_config['output']
+                config['rb_load_filename'] = prev_config['rb_save_filename']
+            else:
+                opt = base_cfg['options'][cl_mode]
+                if 'nnload' in opt:
+                    config['load_file'] = prev_config['output']
+                if 'rbload_re' in opt:
+                    config['rb_load_filename'] = prev_config['rb_save_filename']
+                    config['reassess_for'] = opt.split('rbload_re_')[1]
+                elif 'rbload' in opt:
+                    config['rb_load_filename'] = prev_config['rb_save_filename']
 
         if cl_mode == 'walking':
             config['cl_structure'] = '' # forbid loading curriculum
+            config['rb_save_filename'] = '' # do not save replay beffer since it will not be used anyway
 
         cl_info += cl_mode + ' '
 
@@ -120,11 +133,10 @@ def cl_run(tasks, cl_mode, **base_cfg):
 
         print('cl_run: {} stage {} done'.format(config['output'], stage))
         if cl_mode == 'walking':
-            print('cl_run: {} exit from the loop {} {}'.format(config['output'], ss < steps, avg_test_return <= base_cfg['reach_return']))
+            print('cl_run: {} exit from the loop {}'.format(config['output'], ss < steps))
             break
 
         if step_based_cl_switching or reach_timeout_based_cl_switching:
-            task_sequence = ('balancing_tf', 'balancing', 'walking')
             idx = [idx for idx, ts in enumerate(task_sequence) if ts == cl_mode][0]
             cl_mode_new = task_sequence[idx+1]
         cl_mode = cl_mode_new
@@ -135,18 +147,19 @@ def cl_run(tasks, cl_mode, **base_cfg):
     # notify
     print('cl_run: ' +  base_cfg['output'] + ' finished!')
 
-    # calculate final performance
-    walking_avg_damage = base_cfg['default_damage']
+    # calculate final performance, if default damage is provided
+    if base_cfg['reach_return'] and base_cfg['default_damage']:
+        walking_avg_damage = base_cfg['default_damage']
 
-    # penalize if target performance was not reached
-    if avg_test_return < base_cfg['reach_return']:
-        damage = max([walking_avg_damage, damage])
+        # penalize if target performance was not reached
+        if avg_test_return < base_cfg['reach_return']:
+            damage = max([walking_avg_damage, damage])
 
-    # penalize absence of walking stage
-    if "walking" not in cl_info:
-        damage = 2*walking_avg_damage
+        # penalize absence of walking stage
+        if "walking" not in cl_info:
+            damage = 2*walking_avg_damage
 
-    # add solution regularization
+    # add regularization
     reg = 0
     params = []
     if exists(base_cfg["cl_load"]+'.npy'):
