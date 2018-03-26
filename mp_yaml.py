@@ -10,7 +10,7 @@ import random
 from datetime import datetime
 import yaml, glob
 
-from ddpg import parse_args, cfg_run
+from ddpg import parse_args, run
 
 random.seed(datetime.now())
 
@@ -41,13 +41,14 @@ def main():
 
     len(L)
 
-    random.shuffle(L)
+    M = []
     for config in L:
         a,b = config['output'].split('/')
         with open("{}/_{}.yaml".format(a,b), 'w', encoding='utf8') as file:
             yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
+            M.append("{}/_{}.yaml".format(a,b))
 
-    #do_multiprocessing_pool(arg_cores, L)
+    do_multiprocessing_pool(arg_cores, M)
 
 
 ######################################################################################
@@ -64,7 +65,7 @@ def mp_run(cfg):
 
     # Run the experiment
     try:
-        cfg_run(**args)
+        run(**args)
     except Exception:
         print('mp_run {} failid to exit correctly'.format(cfg))
         sys.exit()
