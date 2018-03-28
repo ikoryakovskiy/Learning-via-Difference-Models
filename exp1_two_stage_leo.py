@@ -19,7 +19,7 @@ def main():
 
     # Parameters
     runs = range(16)
-    keep_samples = True
+    keep_samples = False
     exp_name = "ddpg-exp1_two_stage"
 
     tasks = {
