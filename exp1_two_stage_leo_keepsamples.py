@@ -19,7 +19,8 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(1)
+    runs = range(16)
+    keep_samples = True
     exp_name = "ddpg-exp1_two_stage"
 
     tasks = {
@@ -34,23 +35,28 @@ def main():
 
     mp_cfgs = []
 
+    steps = 300000
+    args['rb_max_size'] = steps
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, 300000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, **misc)
 
+    bsteps = 50000
+    wsteps = steps - bsteps
+    args['rb_max_size'] = steps if keep_samples else wsteps
     options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, 50000, 250000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, bsteps, wsteps), options=options, **misc)
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload'}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, 50000, 250000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, bsteps, wsteps), options=options, **misc)
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload_re_walking_300_-1.5'}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, 50000, 250000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, bsteps, wsteps), options=options, **misc)
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': 'rbload'}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, 50000, 250000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, bsteps, wsteps), options=options, **misc)
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': 'rbload_re_walking_300_-1.5'}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, 50000, 250000), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(-1, bsteps, wsteps), options=options, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)

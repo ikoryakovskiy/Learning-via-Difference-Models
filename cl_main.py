@@ -19,6 +19,21 @@ import numpy as np
 from os.path import exists
 import yaml, io
 import collections
+import pdb
+
+import importlib
+spam_spec = importlib.util.find_spec("roboschool")
+if spam_spec:
+    import gym, roboschool
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+def env_connect(path):
+    if os.path.isfile(path):
+        env = Leo(path)
+    else:
+        env = gym.make(path)
+    return env
 
 
 def cl_run(tasks, cl_mode, **base_cfg):
@@ -93,7 +108,8 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if env:
             env.close()
             env = None
-        env = Leo(config['cfg'])
+        #pdb.set_trace()
+        env = env_connect(config['cfg'])
         env = MyMonitor(env, config['output'], report='all')
 
         # load previous stage actor, critic and curriculum
