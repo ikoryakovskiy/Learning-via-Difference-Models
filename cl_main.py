@@ -22,8 +22,7 @@ import collections
 import pdb
 
 import importlib
-spam_spec = importlib.util.find_spec("roboschool")
-if spam_spec:
+if importlib.util.find_spec("roboschool"):
     import gym, roboschool
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
