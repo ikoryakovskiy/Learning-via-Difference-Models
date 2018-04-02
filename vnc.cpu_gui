@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+    echo $0: usage: vnc.cpu_gui port
+    exit 1
+fi
+
+vncviewer 0.0.0.0:$1

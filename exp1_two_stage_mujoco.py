@@ -18,7 +18,7 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(1)
+    runs = range(16)
     exp_name = "ddpg-exp1_two_stage"
 
     starting_task = 'balancing_tf'
