@@ -92,7 +92,7 @@ def parse_args():
     parser.add_argument('--cl-save', type=str, default='')
     parser.add_argument('--cl-pt-load', type=str, default='')
     parser.add_argument('--cl-pt-shape', type=tuple, default=None)
-
+    boolean_flag(parser,  'cl-keep_samples', default=True)
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)

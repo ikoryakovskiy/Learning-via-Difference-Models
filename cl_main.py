@@ -103,6 +103,9 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if reach_timeout_based_cl_switching:
             config['reach_timeout'] = base_cfg['reach_timeout'][stage_counter]
 
+        if not base_cfg['cl_keep_samples']:
+            config['rb_max_size'] = config['steps']
+
         # every stage happens when environment is switched over, thus we initialise it every stage
         if env:
             env.close()
