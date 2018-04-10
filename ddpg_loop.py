@@ -168,7 +168,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         tt = 0
         ss = 0
         terminal = 0
-        reach_timeout_twice = 0
+        reach_timeout_num = 0
         more_info = None
         ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
         ti = config["test_interval"]
@@ -205,7 +205,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
               (config["steps"]  == 0 or ss < config["steps"]) and \
               (not cl_nn or cl_mode_new == cl_mode) and \
               (not config['reach_return'] or avg_test_return <= config['reach_return']) and \
-              (not config['reach_timeout'] or (config['reach_timeout'] > 0 and reach_timeout_twice < 2)):
+              (not config['reach_timeout'] or (config['reach_timeout'] > 0 and reach_timeout_num < config['reach_timeout_num'])):
 
             # Compute OU noise and action
             if not test:
@@ -310,9 +310,9 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 test_returns.append(trial_return)
                 avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
                 if float(info.split()[0]) > config['reach_timeout']:
-                    reach_timeout_twice += 1
+                    reach_timeout_num += 1
                 else:
-                    reach_timeout_twice = 0
+                    reach_timeout_num = 0
 
                 # report
                 more_info = ''.join('{:10.2f}'.format(perf) for perf in nn_perf)
