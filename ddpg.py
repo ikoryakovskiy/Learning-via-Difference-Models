@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument('--options', type=dict, default=None, help='Options which specify what to reload at each curriculum stage')
 
     # Task execution
-    parser.add_argument('--cfg', type=str, default='cfg/leo_walking.yaml', help='GRL yaml configuration or GYM model name')
+    parser.add_argument('--cfg', type=str, default='', help='GRL yaml configuration or GYM model name') #cfg/leo_walking.yaml
     parser.add_argument('--env-timeout', type=float, default=20.0)
     parser.add_argument('--env-td-error-scale', type=float, default=600.0, help='Approximate scale of TD errors')
     parser.add_argument('--env-report', type=str, default='test')
