@@ -4,9 +4,9 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-env = 'Walker2d'
+#env = 'Walker2d'
 #env = 'HalfCheetah'
-#env = 'Hopper'
+env = 'Hopper'
 #task = 'Balancing'
 task = 'Walking'
 
@@ -30,8 +30,8 @@ if env == 'Walker2d' and task == 'Walking':
     args['load_file'] = 'cl/walker2d_walking-last'
     args['compare_with'] = 'cl/walker2d_balancing-last'
 elif env == 'Hopper' and task == 'Walking':
-    args['load_file'] = 'ddpg-exp1_two_stage_hopper-g0001-mp0-02_walking-best'
-    args['compare_with'] = 'ddpg-exp1_two_stage_hopper-g0001-mp0-02_walking-best'
+    args['load_file'] = 'cl/hopper_walking-last'
+    args['compare_with'] = 'cl/hopper_balancing-last'
 
 #args['load_file'] = 'ddpg-exp1_two_stage_halfcheetah-g0001-mp0-02_walking-best'
 

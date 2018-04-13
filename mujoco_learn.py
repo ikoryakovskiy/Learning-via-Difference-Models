@@ -4,9 +4,9 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-env = 'Walker2d'
+#env = 'Walker2d'
 #env = 'HalfCheetah'
-#env = 'Hopper'
+env = 'Hopper'
 #task = 'Balancing'
 task = 'Walking'
 
