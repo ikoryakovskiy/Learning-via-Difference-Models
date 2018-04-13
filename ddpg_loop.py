@@ -22,27 +22,6 @@ import pdb
 # ===========================
 # Policy saving and loading
 # ===========================
-#def load_policy(sess, config):
-#    suffixes = ['', '-best', '-last']
-#    loaded = False
-#    if config["load_file"]:
-#        for sfx in suffixes:
-#            load_file = config["load_file"] + sfx
-#            path = os.path.dirname(os.path.abspath(__file__))
-#            load_file = "{}/{}".format(path, load_file)
-#            meta_file = "{}.meta".format(load_file)
-#            if os.path.isfile(meta_file):
-#                var_all = tf.trainable_variables()
-#                var_this = [v for v in var_all if not 'curriculum' in v.name]
-#                saver = tf.train.Saver(var_this)
-#                saver.restore(sess, load_file)
-#                print("Loaded NN from {}".format(meta_file))
-#                loaded = True
-#                break
-#        if not loaded:
-#            print("Not a valid path")
-#    return sess
-
 def preload_policy(sess, config):
     suffixes = ['', '-best', '-last']
     loaded = False
@@ -53,7 +32,7 @@ def preload_policy(sess, config):
             load_file = "{}/{}".format(path, load_file)
             meta_file = "{}.meta".format(load_file)
             if os.path.isfile(meta_file):
-                var_all = tf.all_variables()
+                var_all = tf.all_variables() #tf.trainable_variables()
                 var_this = [v for v in var_all if not 'curriculum' in v.name]
                 saver = tf.train.Saver(var_this)
                 saver.restore(sess, load_file)
@@ -66,9 +45,6 @@ def preload_policy(sess, config):
     else:
         sess.run(tf.global_variables_initializer())
     return sess
-
-#def save_policy(sess, saver, config, suffix = "", global_step = None):
-#    saver.save(sess, "./{}{}".format(config["output"], suffix), global_step)
 
 def save_policy(sess, config, suffix = "", global_step = None):
     if config["output"]:
@@ -153,31 +129,12 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg_graph, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
-#        for op in ddpg_graph.get_operations():
-#            if "actorLayer1/W/Adam_1" in op.name:
-#                print(op)
-#
-#        # random initialization of variables
-#        #sess.run(tf.global_variables_initializer())
-#
-#        print(tf.trainable_variables())
-
-        # load curriculum neural network weights (provided parametes have priority)
+        # Load curriculum neural network weights (provided parametes have priority)
         if cl_nn:
             sess = cl_nn.load(sess, config["cl_load"])
 
         # Check if a policy needs to be loaded
-#        sess = load_policy(sess, config)
         sess = preload_policy(sess, config)
-#        saver = tf.train.Saver()
-#        sess = preload_policy(sess, saver, config)
-
-#        # load compare_with_actor
-#        if config["compare_with"]:
-#            #compare_with_sess = tf.Session(graph=compare_with_graph, config=tf.ConfigProto(gpu_options=gpu_options))
-#            with tf.Session(graph=compare_with_graph, config=tf.ConfigProto(gpu_options=gpu_options)) as compare_with_sess:
-#                saver = tf.train.Saver()
-#                saver.restore(compare_with_sess, config["compare_with"])
 
         # Initialize target network weights
         actor.update_target_network(sess)
@@ -189,8 +146,6 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # Observation normalization.
         obs_range = [env.observation_space.low, env.observation_space.high]
-        #pdb.set_trace()
-        #obs_range = [-5, 5]
         if config["normalize_observations"]:
             obs_rms = RunningMeanStd(shape=env.observation_space.shape)
         else:
@@ -243,10 +198,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         # Export trajectory
         if config['trajectory']:
             trajectory = []
-            #trajectory.append([0] + [0]*actor.a_dim)
             if config["compare_with"]:
                 actor_sim = []
-                #actor_sim.append([0] + [0]*actor.a_dim)
 
         # start environment
         for c in curriculums:
@@ -283,7 +236,6 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             next_obs = obs_normalize(next_obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
             reward *= config['reward_scale']
-            #pdb.set_trace()
 
             # Add the transition to replay buffer
             if not test:
@@ -343,12 +295,10 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
             # Record trajectory
             if config['trajectory']:
-                #pdb.set_trace()
                 ti = ss_all * config['env_timestep']
                 trajectory.append([ti] + obs[:o_dims].tolist() + (action*max_action).tolist() + next_obs[:o_dims].tolist() + [reward] + [terminal]) # + [info])
                 if config["compare_with"]:
                     compare_with_action = compute_action(compare_with_sess, compare_with_actor, obs[:o_dims], noise, test)
-                    #actor_sim.append( [ti] + abs(action-compare_with_action).tolist() )
                     actor_sim.append( [ti] + obs[:o_dims].tolist() + (compare_with_action*max_action).tolist())
 
             # Prepare next step
@@ -501,7 +451,6 @@ def start(env, pt=None, cl_mode=None, **config):
         else:
             cl_nn = CurriculumNetwork(pt.get_v_size(), config, cl_mode)
 
-    #pdb.set_trace()
     if config["compare_with"]:
         with tf.Graph().as_default() as compare_with_graph:
             compare_with_actor = ActorNetwork(obs_dim, act_dim, 1, config)
@@ -509,7 +458,6 @@ def start(env, pt=None, cl_mode=None, **config):
         print(actor.target_inputs.graph is tf.get_default_graph())
         print(compare_with_actor.target_inputs.graph is tf.get_default_graph())
         print(compare_with_actor.target_inputs.graph is actor.target_inputs.graph)
-        #pdb.set_trace()
         return compare(env, ddpg, actor, critic, compare_with_graph, compare_with_actor, cl_nn, pt, cl_mode,
                       **config)
 
