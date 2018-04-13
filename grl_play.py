@@ -18,7 +18,13 @@ args['normalize_returns'] = False
 args['batch_norm'] = True
 args['output'] = '{}_{}_play'.format(env, task)
 #args['load_file'] = '{}_{}'.format(env, task)
-args['load_file'] = 'ddpg-walking_after_balancing-25000000-100000000-1100-mp0'
+args['load_file'] = 'cl/leo_walking-last'
+args['compare_with'] = 'cl/leo_walking-last'
+#args['compare_with'] = 'cl/leo_balancing-last'
+
+args['trajectory'] = 'cl/{}_{}'.format(env, task)
+args['env_timestep'] = 0.03
+#args['env_report'] = 'all'
 
 # Run actual script.
 args['save'] = False

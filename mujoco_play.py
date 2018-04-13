@@ -4,9 +4,9 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-#env = 'Walker2d'
+env = 'Walker2d'
 #env = 'HalfCheetah'
-env = 'Hopper'
+#env = 'Hopper'
 #task = 'Balancing'
 task = 'Walking'
 
@@ -20,16 +20,26 @@ args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
 #args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
 
 args['steps'] = 0
-args['trials'] = 11
+args['trials'] = 1
 args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['batch_norm'] = True
+
+if env == 'Walker2d' and task == 'Walking':
+    args['load_file'] = 'cl/walker2d_walking-last'
+    args['compare_with'] = 'cl/walker2d_balancing-last'
+elif env == 'Hopper' and task == 'Walking':
+    args['load_file'] = 'ddpg-exp1_two_stage_hopper-g0001-mp0-02_walking-best'
+    args['compare_with'] = 'ddpg-exp1_two_stage_hopper-g0001-mp0-02_walking-best'
+
 #args['load_file'] = 'ddpg-exp1_two_stage_halfcheetah-g0001-mp0-02_walking-best'
-#args['load_file'] = 'ddpg-exp1_two_stage_walker2d-g0001-mp2-02_walking-best'
-args['load_file'] = 'ddpg-exp1_two_stage_hopper-g0001-mp0-02_walking-best'
-args['output'] = '' #'{}_{}_play'.format(env.lower(), task.lower())
+
+args['output'] = ''
 args['render'] = True
+args['trajectory'] = 'cl/{}_{}'.format(env, task)
+args['env_timestep'] = 0.0165
+
 
 # Run actual script.
 args['save'] = False

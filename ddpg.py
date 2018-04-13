@@ -63,6 +63,7 @@ def parse_args():
     # Task execution
     parser.add_argument('--cfg', type=str, default='', help='GRL yaml configuration or GYM model name') #cfg/leo_walking.yaml
     parser.add_argument('--env-timeout', type=float, default=20.0)
+    parser.add_argument('--env-timestep', type=float, default=0.03)
     parser.add_argument('--env-td-error-scale', type=float, default=600.0, help='Approximate scale of TD errors')
     parser.add_argument('--env-report', type=str, default='test')
     parser.add_argument('--trials', type=int, default=0)
@@ -94,6 +95,9 @@ def parse_args():
     parser.add_argument('--cl-pt-load', type=str, default='')
     parser.add_argument('--cl-pt-shape', type=tuple, default=None)
     boolean_flag(parser,  'cl-keep_samples', default=True)
+
+    # Comparison of tasks (e.g. walking and balancing)
+    parser.add_argument('--compare-with', type=str, default='')
 
     # Learning algorithm options
     parser.add_argument('--tau', type=float, default=0.001)
@@ -127,6 +131,7 @@ def parse_args():
 
     # In/out options
     parser.add_argument('--output', type=str, default='default')
+    parser.add_argument('--trajectory', type=str, default=None)
     parser.add_argument('--load-file', type=str, default='')
     boolean_flag(parser,  'save', default=False)
     args = parser.parse_args()

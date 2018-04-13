@@ -21,7 +21,7 @@ else:
 args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
 #args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
 #args['cfg'] = "Roboschool{}-v1".format(env+task)
-args['steps'] = 1000000
+args['steps'] = 10000
 args['test_interval'] = 30
 args['seed'] = 1
 args['rb_max_size'] = args['steps']
@@ -29,7 +29,7 @@ args['normalize_observations'] = False
 args['normalize_returns'] = False
 args['batch_norm'] = True
 args['version'] = 0
-args['output'] = '{}_{}'.format(env.lower(), task.lower())
+args['output'] = 'cl/{}_{}'.format(env.lower(), task.lower())
 
 #args['rb_save_filename'] = '{}_{}'.format(env, 'balancing')
 #args['rb_load_filename'] = '{}_{}'.format(env, 'balancing')

@@ -117,6 +117,11 @@ def train(env, ddpg, actor, critic, balancing_graph, balancing_actor, **config):
     sim.append([time] + [0]*actor.a_dim)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+
+        for op in ddpg.get_operations():
+            if "actorLayer1/W/Adam_1" in op.name:
+                print(op)
+
         saver = tf.train.Saver()
         sess = preload_policy(sess, saver, config)
 
@@ -124,7 +129,8 @@ def train(env, ddpg, actor, critic, balancing_graph, balancing_actor, **config):
 
             # also load balancing actor
             saver = tf.train.Saver()
-            saver.restore(balancing_sess, "leo_curriculum_analysis/ddpg-balancing-5000000-1010-mp1-last")
+            #saver.restore(balancing_sess, "leo_gait_analysis/ddpg-balancing-5000000-1010-mp1-last")
+            saver.restore(balancing_sess, "leo_gait_analysis/ddpg-walking_after_balancing-25000000-1101-mp2-best")
 
             # Initialize target network weights
             actor.update_target_network(sess)
@@ -368,7 +374,7 @@ if __name__ == '__main__':
     args['batch_norm'] = True
     args['output'] = '{}_{}_play'.format(env, task)
     #args['load_file'] = 'leo_curriculum_analysis/ddpg-walking-30000000-1000-mp0-best'
-    args['load_file'] = 'leo_curriculum_analysis/ddpg-walking_after_balancing-25000000-1101-mp2-best'
+    args['load_file'] = 'leo_gait_analysis/ddpg-walking_after_balancing-25000000-1101-mp2-best'
 
     # Run actual script.
     args['save'] = False
