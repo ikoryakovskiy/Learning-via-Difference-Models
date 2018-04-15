@@ -18,7 +18,7 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(1)
+    runs = range(3)
     exp_name = "ddpg-exp1_two_stage"
 
     starting_task = 'balancing_tf'
@@ -92,10 +92,10 @@ def create_tasks(args, cores, exp_name, bsteps, steps, reassess_for, tasks, **mi
     mp_cfgs = []
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, tasks=tasks, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_w',   steps=(-1,  -1, steps), options=options, tasks=tasks, **misc)
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  bsteps, -1), options=options, tasks=tasks, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_b',   steps=(-1,  bsteps, -1), options=options, tasks=tasks, **misc)
 
     return mp_cfgs
 
