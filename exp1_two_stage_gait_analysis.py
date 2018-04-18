@@ -90,8 +90,8 @@ def main():
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
     do_multiprocessing_pool(cores, mp_cfgs)
-    #config, tasks, starting_task = mp_cfgs[0]
-    #cl_run(tasks, starting_task, **config)
+#    config, tasks, starting_task = mp_cfgs[0]
+#    cl_run(tasks, starting_task, **config)
 
 
 def create_tasks(args, cores, exp_name, bsteps, steps, reassess_for, tasks, cl_options={}, **misc):
@@ -105,7 +105,7 @@ def create_tasks(args, cores, exp_name, bsteps, steps, reassess_for, tasks, cl_o
 
     # curriculum option
     wsteps = steps - bsteps
-    mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_bw', steps=(-1, bsteps, wsteps), options=cl_options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_bw', steps=(-1, bsteps, wsteps), options=cl_options, tasks=tasks, **misc)
 
     return mp_cfgs
 
@@ -136,7 +136,7 @@ def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, 
 
     # add file to save trajectories
     for cfg in mp_cfgs:
-        cfg[0]['trajectory'] = cfg[0]['output']
+        cfg[0]['trajectory'] = cfg[0]['output'] + '.pkl'
     return mp_cfgs
 
 

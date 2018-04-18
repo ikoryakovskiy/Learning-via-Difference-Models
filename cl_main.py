@@ -96,6 +96,9 @@ def cl_run(tasks, cl_mode, **base_cfg):
             config['seed'] = int.from_bytes(os.urandom(4), byteorder='big', signed=False) // 2
         if base_cfg['cl_save']:
             config['cl_save'] = base_cfg['cl_save'] + stage
+        if base_cfg['trajectory']:
+            filename, file_extension = os.path.splitext(base_cfg['trajectory'])
+            config['trajectory'] = filename + stage + file_extension
         if step_based_cl_switching:
             config['steps'] = int(base_cfg["steps"][stage_counter])
         else:

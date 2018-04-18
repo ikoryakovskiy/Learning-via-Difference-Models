@@ -18,6 +18,7 @@ import random
 from running_mean_std import RunningMeanStd
 import json
 import pdb
+import pickle
 
 # ===========================
 # Policy saving and loading
@@ -52,6 +53,15 @@ def save_policy(sess, config, suffix = "", global_step = None):
         var_this = [v for v in var_all if not 'curriculum' in v.name]
         saver = tf.train.Saver(var_this)
         saver.save(sess, "./{}{}".format(config["output"], suffix), global_step)
+
+
+def dump_pkl_csv(fname, data):
+    if len(data):
+        if '.pkl' in fname:
+            with open(fname+'.pkl','wb') as f:
+                pickle.dump(np.array(data), f)
+        else:
+            np.savetxt(fname+'.csv', data)
 
 # ===========================
 # Helper function
@@ -384,9 +394,9 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # Export trajectory
         if config['trajectory']:
-            np.savetxt(config['trajectory']+'.csv', trajectory)
+            dump_pkl_csv(config['trajectory'], trajectory)
             if config["compare_with"]:
-                np.savetxt(config['trajectory']+'_sim.csv', actor_sim)
+                dump_pkl_csv(config['trajectory']+'_sim', actor_sim)
 
         # verify replay_buffer
         #evaluator.reassess(replay_buffer, verify=True, task = config['reassess_for'])
