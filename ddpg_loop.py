@@ -32,7 +32,7 @@ def preload_policy(sess, config):
             load_file = "{}/{}".format(path, load_file)
             meta_file = "{}.meta".format(load_file)
             if os.path.isfile(meta_file):
-                var_all = tf.all_variables() #tf.trainable_variables()
+                var_all = tf.global_variables() #tf.trainable_variables()
                 var_this = [v for v in var_all if not 'curriculum' in v.name]
                 saver = tf.train.Saver(var_this)
                 saver.restore(sess, load_file)
@@ -48,7 +48,7 @@ def preload_policy(sess, config):
 
 def save_policy(sess, config, suffix = "", global_step = None):
     if config["output"]:
-        var_all = tf.all_variables() #tf.trainable_variables()
+        var_all = tf.global_variables() #tf.trainable_variables()
         var_this = [v for v in var_all if not 'curriculum' in v.name]
         saver = tf.train.Saver(var_this)
         saver.save(sess, "./{}{}".format(config["output"], suffix), global_step)

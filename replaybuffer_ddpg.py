@@ -30,8 +30,8 @@ class ReplayBuffer(object):
         if s.size == self.o_dims:
             experience = (s, a, r, t, s2)
         else:
-            experience = (s[0:self.o_dims], a, r, t, s2[0:self.o_dims],
-                          s2[self.o_dims])
+            # the last element is forward promotion of the robot
+            experience = (s[0:self.o_dims], a, r, t, s2[0:self.o_dims], s2[-1])
 
         if self.replay_buffer_count < self.buffer_size:
             self.replay_buffer.append(experience)

@@ -12,6 +12,7 @@ import argparse
 import time
 import yaml
 import os
+import pdb
 from importlib import reload
 from ddpg_loop import start
 from my_monitor import MyMonitor
@@ -41,6 +42,8 @@ def run(cfg, **config):
     else:
         import roboschool
         env = gym.make(cfg)
+        #pdb.set_trace()
+        env.seed(config['seed'])
 
     env = MyMonitor(env, config['output'], report=config['env_report'])
 
