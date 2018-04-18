@@ -9,9 +9,9 @@ task = 'walking'
 #task = 'balancing'
 
 args['cfg'] = 'cfg/{}_{}.yaml'.format(env, task)
-args['steps'] = 10000
+args['steps'] = 10
 args['test_interval'] = 30
-#args['seed'] = 1
+args['seed'] = 1
 args['perf_td_error'] = True
 args['perf_l2_reg'] = True
 args['rb_min_size'] = 1000
@@ -21,12 +21,9 @@ args['batch_norm'] = True
 #args['reassess_for'] = 'walking_300_-1.5'
 args['output'] = 'cl/{}_{}'.format(env, task)
 
-#args['rb_save_filename'] = 'rbdl_py_{}'.format(task)
+args['rb_save_filename'] = 'cl/{}_{}'.format(env, task)
 #args['rb_load_filename'] = 'rbdl_py_balancing'
 
-#args['rb_load_filename'] = 'rbdl_py_{}'.format(task)
-#args['load_file'] = 'rbdl_py_balancing'
-#args['tensorboard'] = True
 
 '''
 import yaml

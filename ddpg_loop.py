@@ -233,6 +233,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
             # obtain observation of a state
             next_obs, reward, terminal, info = env.step(action*max_action)
+            #print('Forward promotion: ' + str(next_obs[-1]))
+            #print('Reward: ' + str(reward))
             next_obs = obs_normalize(next_obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
             reward *= config['reward_scale']
