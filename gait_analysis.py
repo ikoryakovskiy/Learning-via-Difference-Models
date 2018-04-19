@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from ddpg import parse_args, cfg_run
+import os
 
 stage_names = ('00_balancing_tf', '01_balancing', '02_walking')
 
@@ -10,16 +11,18 @@ def main():
     trajectories = folder + 'trajectories/'
     misc = folder + 'misc/'
 
-#    for mp in range(3):
-#        leo_export(mp, task='balancing', policies=policies, trajectories=trajectories, misc=misc)
-#        leo_export(mp, task='walking', policies=policies, trajectories=trajectories, misc=misc)
+    for mp in range(3):
+        leo_export(mp, task='balancing', policies=policies, trajectories=trajectories, misc=misc)
+        leo_export(mp, task='walking', policies=policies, trajectories=trajectories, misc=misc)
 
-    mujoco_export('Walker2d', 1, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
+#    mujoco_export('Walker2d', 1, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
 #    mujoco_export('Hopper', 2, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
+#    mujoco_export('HalfCheetah', 0, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
+#    mujoco_export('HalfCheetah', 0, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 
-#    mujoco_models = ['Hopper', 'Walker2d', 'Walker2d2']
+#    mujoco_models = ['Hopper', 'HalfCheetah', 'Walker2d']
 #    for env in mujoco_models:
-#        for mp in range(3):
+#        for mp in range(1,3):
 #            mujoco_export(env, mp, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
 #            mujoco_export(env, mp, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 
@@ -92,6 +95,9 @@ def leo_export(mp, policies='', task='walking', trajectories='', misc=''):
     # Run actual script.
     args['save'] = False
     cfg_run(**args)
+
+    if task == 'walking':
+        os.rename('aux_leo.csv', 'aux_leo-mp{}.csv'.format(mp))
 
 
 if __name__ == '__main__':

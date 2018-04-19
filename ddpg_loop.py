@@ -58,7 +58,7 @@ def save_policy(sess, config, suffix = "", global_step = None):
 def dump_pkl_csv(fname, data):
     if len(data):
         if '.pkl' in fname:
-            with open(fname+'.pkl','wb') as f:
+            with open(fname,'wb') as f:
                 pickle.dump(np.array(data), f)
         else:
             np.savetxt(fname+'.csv', data)
@@ -306,12 +306,13 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     break
 
             # Record trajectory
+            # Note that it exports all training and testing episodes
             if config['trajectory']:
-                ti = ss_all * config['env_timestep']
-                trajectory.append([ti] + obs[:o_dims].tolist() + (action*max_action).tolist() + next_obs[:o_dims].tolist() + [reward] + [terminal]) # + [info])
+                real_time = ss_all * config['env_timestep']
+                trajectory.append([real_time] + obs[:o_dims].tolist() + (action*max_action).tolist() + next_obs[:o_dims].tolist() + [reward] + [terminal]) # + [info])
                 if config["compare_with"]:
                     compare_with_action = compute_action(compare_with_sess, compare_with_actor, obs[:o_dims], noise, test)
-                    actor_sim.append( [ti] + obs[:o_dims].tolist() + (compare_with_action*max_action).tolist())
+                    actor_sim.append( [real_time] + obs[:o_dims].tolist() + (compare_with_action*max_action).tolist())
 
             # Prepare next step
             obs = next_obs
@@ -368,7 +369,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 save_policy(sess, config, suffix="-best")
 
             if not test:
-                ss = ss + 1
+                ss += 1
                 for c in curriculums:
                     if ss > c['ss']:
                         c['ss'], val = next(c['gen'])
