@@ -27,61 +27,61 @@ def main():
 
     keep_samples = False
 
-#    # Leo
-#    tasks = {
-#            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-#            'balancing':    'cfg/leo_balancing.yaml',
-#            'walking':      'cfg/leo_walking.yaml'
-#            }
-#    bsteps = 50000
-#    steps  = 300000
-#    reassess_for = 'walking_300_-1.5'
-#    args['rb_max_size'] = steps if keep_samples else steps - bsteps
-#    args['env_timestep'] = 0.03
-#    cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload'}
-#    mp_cfgs += create_tasks(args, cores, exp_name+'_leo', bsteps, steps, reassess_for, tasks, cl_options, **misc)
-
-    # Hopper
+    # Leo
     tasks = {
-        'balancing_tf': 'RoboschoolHopperBalancingGRL-v1',
-        'balancing':    'RoboschoolHopperBalancingGRL-v1',
-        'walking':      'RoboschoolHopperGRL-v1'
-        }
-    bsteps = 100000
-    steps  = 600000
-    reassess_for = 'walking_3_-1.5'
+            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
+            'balancing':    'cfg/leo_balancing.yaml',
+            'walking':      'cfg/leo_walking.yaml'
+            }
+    bsteps = 50000
+    steps  = 300000
+    reassess_for = 'walking_300_-1.5'
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
-    args['env_timestep'] = 0.0165
+    args['env_timestep'] = 0.03
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_hopper', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_leo', bsteps, steps, reassess_for, tasks, cl_options, **misc)
 
-#    # HalfCheetah
+#    # Hopper
 #    tasks = {
-#        'balancing_tf': 'RoboschoolHalfCheetahBalancingGRL-v1',
-#        'balancing':    'RoboschoolHalfCheetahBalancingGRL-v1',
-#        'walking':      'RoboschoolHalfCheetahGRL-v1'
+#        'balancing_tf': 'RoboschoolHopperBalancingGRL-v1',
+#        'balancing':    'RoboschoolHopperBalancingGRL-v1',
+#        'walking':      'RoboschoolHopperGRL-v1'
 #        }
 #    bsteps = 100000
 #    steps  = 600000
 #    reassess_for = 'walking_3_-1.5'
 #    args['rb_max_size'] = steps if keep_samples else steps - bsteps
 #    args['env_timestep'] = 0.0165
-#    cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-#    mp_cfgs += create_tasks(args, cores, exp_name+'_halfcheetah', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+#    cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload'}
+#    mp_cfgs += create_tasks(args, cores, exp_name+'_hopper', bsteps, steps, reassess_for, tasks, cl_options, **misc)
 
-    # Walker2d
+    # HalfCheetah
     tasks = {
-        'balancing_tf': 'RoboschoolWalker2dBalancingGRL-v1',
-        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-        'walking':      'RoboschoolWalker2dGRL-v1'
+        'balancing_tf': 'RoboschoolHalfCheetahBalancingGRL-v1',
+        'balancing':    'RoboschoolHalfCheetahBalancingGRL-v1',
+        'walking':      'RoboschoolHalfCheetahGRL-v1'
         }
-    bsteps = 200000
-    steps  = 700000
+    bsteps = 100000
+    steps  = 600000
     reassess_for = 'walking_3_-1.5'
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     args['env_timestep'] = 0.0165
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_halfcheetah', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+
+#    # Walker2d
+#    tasks = {
+#        'balancing_tf': 'RoboschoolWalker2dBalancingGRL-v1',
+#        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+#        'walking':      'RoboschoolWalker2dGRL-v1'
+#        }
+#    bsteps = 200000
+#    steps  = 700000
+#    reassess_for = 'walking_3_-1.5'
+#    args['rb_max_size'] = steps if keep_samples else steps - bsteps
+#    args['env_timestep'] = 0.0165
+#    cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
+#    mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d', bsteps, steps, reassess_for, tasks, cl_options, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
