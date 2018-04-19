@@ -64,19 +64,6 @@ def main():
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d', bsteps, steps, reassess_for, tasks, **misc)
 
-#    # Walker2d2
-#    tasks = {
-#        'balancing_tf': 'RoboschoolWalker2d2BalancingGRL-v1',
-#        'balancing':    'RoboschoolWalker2d2BalancingGRL-v1',
-#        'walking':      'RoboschoolWalker2d2GRL-v1'
-#        }
-#
-#    bsteps = 200000
-#    steps  = 700000
-#    reassess_for = 'walking_3_-1.5'
-#    args['rb_max_size'] = steps if keep_samples else steps - bsteps
-#    mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d2', bsteps, steps, reassess_for, tasks, **misc)
-
     # DBG: export configuration
     export_cfg(mp_cfgs)
 
