@@ -11,20 +11,20 @@ def main():
     trajectories = folder + 'trajectories/'
     misc = folder + 'misc/'
 
-    for mp in range(3):
-        leo_export(mp, task='balancing', policies=policies, trajectories=trajectories, misc=misc)
-        leo_export(mp, task='walking', policies=policies, trajectories=trajectories, misc=misc)
+#    for mp in range(6):
+#        leo_export(mp, task='balancing', policies=policies, trajectories=trajectories, misc=misc)
+#        leo_export(mp, task='walking', policies=policies, trajectories=trajectories, misc=misc)
 
 #    mujoco_export('Walker2d', 1, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
 #    mujoco_export('Hopper', 2, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 #    mujoco_export('HalfCheetah', 0, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
 #    mujoco_export('HalfCheetah', 0, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 
-#    mujoco_models = ['Hopper', 'HalfCheetah', 'Walker2d']
-#    for env in mujoco_models:
-#        for mp in range(1,3):
-#            mujoco_export(env, mp, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
-#            mujoco_export(env, mp, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
+    mujoco_models = ['Hopper', 'HalfCheetah', 'Walker2d']
+    for env in mujoco_models:
+        for mp in range(6):
+            #mujoco_export(env, mp, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
+            mujoco_export(env, mp, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 
 
 def mujoco_export(env, mp, task='Walking', policies='', trajectories='', misc=''):
