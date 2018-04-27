@@ -21,6 +21,7 @@ def main():
 #    mujoco_export('HalfCheetah', 0, task='Walking', policies=policies, trajectories=trajectories, misc=misc)
 
     mujoco_models = ['Hopper', 'HalfCheetah', 'Walker2d']
+    mujoco_models = ['Hopper']
     for env in mujoco_models:
         for mp in range(6):
             #mujoco_export(env, mp, task='Balancing', policies=policies, trajectories=trajectories, misc=misc)
