@@ -4,6 +4,7 @@
 *.o
 *.obj
 *.pdf
+*.pdf_tex
 
 # Precompiled Headers
 *.gch
@@ -20,6 +21,8 @@
 
 # temporary and export files
 *.csv
+*.bin
+*.pkl
 *.db
 *.meta
 *.index
@@ -30,6 +33,8 @@ db_trajectories
 checkpoint
 *.tfevents.*
 tmp/*
+gait_analysis/yaml/*
+gait_analysis/misc/*
 
 # Compiled Static libraries
 *.lai
@@ -46,7 +51,6 @@ tmp/*
 *.state
 *.pyc
 *.c.*
-*.bin
 bayes
 bayes.c
 cython_debug/
