@@ -7,6 +7,11 @@ from cl_learning import Helper, prepare_multiprocessing, do_multiprocessing_pool
 import random
 import yaml, io
 from cl_main import cl_run
+import numpy as np
+
+seed = 1
+random.seed(seed)
+np.random.seed(random.randint(0, 1000000))
 
 def main():
     args = parse_args()
@@ -99,6 +104,7 @@ def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, tasks, s
 
 def do_network_based(base_args, cores, name, nn_params, runs, tasks, starting_task):
     args = base_args.copy()
+    args['seed'] = seed
     args['rb_min_size'] = 1000
     args['default_damage'] = 4035.00
     args['perf_td_error'] = True

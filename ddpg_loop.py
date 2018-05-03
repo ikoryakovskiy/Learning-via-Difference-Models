@@ -47,6 +47,7 @@ def preload_policy(sess, config):
         sess.run(tf.global_variables_initializer())
     return sess
 
+
 def save_policy(sess, config, suffix = "", global_step = None):
     if config["output"]:
         var_all = tf.global_variables() #tf.trainable_variables()
@@ -221,7 +222,11 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         obs = obs_normalize(obs, obs_rms, obs_range, o_dims, config["normalize_observations"])
 
         # Export environment state
-        env.log(''.join("{:10.2f}".format(th) for th in cl_threshold) if cl_threshold is not None else '')
+        if cl_nn:
+            more_info = ''.join('{:10.2f}'.format(vvv) for vv in v[0] for vvv in vv)
+            more_info += ''.join('{:10.2f}'.format(indi) for indi in [-100, -100, -100])
+            more_info += ''.join('{:10.2f}'.format(th) for th in cl_threshold)
+        env.log(more_info if cl_threshold is not None else '')
 
         # Main loop over steps or trials
         # Finish when trials finish
@@ -331,6 +336,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
 
                 # update PerformanceTracker
+                more_info = ""
                 if cl_nn:
                     s = info.split()
                     # convert number of falls into a relative value
@@ -344,6 +350,12 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
                     #cl_threshold = pt.denormalize(cl_threshold)
 
+                    more_info += ''.join('{:10.2f}'.format(vvv) for vv in v[0] for vvv in vv)
+                    more_info += ''.join('{:10.2f}'.format(indi) for indi in indicators)
+                    more_info += ''.join('{:10.2f}'.format(th) for th in cl_threshold)
+                # report
+                env.log(more_info)
+
                 # check if performance is satisfactory
                 test_returns.append(trial_return)
                 avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
@@ -351,11 +363,6 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                     reach_timeout_num += 1
                 else:
                     reach_timeout_num = 0
-
-                # report
-                more_info = ''.join('{:10.2f}'.format(perf) for perf in nn_perf)
-                more_info += ''.join("{:10.2f}".format(th) for th in cl_threshold) if cl_threshold is not None else ''
-                env.log(more_info)
 
                 if not config['mp_debug']:
                     msg = "{:>10} {:>10} {:>10.3f} {:>10}" \
@@ -446,6 +453,7 @@ def start(env, pt=None, cl_mode=None, **config):
         np.random.seed(random.randint(0, 1000000))
         tf.set_random_seed(random.randint(0, 1000000))
         env.seed(random.randint(0, 1000000))
+        print("Random seed verification (numpy) ", np.random.randint(10000))
 
         obs_dim = env.observation_space.shape[-1]
         act_dim = env.action_space.shape[-1]
