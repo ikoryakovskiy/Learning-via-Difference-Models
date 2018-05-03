@@ -140,16 +140,16 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
     with tf.Session(graph=ddpg_graph, config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
-        # Load curriculum neural network weights (provided parametes have priority)
-        if cl_nn:
-            sess = cl_nn.load(sess, config["cl_load"])
-
         # Check if a policy needs to be loaded
         sess = preload_policy(sess, config)
 
         # Initialize target network weights
         actor.update_target_network(sess)
         critic.update_target_network(sess)
+
+        # Load curriculum neural network weights (provided parametes have priority)
+        if cl_nn:
+            sess = cl_nn.load(sess, config["cl_load"])
 
         # Initialize replay memory
         o_dims=env.observation_space.shape[-1]
