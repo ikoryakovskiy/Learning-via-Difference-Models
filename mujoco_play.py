@@ -4,8 +4,8 @@ from ddpg import parse_args, cfg_run
 
 args = parse_args()
 
-#env = 'Walker2d'
-env = 'HalfCheetah'
+env = 'Walker2d'
+#env = 'HalfCheetah'
 #env = 'Hopper'
 #task = 'Balancing'
 task = 'Walking'
@@ -20,7 +20,7 @@ args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
 #args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
 
 args['steps'] = 0
-args['trials'] = 1
+args['trials'] = 100
 args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
@@ -33,7 +33,7 @@ args['batch_norm'] = True
 #    args['load_file'] = 'cl/hopper_walking-last'
 #    args['compare_with'] = 'cl/hopper_balancing-last'
 
-#args['load_file'] = 'ddpg-exp1_two_stage_halfcheetah-g0001-mp0-02_walking-best'
+args['load_file'] = 'ddpg-exp1_two_stage_walker2d_ga_w-g0001-mp0-02_walking-best'
 
 args['output'] = ''
 args['render'] = True
