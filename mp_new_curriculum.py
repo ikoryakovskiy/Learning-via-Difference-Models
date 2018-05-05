@@ -44,7 +44,7 @@ def main():
 #    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
 
     nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_short', nn_params=nn_params, **misc)
+    mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short', nn_params=nn_params, **misc)
 
 #    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)
 #    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), **misc)
@@ -57,9 +57,19 @@ def main():
 #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(20.0, 20.0, 0.0), **misc)
 #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb20', reach_timeout=(-1.0, 20.0, 0.0), **misc)
 
+
+#    # walker2d
+#    tasks = {
+#        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
+#        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+#        'walking':      'RoboschoolWalker2dGRL-v1'
+#        }
+#    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
+
+
     # DBG: export configuration
     export_cfg(mp_cfgs)
-
 
     # Run all scripts at once
     random.shuffle(mp_cfgs)
@@ -98,7 +108,15 @@ def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, tasks, s
     return mp_cfgs
 
 
-def do_network_based(base_args, cores, name, nn_params, runs, tasks, starting_task):
+def do_network_based_mujoco(base_args, cores, name, nn_params, runs, tasks, starting_task):
+    args = base_args.copy()
+    args['env_td_error_scale'] = 600.0
+    args['env_timeout'] = 16.5
+    args['steps'] = 700000
+    return do_network_based_leo(args, cores, name, nn_params, runs, tasks, starting_task)
+
+
+def do_network_based_leo(base_args, cores, name, nn_params, runs, tasks, starting_task):
     args = base_args.copy()
     args['rb_min_size'] = 1000
     args['default_damage'] = 4035.00

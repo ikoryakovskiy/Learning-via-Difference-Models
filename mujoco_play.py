@@ -7,20 +7,27 @@ args = parse_args()
 env = 'Walker2d'
 #env = 'HalfCheetah'
 #env = 'Hopper'
-#task = 'Balancing'
-task = 'Walking'
+task = 'Balancing'
+#task = 'Walking'
 
+tf = True
+#tf = False
 
 if task == 'Balancing':
     task_balancing = task
 else:
     task_balancing = ''
 
-args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL')
+if tf:
+    tfstr = '_TF'
+else:
+    tfstr = ''
+
+args['cfg'] = "Roboschool{}-v1".format(env+task_balancing+'GRL'+tfstr)
 #args['cfg'] = "Roboschool{}-v1".format(env+task_balancing)
 
 args['steps'] = 0
-args['trials'] = 100
+args['trials'] = 1
 args['test_interval'] = 0
 args['normalize_observations'] = False
 args['normalize_returns'] = False
@@ -33,7 +40,8 @@ args['batch_norm'] = True
 #    args['load_file'] = 'cl/hopper_walking-last'
 #    args['compare_with'] = 'cl/hopper_balancing-last'
 
-args['load_file'] = 'ddpg-exp1_two_stage_walker2d_ga_w-g0001-mp0-02_walking-best'
+#args['load_file'] = 'ddpg-exp1_two_stage_walker2d_ga_w-g0001-mp0-02_walking-best'
+args['load_file'] = 'cl/walker2d_balancing_tf-last'
 
 args['output'] = ''
 args['render'] = True
