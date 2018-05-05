@@ -26,12 +26,12 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(1)
+    runs = range(16)
 
     # create perturbed models of leo
     model_paths = (
-            '/home/ivan/work/Project/Software/grl/src/grl/addons/rbdl/cfg/leo_vc/perturbed',
-            '/grl/src/grl/addons/rbdl/cfg/leo_vc/perturbed',
+            '/home/ivan/work/Project/Software/grl/src/grl/addons/rbdl/cfg/leo_vc',
+            '/grl/src/grl/addons/rbdl/cfg/leo_vc',
             )
 
     models, names = create_models(model_paths)
@@ -77,9 +77,9 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-    #do_multiprocessing_pool(cores, mp_cfgs)
-    config, tasks, starting_task = mp_cfgs[0]
-    cl_run(tasks, starting_task, **config)
+    do_multiprocessing_pool(cores, mp_cfgs)
+    #config, tasks, starting_task = mp_cfgs[0]
+    #cl_run(tasks, starting_task, **config)
 
 
 def do_steps_based(base_args, cores, name, steps, runs, tasks, starting_task):
@@ -165,9 +165,13 @@ def create_models(paths):
         if os.path.isdir(path):
             break
 
+    ppath = '/~perturbed~'
+    if not os.path.exists(path+ppath):
+        os.makedirs(path+ppath)
+
     files = {
-            'tf': '{}/leo_ff_dl{}_tf.lua',
-            'no': '{}/leo_ff_dl{}.lua',
+            'tf': '{}{}/leo_ff_dl{}_tf.lua',
+            'no': '{}{}/leo_ff_dl{}.lua',
             }
 
     torsoMass = 0.94226
@@ -176,7 +180,7 @@ def create_models(paths):
 
     content = {}
     for key in files:
-        with open(files[key].format(path, ''), 'r') as content_file:
+        with open(files[key].format(path, '', ''), 'r') as content_file:
             content[key] = content_file.read()
 
     models = []
@@ -184,7 +188,7 @@ def create_models(paths):
     for tmp in torsoMassPro:
         model = {}
         for key in content:
-            filename, file_extension = os.path.splitext(files[key].format(path,'_perturbed'))
+            filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
             foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
             with open(foutname, 'w') as fout:
                 new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
@@ -199,7 +203,7 @@ def create_models(paths):
     for tmp in jointFriction:
         model = {}
         for key in content:
-            filename, file_extension = os.path.splitext(files[key].format(path,'_perturbed'))
+            filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
             foutname = '{}_jf_{:.03f}{}'.format(filename, tmp, file_extension)
             with open(foutname, 'w') as fout:
                 new_mass = 'jointFriction = {}'.format(tmp)
