@@ -52,12 +52,14 @@ class Helper(object):
             mp_cfgs.append( (cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 
-    def gen_cfg_steps(self, solutions=None, g=1, begin=0):
+    def gen_cfg_steps(self, solutions=None, g=1, begin=0, options=None):
         mp_cfgs = []
         for run, solution in enumerate(solutions):
             cfg = self.gen_base_(g, begin+run)
             if solution:
                 cfg['steps'] = solution
+            if options:
+                cfg['options'] = options
             mp_cfgs.append( (cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 

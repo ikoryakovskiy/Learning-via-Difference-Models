@@ -21,6 +21,23 @@ from opt_ce import opt_ce
 
 random.seed(datetime.now())
 
+def comb_to_sol(comb, steps, steps_delta_a, steps_delta_b):
+    a = int(comb[0] * steps_delta_a)
+    b = int(comb[1] * steps_delta_b)
+    if   a == 0 and b == 0:
+        sol = (-1, -1, steps)
+    elif a == 0 and b > 0:
+        sol = (-1, b, steps-b)
+    elif a > 0 and a < b:
+        sol = (a, b-a, steps-b)
+    elif a > 0 and a >= b:
+        sol = (a, -1, steps-a)
+    else:
+        print('something bad happened')
+        pdb.set_trace()
+    return sol
+
+
 def main():
     prepare_multiprocessing()
     alg = 'ddpg'
@@ -33,24 +50,31 @@ def main():
     print('Using {} cores.'.format(arg_cores))
 
     args['mp_debug'] = True
-    args['reach_return'] = 1422.66
-    args['default_damage'] = 4035.00
+    #args['reach_return'] = 1422.66
+    #args['default_damage'] = 4035.00
+    args['reach_return'] = 526.0
+    args['default_damage'] = 4132.00
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
+    args['cl_l2_reg'] = 0
     steps       = 300000
     steps_ub    = 100000
-    steps_delta =   5000
+    steps_delta_a = 500
+    steps_delta_b = 5000
     popsize = 16*6
     G = 100
     use_mp = True
 
+#    ### For debugging
 #    args['mp_debug'] = False
-##    steps       = 3000
-##    steps_ub    = 1000
-##    steps_delta =  500
-#    G = 10
-#    use_mp = False
+#    steps       = 3000
+#    steps_delta_a = 50
+#    steps_delta_b = 50
+#    G = 100
+#    popsize = 20
+#    #use_mp = False
+#    ###
 
     # Tasks
     tasks = {
@@ -60,50 +84,47 @@ def main():
             }
     starting_task = 'balancing_tf'
 
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+
     root = "cl"
     if not os.path.exists(root):
         os.makedirs(root)
 
     categories = range(21)
-    opt = opt_ce(popsize, categories)
+    #balancing_tf = np.array(categories)/max(categories)
+    #balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
+
+
+    # To ensure fair sampling, enumberate all step_options and select unique ones!
+    step_combinations, step_solutions = [], []
+    for a in categories:
+        for b in categories:
+            sol = comb_to_sol((a,b), steps, steps_delta_a, steps_delta_b)
+            if sol not in step_solutions:
+                step_combinations.append((a,b))
+                step_solutions.append(sol)
+
+    opt = opt_ce(popsize, step_combinations, categories)
     g = 1
     #opt = opt_ce.load(root, 'opt.pkl')
     #g = 2
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
-    balancing_tf = np.array(categories)/max(categories)
-    balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
-    balancing = np.array(categories) * steps_delta
-
     while not opt.stop() and g <= G:
         if args['mp_debug']:
             sys.stdout = Logger(root + "/stdout-g{:04}.log".format(g))
             print("Should work")
 
-        solutions = opt.ask()
+        combinations = opt.ask()
 
-        # remap solutions
-        resol = []
-        for s in solutions:
-            a, b = s
-            a = balancing_tf[a]
-            b = balancing[b]
-            if   a == 0 and b == 0:
-                rs = (-1, -1, steps)
-            elif a == 0 and b > 0:
-                rs = (-1, b, steps-b)
-            elif a > 0 and a < b:
-                rs = (a, b-a, steps-b)
-            elif a > 0 and a >= b:
-                rs = (a, -1, steps-a)
-            else:
-                print('something bad happened')
-                pdb.set_trace()
-            resol.append(rs)
+        # convert sampled options to solutions
+        solutions = []
+        for comb in combinations:
+            solutions.append(comb_to_sol(comb, steps, steps_delta_a, steps_delta_b))
 
         # preparation
-        mp_cfgs = hp.gen_cfg_steps(resol, g)
+        mp_cfgs = hp.gen_cfg_steps(solutions, g, options=options)
 
         # evaluate and backup immediately
         damage = hp.run(mp_cfgs)
@@ -113,10 +134,10 @@ def main():
         # remove None elements
         notnonel = np.where(np.array(damage)!=None)[0]
         damage = [d for i,d in enumerate(damage) if i in notnonel]
-        solutions = [d for i,d in enumerate(solutions) if i in notnonel]
+        combinations = [d for i,d in enumerate(combinations) if i in notnonel]
 
-        # update using *original* solutions
-        best = opt.tell(solutions, damage)
+        # update using *original* solutions == combinations
+        best = opt.tell(combinations, damage)
 
         # back-project to array incluing None elements
         best = [notnonel[i] for i in best]

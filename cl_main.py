@@ -50,11 +50,12 @@ def cl_run(tasks, cl_mode, **base_cfg):
         reach_timeout_based_cl_switching = True
     else:
         reach_timeout_based_cl_switching = False
-#    ################
+
+#    ######## Debugging ########
 #    if step_based_cl_switching:
 #        ss = base_cfg["steps"]
-#        damage = 0.0001 * (abs(ss[0]-20000) + abs(ss[1]-30000))
-#        if random.random() > 0.:
+#        damage = 0.001 * (abs(ss[0]-200) + abs(ss[1]-3000))
+#        if random.random() > 0.2:
 #            return (9*random.random() + damage, 'testing', [])
 #        else:
 #            1/0

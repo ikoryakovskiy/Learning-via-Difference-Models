@@ -38,7 +38,7 @@ def main():
     tasks, names = create_tasks(models, names)
 
 
-    options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
     starting_task = 'balancing_tf'
     mp_cfgs = []
     for task, name in zip(tasks, names):
