@@ -60,7 +60,7 @@ def main():
     args['cl_l2_reg'] = 0
     steps       = 300000
     steps_ub    = 100000
-    steps_delta_a = 500
+    steps_delta_a = 1000
     steps_delta_b = 5000
     popsize = 16*6
     G = 100
