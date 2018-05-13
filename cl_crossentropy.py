@@ -72,8 +72,8 @@ def main():
 #    steps_delta_a = 50
 #    steps_delta_b = 50
 #    G = 100
-#    popsize = 20
-#    #use_mp = False
+#    popsize = 3
+#    use_mp = False
 #    ###
 
     # Tasks

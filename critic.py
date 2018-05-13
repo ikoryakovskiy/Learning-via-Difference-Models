@@ -102,6 +102,9 @@ class CriticNetwork(object):
             self.predicted_q_value: predicted_q_value
         })
 
+    def l2_reg_(self, sess):
+        return sess.run(self.l2_reg)
+
     def predict(self, sess, inputs, action):
         return sess.run(self.out, feed_dict={
             self.inputs: inputs,

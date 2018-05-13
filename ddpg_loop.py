@@ -194,6 +194,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
         reach_timeout_num = 0
         more_info = None
         ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
+        prev_l2_reg = critic.l2_reg_(sess)
         ti = config["test_interval"]
         test_returns = []
         avg_test_return = config['reach_return']
@@ -281,7 +282,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 # Update the critic given the targets
                 if config['perf_l2_reg']:
                     _, _, l2_reg = critic.train_(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
-                    l2_reg_acc += l2_reg
+                    l2_reg_acc += (l2_reg - prev_l2_reg)
+                    prev_l2_reg = l2_reg
                 else:
                     critic.train(sess, s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
 
@@ -327,32 +329,22 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
             if terminal and test:
 
                 # NN performance indicators
-                td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
-                l2_reg_per_step = l2_reg_acc/ss_acc if ss_acc > 0 else 0
-                action_grad_per_step = action_grad_acc/ss_acc if ss_acc > 0 else 0
-                actor_grad_per_step = actor_grad_acc/ss_acc if ss_acc > 0 else 0
-                nn_perf = [td_per_step, l2_reg_per_step, action_grad_per_step,
-                           actor_grad_per_step]
-                ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
-
-                # update PerformanceTracker
                 more_info = ""
+                s = info.split()
+                norm_duration = float(s[0]) / config["env_timeout"]
+                td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
+                norm_td_error = td_per_step / config["env_td_error_scale"]
+                norm_complexity = l2_reg_acc/ss_acc if ss_acc > 0 else 0
+                indicators = [norm_duration, norm_td_error, norm_complexity]
+                more_info += ''.join('{:10.8f}'.format(indi) for indi in indicators)
                 if cl_nn:
-                    s = info.split()
-                    # convert number of falls into a relative value
-                    norm_td_error = td_per_step / config["env_td_error_scale"]
-                    norm_duration = float(s[0]) / config["env_timeout"]
-                    norm_complexity = l2_reg_per_step
-                    #indicators = [norm_td_error, norm_complexity, norm_duration]
-                    indicators = [norm_duration, norm_td_error, norm_complexity]
+                    # update PerformanceTracker
                     pt.add(indicators) # return, duration, damage
                     v = pt.flatten()
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
-                    #cl_threshold = pt.denormalize(cl_threshold)
-
-                    more_info += ''.join('{:10.2f}'.format(vvv) for vv in v[0] for vvv in vv)
-                    more_info += ''.join('{:10.2f}'.format(indi) for indi in indicators)
-                    more_info += ''.join('{:10.2f}'.format(th) for th in cl_threshold)
+                    more_info += ''.join('{:10.8f}'.format(vvv) for vv in v[0] for vvv in vv)
+                    more_info += ''.join('{:10.8f}'.format(th) for th in cl_threshold)
+                ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
                 # report
                 env.log(more_info)
 
