@@ -336,14 +336,14 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 norm_td_error = td_per_step / config["env_td_error_scale"]
                 norm_complexity = l2_reg_acc/ss_acc if ss_acc > 0 else 0
                 indicators = [norm_duration, norm_td_error, norm_complexity]
-                more_info += ''.join('{:12.8f}'.format(indi) for indi in indicators)
+                more_info += ''.join('{:14.8f}'.format(indi) for indi in indicators)
                 if cl_nn:
                     # update PerformanceTracker
                     pt.add(indicators) # return, duration, damage
                     v = pt.flatten()
                     cl_mode_new, cl_threshold = cl_nn.predict(sess, v)
-                    more_info += ''.join('{:12.8f}'.format(vvv) for vv in v[0] for vvv in vv)
-                    more_info += ''.join('{:12.8f}'.format(th) for th in cl_threshold)
+                    more_info += ''.join('{:14.8f}'.format(vvv) for vv in v[0] for vvv in vv)
+                    more_info += ''.join('{:14.8f}'.format(th) for th in cl_threshold)
                 ss_acc, td_acc, l2_reg_acc, action_grad_acc, actor_grad_acc = 0,0,0,0,0
                 # report
                 env.log(more_info)
