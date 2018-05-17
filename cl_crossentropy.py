@@ -10,7 +10,7 @@ import sys
 import pdb
 import time
 from logger import Logger
-import math
+from random import randint
 import pickle
 
 from cl_main import cl_run
@@ -28,10 +28,10 @@ def comb_to_sol(comb, steps, steps_delta_a, steps_delta_b):
         sol = (-1, -1, steps)
     elif a == 0 and b > 0:
         sol = (-1, b, steps-b)
-    elif a > 0 and a < b:
-        sol = (a, b-a, steps-b)
-    elif a > 0 and a >= b:
+    elif a > 0 and b == 0:
         sol = (a, -1, steps-a)
+    elif a > 0 and b > 0:
+        sol = (a, b, steps-a-b)
     else:
         print('something bad happened')
         pdb.set_trace()
@@ -58,10 +58,9 @@ def main():
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
     args['cl_l2_reg'] = 0
-    steps       = 300000
-    steps_ub    = 100000
+    steps         = 400000
     steps_delta_a = 1000
-    steps_delta_b = 5000
+    steps_delta_b = 4000
     popsize = 16*6
     G = 100
     use_mp = True
@@ -90,7 +89,7 @@ def main():
     if not os.path.exists(root):
         os.makedirs(root)
 
-    categories = range(21)
+    categories = range(26)
     #balancing_tf = np.array(categories)/max(categories)
     #balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
 
@@ -125,6 +124,8 @@ def main():
 
         # preparation
         mp_cfgs = hp.gen_cfg_steps(solutions, g, options=options)
+        for cfg in mp_cfgs:
+            cfg[0]['test_interval'] = 1+randint(0, 29)
 
         # evaluate and backup immediately
         damage = hp.run(mp_cfgs)

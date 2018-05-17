@@ -31,27 +31,27 @@ class opt_ce(object):
         self.pa = [x/sum(self.pa) for x in self.pa]
         self.pb = [0.5]*self.psize
         self.pb = [x/sum(self.pb) for x in self.pb]
-        self.alpha = 0.8 #0.8
+        self.alpha = 0.9 #0.8
 
-        # priors
-        priora = [0]*self.psize
-        priorb = [0]*self.psize
-        for sol in solutions:
-            a, b = sol
-            priora[a] += 1
-            priorb[b] += 1
-#        priora = [1-x/(1+max(priora)) for x in priora]
-#        priorb = [1-x/(1+max(priorb)) for x in priorb]
-#        priora = [x/sum(priora) for x in priora]
-#        priorb = [x/sum(priorb) for x in priorb]
-        minprob = 1
-        assert(min(priora) > 0)
-        assert(min(priorb) > 0)
-        self.pa = [minprob * min(priora)/x for x in priora]
-        self.pb = [minprob * min(priorb)/x for x in priorb]
-        self.pa = [x/sum(self.pa) for x in self.pa]
-        self.pb = [x/sum(self.pb) for x in self.pb]
-        # priors
+#        # priors
+#        priora = [0]*self.psize
+#        priorb = [0]*self.psize
+#        for sol in solutions:
+#            a, b = sol
+#            priora[a] += 1
+#            priorb[b] += 1
+##        priora = [1-x/(1+max(priora)) for x in priora]
+##        priorb = [1-x/(1+max(priorb)) for x in priorb]
+##        priora = [x/sum(priora) for x in priora]
+##        priorb = [x/sum(priorb) for x in priorb]
+#        minprob = 1
+#        assert(min(priora) > 0)
+#        assert(min(priorb) > 0)
+#        self.pa = [minprob * min(priora)/x for x in priora]
+#        self.pb = [minprob * min(priorb)/x for x in priorb]
+#        self.pa = [x/sum(self.pa) for x in self.pa]
+#        self.pb = [x/sum(self.pb) for x in self.pb]
+#        # priors
 
         self.Xi = []
         self.Yi = []
@@ -78,7 +78,7 @@ class opt_ce(object):
         # sort damage
         try:
             idxs =np.argsort(np.array(damage)) # minimum first
-            quantile_idx = idxs[:int(len(damage)*0.1)]
+            quantile_idx = idxs[:int(len(damage)*0.2)]
             if len(quantile_idx) > 0: # if there are enough samples
                 best = [solutions[x] for x in quantile_idx]
                 besta, bestb = zip(*best)
