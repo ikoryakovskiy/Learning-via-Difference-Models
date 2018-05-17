@@ -120,7 +120,7 @@ def parse_args():
 
     # Replay Buffer options
     parser.add_argument('--minibatch-size', type=int, default=64)
-    parser.add_argument('--rb-max-size', type=int, default=300000)
+    parser.add_argument('--rb-max-size', type=int, default=None)
     parser.add_argument('--rb-min-size', type=int, default=1000)
     parser.add_argument('--rb-save-filename', type=str, default='')
     parser.add_argument('--rb-load-filename', type=str, default='')

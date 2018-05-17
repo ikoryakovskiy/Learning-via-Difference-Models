@@ -35,7 +35,7 @@ def main():
 
     # In this experiment we keep walking steps at 250000, but additionally do balancing steps of various durations
     wsteps = 250000
-    for bsteps_mul in [0, 1, 2, 3, 4]:
+    for bsteps_mul in range(9):
         name = "{}-mul{}".format(exp_name, bsteps_mul)
         if bsteps_mul > 0:
             bsteps = 25000 * bsteps_mul

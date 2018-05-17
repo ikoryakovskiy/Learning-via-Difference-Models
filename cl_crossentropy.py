@@ -58,7 +58,8 @@ def main():
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
     args['cl_l2_reg'] = 0
-    steps         = 400000
+    steps = 400000
+    args['rb_max_size'] = steps
     steps_delta_a = 1000
     steps_delta_b = 4000
     popsize = 16*6
