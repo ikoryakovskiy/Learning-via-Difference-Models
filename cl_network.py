@@ -53,8 +53,6 @@ class NeuralNetwork(object):
             toload = self.target_network_params + self.network_params
             saver = tf.train.Saver(toload)
             saver.restore(sess, fname)
-            #self.network_params = [v for v in tf.trainable_variables() if 'curriculum' in v.name]
-            #self.target_network_params = [v for v in tf.trainable_variables() if 'target' in v.name]
         print("Loaded curriculum from {}".format(fname))
         return sess
 

@@ -224,8 +224,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
         # Export environment state
         if cl_nn:
-            more_info = ''.join('{:10.2f}'.format(vvv) for vv in v[0] for vvv in vv)
-            more_info += ''.join('{:10.2f}'.format(indi) for indi in [-100, -100, -100])
+            more_info = ''.join('{:10.2f}'.format(indi) for indi in [-100, -100, -100])
+            more_info += ''.join('{:10.2f}'.format(vvv) for vv in v[0] for vvv in vv)
             more_info += ''.join('{:10.2f}'.format(th) for th in cl_threshold)
         env.log(more_info if cl_threshold is not None else '')
 

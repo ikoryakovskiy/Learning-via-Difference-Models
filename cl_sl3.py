@@ -25,7 +25,7 @@ ns = 3 # number of curriculum stages
 
 def read_file(f, cl_mode=0):
     try:
-        data = np.loadtxt(f, skiprows=3, usecols=(3, 11, 12, 4, 5))
+        data = np.loadtxt(f, skiprows=3, usecols=(11, 12, 13, 4, 5))
     except IndexError:
         return None
     except Exception as e:
@@ -37,10 +37,11 @@ def read_file(f, cl_mode=0):
     stage = cl_mode*np.ones((length,1))
 
     # last export was not due to the end of testing
-    if all(data[-1,1:] == data[-2,1:]):
+    if all(data[-1,:] == data[-2,:]):
         data = data[:-1, :]
-        damage = damage[:-1, :]
+        damage = np.delete(damage, [len(damage)-2], axis=0) # here we keep the last value of damge because this is the true value
         distance = distance[:-1, :]
+        stage = stage[:-1, :]
 
     return {'data':data, 'stage':stage, 'damage':damage, 'distance':distance}
 
@@ -93,7 +94,7 @@ def clean_data(dd, params):
 def process_data(dd, config):
     dd_new = []
     for d in dd:
-        data = d['data'] / np.array([config['env_timeout'], config["env_td_error_scale"], 1])
+        data = d['data'] #/ np.array([config['env_timeout'], config["env_td_error_scale"], 1])
         stage = d['stage']
         damage = d['damage'] #/ 1000.0 #/ config['default_damage']
         dd_new.append({'data':data, 'stage':stage, 'damage':damage})
@@ -151,7 +152,7 @@ def normalize_data(dd, config, params, data_norm=None, damage_norm=None):
             damage_ = d['damage'][begin:, :]
             if params['damage_norm'] == 'to_reward':
                 damage_ = -np.diff(damage_, axis=0)
-                damage0 = -damage_[0]
+                damage0 = damage_[0]
                 damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_, np.zeros((1,1))))
             else:
                 damage_ = damage_[-1] - damage_
@@ -179,7 +180,7 @@ def normalize_data(dd, config, params, data_norm=None, damage_norm=None):
         damage_ = d['damage'][begin:, :]
         if params['damage_norm'] == 'to_reward':
             damage_ = -np.diff(damage_, axis=0)
-            damage0 = -damage_[0]
+            damage0 = damage_[0]
             damage_ = np.vstack((np.ones((steps_of_history, 1))*damage0, damage_, np.zeros((1,1))))
             #damage_1 = np.exp(-np.diff(damage_, axis=0)/30.0)
             #damage_2 = np.exp(-damage_[0]/30.0)
@@ -345,9 +346,10 @@ def main():
     params['neg_damage'] = True
 
     config = parse_args()
-    config['default_damage'] = 4035.00
+    config['default_damage'] = 4132.00
+    config["cl_stages"] = "balancing_tf;balancing;walking:monotonic"
     config["cl_tau"] = 0.001
-    config['cl_dropout_keep'] = 0.7
+    config['cl_dropout_keep'] = 0.7#0.7
     config["cl_l2_reg"] = 0.001
     config["minibatch_size"] = 128
 
@@ -358,11 +360,14 @@ def main():
 #    export_names = "long_curriculum_network"
     config["cl_lr"] = 0.01
     training_epochs = 1000
-    export_names = "short_curriculum_network"
+    export_names = "new_short_curriculum_network"
     nn_params = (export_names, "{}_stat.pkl".format(export_names))
 
+    # debug options
+    #training_epochs = 100
+
     #dd = load_data('leo_supervised_learning_regression2/', params, gens = [2])
-    dd = load_data('leo_supervised_learning_regression/', params, gens = range(1,7))
+    dd = load_data('leo_supervised_learning_regression_new/', params, gens = range(1,7))
 
     # Rule-based processing before splitting
     dd = clean_data(dd, params)
@@ -401,6 +406,7 @@ def main():
     plot_train, plot_test = [], []
     plt.gca().set_color_cycle(['red', 'green', 'blue'])
 
+    tf.reset_default_graph()
     with tf.Graph().as_default() as sl:
         #cl_nn = cl_critic(pt.get_v_size(), config)
         #cl_nn = cl_critic_target(pt.get_v_size(), config)
