@@ -119,7 +119,7 @@ def compare(env, ddpg, actor, critic, compare_with_graph, compare_with_actor,
 # ===========================
 #   Agent Training
 # ===========================
-def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None, compare_with_sess=None, compare_with_actor=None, **config):
+def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None, compare_with_sess=None, compare_with_actor=None, norm_complexity=0, **config):
 
     print('train: ' + config['output'] + ' started!')
     print("Noise: {} and {}".format(config["ou_sigma"], config["ou_theta"]))
@@ -334,7 +334,7 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 norm_duration = float(s[0]) / config["env_timeout"]
                 td_per_step = td_acc/ss_acc if ss_acc > 0 else 0
                 norm_td_error = td_per_step / config["env_td_error_scale"]
-                norm_complexity = l2_reg_acc/ss_acc if ss_acc > 0 else 0
+                norm_complexity += l2_reg_acc/ss_acc if ss_acc > 0 else 0
                 indicators = [norm_duration, norm_td_error, norm_complexity]
                 more_info += ''.join('{:14.8f}'.format(indi) for indi in indicators)
                 if cl_nn:
@@ -427,10 +427,10 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
 
     print('train: ' + config['output'] + ' returning ' + '{} {} {} {}'.format(avg_test_return, damage, ss, cl_mode_new))
 
-    return (avg_test_return, damage, ss, cl_mode_new)
+    return (avg_test_return, damage, ss, cl_mode_new, norm_complexity)
 
 
-def start(env, pt=None, cl_mode=None, **config):
+def start(env, pt=None, cl_mode=None, norm_complexity=0, **config):
 
     # block warnings from tf.saver if needed
     if config['mp_debug']:
@@ -474,5 +474,5 @@ def start(env, pt=None, cl_mode=None, **config):
         return compare(env, ddpg, actor, critic, compare_with_graph, compare_with_actor, cl_nn, pt, cl_mode,
                       **config)
 
-    return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, **config)
+    return train(env, ddpg, actor, critic, cl_nn, pt, cl_mode, norm_complexity, **config)
 

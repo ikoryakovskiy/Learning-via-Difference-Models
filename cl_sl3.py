@@ -5,6 +5,7 @@ import glob
 import pickle
 from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from replaybuffer_ddpg import ReplayBuffer
 from critic import CriticNetwork
@@ -15,6 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 from ptracker import PerformanceTracker
 from cl_network import CurriculumNetwork
 from ddpg import parse_args
+plt.close("all")
 
 tt  = 0 # duration
 ee  = 1 # td error
@@ -72,6 +74,7 @@ def load_data(path, params, gens = [1]):
             walking      = read_file(f.replace(stage_names[0], stage_names[2]), cl_mode=2)
             d = concat(balancing_tf, balancing)
             d = concat(d, walking)
+            d['data'] = np.hstack((d['data'][:, 0:2], np.cumsum(d['data'][:, 2:3], axis=0)))
             dd.append(d)
     return dd
 
@@ -109,7 +112,81 @@ def select_good(dd, config, good_ratio):
     threshold = int(good_ratio*len(idx))
     good_dd_idx = idx[:threshold]
     good_dd = [d for i, d in enumerate(dd) if i in good_dd_idx]
+    print("Max damage = " + str(final_damage[idx[threshold]]))
+
+    # one-stage
+    separation = [0]*3
+    for d in good_dd:
+        if all(d['stage'] == 2):
+            separation[2] += 1
+        elif all([a or b for a, b in zip(d['stage'] == 2, d['stage'] == 1)]):
+            separation[1] += 1
+        else:
+            separation[0] += 1
+
+    print("Separation: " + str(separation))
+
     return good_dd
+
+
+def calc_weights(dd):
+    min_len = np.inf
+    max_len = 0
+    for d in dd:
+        min_len = min([min_len,len(d['damage'])])
+        max_len = max([max_len,len(d['damage'])])
+    print("Min weight = " + str(min_len/max_len))
+
+    dd_new = []
+    for d in dd:
+        data = d['data']
+        stage = d['stage']
+        damage = d['damage']
+        weight = 1- (len(damage) - min_len) / max_len
+        dd_new.append({'data':data, 'stage':stage, 'damage':damage, 'weight':weight})
+    return dd_new
+
+
+def plot_data3(dd):
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 3, 1, projection='3d')
+    ax2 = fig.add_subplot(1, 3, 2, projection='3d')
+    ax3 = fig.add_subplot(1, 3, 3, projection='3d')
+    axarr = [ax1, ax2, ax3]
+    #f, axarr = plt.subplots(nrows=1, ncols=3)#, projection='3d')
+
+    #dd = dd[:2]
+    colors = ['r', 'g', 'b']
+    for d in dd:
+        x, y, z = d['data'].T
+        c = np.array([colors[int(i)] for i in d['stage']])
+
+        for ax, i in zip(axarr, range(3)):
+            ind = np.where(d['stage'] == i)[0]
+            ax.scatter(x[ind], y[ind], z[ind], c=c[ind], marker='o')
+
+    for ax in axarr:
+        ax.set_xlabel('duration')
+        ax.set_ylabel('td-error')
+        ax.set_zlabel('complexity')
+    plt.show()
+
+
+def plot_data(dd):
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection='3d')
+
+    #dd = dd[:2]
+    colors = ['r', 'g', 'b']
+    for d in dd:
+        x, y, z = d['data'].T
+        c = np.array([colors[int(i)] for i in d['stage']])
+        ax.scatter(x, y, z, c=c, marker='o')
+
+    ax.set_xlabel('duration')
+    ax.set_ylabel('td-error')
+    ax.set_zlabel('complexity')
+    plt.show()
 
 
 def normalize(data, mean_data=None, std_data=None):
@@ -208,7 +285,7 @@ def normalize_data(dd, config, params, data_norm=None, damage_norm=None):
         history_block = np.array([softmax_stage_[0,:],]*steps_of_history)
         softmax_stage_ = np.vstack((history_block, softmax_stage_, np.zeros((zero_padding_after, classes))))
 
-        dd_new.append({'data': data_, 'damage': damage_, 'stage':stage_, 'softmax_stage':softmax_stage_})
+        dd_new.append({'data': data_, 'damage': damage_, 'stage':stage_, 'softmax_stage':softmax_stage_, 'weight': d['weight']})
 
     return dd_new, (data_mean, data_std), (damage_mean, damage_std)
 
@@ -245,7 +322,8 @@ def seq_cut(dd, params):
             data_.append(data[i+steps_of_history-1, :])
             damage_.append(damage[i+steps_of_history-1])
             stage_.append(stage[i+steps_of_history-1])
-        dd_new.append({'seq_data': seq_data_, 'seq_damage': seq_damage_, 'seq_softmax_stage': seq_softmax_stage_})
+        dd_new.append({'seq_data': seq_data_, 'seq_damage': seq_damage_, 'seq_softmax_stage': seq_softmax_stage_,
+                       'seq_weight': d['weight']})
 
     #seq_data_ = np.reshape(seq_data_, [-1, steps_of_history, dim])
     #seq_damage_ = np.reshape(seq_damage_, [-1, 1])
@@ -353,26 +431,32 @@ def main():
     config["cl_l2_reg"] = 0.001
     config["minibatch_size"] = 128
 
-    random_shuffle = False #True
+    random_shuffle = True
     test_percentage = 0.3
 #    config["cl_lr"] = 0.001
 #    training_epochs = 10000
 #    export_names = "long_curriculum_network"
     config["cl_lr"] = 0.01
-    training_epochs = 1000
-    export_names = "new_short_curriculum_network"
+    training_epochs = 10000
+    export_names = "eq_curriculum_network_depth_" + str(params['steps_of_history'])
     nn_params = (export_names, "{}_stat.pkl".format(export_names))
 
     # debug options
     #training_epochs = 100
+    #random_shuffle = False #True
 
     #dd = load_data('leo_supervised_learning_regression2/', params, gens = [2])
     dd = load_data('leo_supervised_learning_regression_new/', params, gens = range(1,7))
 
     # Rule-based processing before splitting
     dd = clean_data(dd, params)
-    dd = process_data(dd, config)
-    dd = select_good(dd, config, 0.1)
+    #dd = process_data(dd, config)
+    dd = select_good(dd, config, 0.3)
+    dd = calc_weights(dd)
+
+#    plot_data(dd)
+#
+#def aaa():
 
     # split into training and testing sets
     idx = np.arange(len(dd))
@@ -434,10 +518,14 @@ def main():
                 class_counter = np.reshape(class_counter, [-1, 1])
                 class_weight = (sum(class_counter) - class_counter) / sum(class_counter)
                 weights = y.dot(class_weight)
-                weights = weights / np.linalg.norm(weights)
 
-                _, loss = cl_nn.train(sess, x, y, class_weight=weights)
-                avg_loss += loss
+                if np.any(weights):
+                    weights = weights / np.linalg.norm(weights)
+#                    weights = weights * seq['seq_weight']
+                    _, loss = cl_nn.train(sess, x, y, class_weight=weights)
+                    avg_loss += loss
+                else:
+                    print("Oops!" + str(class_counter))
 
             # Compute average loss
             avg_loss += avg_loss / len(seq_train)
@@ -456,15 +544,14 @@ def main():
 
                     plt.pause(0.05)
 
-
         print("Optimization Finished!")
-
         cl_nn.save(sess, nn_params[0])
+
         plt.show(block=True)
 
 
 def calc_error(sess, cl_nn, sseq, params):
-    plabels = np.zeros(3)
+    true_positive = np.zeros(3)
     num_labels = np.zeros(3)
     for seq in sseq:
         xx = np.reshape(seq['seq_data'], [-1, params['steps_of_history'], 3])
@@ -472,11 +559,17 @@ def calc_error(sess, cl_nn, sseq, params):
             x = np.reshape(x, [-1, params['steps_of_history'], 3])
             rr = cl_nn.predict(sess, x)
             label = np.argmax(rr)
-            softmaxli = np.argmax(softmaxl)
-            plabels[softmaxli] += softmaxl[label]
-            num_labels[softmaxli] += 1
 
-    accuracy = plabels/num_labels
+            true_label = np.argmax(softmaxl)
+            true_positive[true_label] += int(label==true_label)
+            num_labels[true_label] += 1
+
+
+            #softmaxli = np.argmax(softmaxl)
+            #true_positive[softmaxli] += softmaxl[label]
+            #num_labels[softmaxli] += 1
+
+    accuracy = true_positive/num_labels
     for i in range(dim):
         print('accuracy = {} of {}'.format(accuracy[i], num_labels[i]))
     return accuracy

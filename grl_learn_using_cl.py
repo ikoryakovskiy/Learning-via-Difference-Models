@@ -12,19 +12,22 @@ args['default_damage'] = 4132.00
 args['perf_td_error'] = True
 args['perf_l2_reg'] = True
 args['steps'] = 300000
+args["rb_max_size"] = args['steps']
 #args["cl_batch_norm"] = True
 #args['cl_structure'] = 'ffcritic:fc_relu_4;fc_relu_3;fc_relu_3'
 args["cl_batch_norm"] = False
 args['cl_structure'] = 'rnnc:gru_tanh_6_dropout;fc_linear_3'
 args["cl_stages"] = "balancing_tf;balancing;walking:monotonic"
 args['cl_depth'] = 2
-args['cl_pt_shape'] = (2,3)
+args['cl_pt_shape'] = (args['cl_depth'],3)
 args['test_interval'] = 30
 
 
 #args["cl_target"] = True
-args["cl_pt_load"] = "new_short_curriculum_network_stat.pkl"
-cl_load = "new_short_curriculum_network"
+export_names = "eq_curriculum_network_depth_" + str(args['cl_depth'])
+nn_params = (export_names, "{}_stat.pkl".format(export_names))
+args["cl_pt_load"] = nn_params[1]
+
 
 # Parameters
 tasks = {
@@ -37,5 +40,5 @@ hp = Helper(args, 'cl', 'ddpg', tasks, starting_task, 1, use_mp=False)
 
 # Run actual script.
 config, tasks, starting_task = hp.gen_cfg([None], 1)[0]
-config["cl_load"] = cl_load
+config["cl_load"] = nn_params[0]
 cl_run(tasks, starting_task, **config)

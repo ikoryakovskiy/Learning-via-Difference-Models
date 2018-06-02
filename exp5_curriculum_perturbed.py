@@ -37,6 +37,7 @@ def main():
     models, names = create_models(model_paths)
     tasks, names = create_tasks(models, names)
 
+    args['cl_depth'] = 2
 
     options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
     starting_task = 'balancing_tf'
@@ -44,10 +45,8 @@ def main():
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
-    #    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-    #    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
-
-        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+        export_names = "eq_curriculum_network_depth_" + str(args['cl_depth'])
+        nn_params = (export_names, "{}_stat.pkl".format(export_names))
         mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
 
     #    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)

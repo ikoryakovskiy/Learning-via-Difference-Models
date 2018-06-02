@@ -84,6 +84,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
     cl_info = ''
     avg_test_return = base_cfg['reach_return']
     task_sequence = ('balancing_tf', 'balancing', 'walking')
+    norm_complexity = 0
 
     while ss < steps and (not base_cfg['reach_return'] or avg_test_return <= base_cfg['reach_return']):
         stage = '-{:02d}_'.format(stage_counter) + cl_mode
@@ -145,7 +146,7 @@ def cl_run(tasks, cl_mode, **base_cfg):
             yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
 
         # run the stage
-        avg_test_return, damage_new, ss_new, cl_mode_new = start(env=env, pt=pt, cl_mode=cl_mode, **config)
+        avg_test_return, damage_new, ss_new, cl_mode_new, norm_complexity = start(env=env, pt=pt, cl_mode=cl_mode, norm_complexity=norm_complexity, **config)
 
         damage += damage_new
         ss += ss_new
