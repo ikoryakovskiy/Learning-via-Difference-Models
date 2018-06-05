@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(16)
+    runs = range(1)
 
     # create perturbed models of leo
     model_paths = (
@@ -43,32 +43,26 @@ def main():
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
-    #    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-    #    mp_cfgs += do_network_based(args, cores, name='ddpg-cl_long', nn_params=nn_params, **misc)
+#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
 
-        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
-
-    #    mp_cfgs += do_steps_based(args, cores, name='ddpg-bbw', steps=(20000, 30000, 250000), **misc)
-    #    mp_cfgs += do_steps_based(args, cores, name='ddpg-bw',  steps=(   -1, 50000, 250000), **misc)
-    #    mp_cfgs += do_steps_based(args, cores, name='ddpg-w',   steps=(   -1,    -1, 300000), **misc)
-    #
-    #    # naive switching after achieving the balancing for n number of seconds happening twice. 0 means not used
-    #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55', reach_timeout=(5.0, 5.0, 0.0), **misc)
-    #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb5', reach_timeout=(-1.0, 5.0, 0.0), **misc)
-    #
-    #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb2020', reach_timeout=(20.0, 20.0, 0.0), **misc)
-    #    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb20', reach_timeout=(-1.0, 20.0, 0.0), **misc)
+        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long'+name, nn_params=nn_params, **misc)
 
 
-    #    # walker2d
-    #    tasks = {
-    #        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
-    #        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-    #        'walking':      'RoboschoolWalker2dGRL-v1'
-    #        }
-    #    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
-    #    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
+    # walker2d
+    tasks = {
+        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
+        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+        'walking':      'RoboschoolWalker2dGRL-v1'
+        }
+    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+
+    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
+
+    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_long_walker2d', nn_params=nn_params, **misc)
 
 
     # DBG: export configuration
@@ -115,8 +109,34 @@ def do_network_based_mujoco(base_args, cores, name, nn_params, runs, tasks, star
     args = base_args.copy()
     args['env_td_error_scale'] = 600.0
     args['env_timeout'] = 16.5
+
+    args['rb_min_size'] = 1000
+    args['default_damage'] = 4035.00
+    args['perf_td_error'] = True
+    args['perf_l2_reg'] = True
     args['steps'] = 700000
-    return do_network_based_leo(args, cores, name, nn_params, runs, tasks, starting_task)
+    args["cl_batch_norm"] = False
+    args['cl_structure'] = 'rnnc:gru_tanh_6_dropout;fc_linear_3'
+    args['cl_stages'] = 'balancing_tf;balancing;walking:monotonic'
+    args['cl_depth'] = 2
+    args['cl_pt_shape'] = (2,3)
+    args["cl_pt_load"] = nn_params[1]
+    cl_load = nn_params[0]
+
+    hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
+
+    # Weights of the NN
+    solutions = [None]*len(runs)
+    begin = runs[0]
+
+    mp_cfgs = hp.gen_cfg(solutions, 1, begin=begin)
+    mp_cfgs_new = []
+    for cfg in mp_cfgs:
+        config, tasks, starting_task = cfg
+        copy_config = config.copy()
+        copy_config["cl_load"] = cl_load
+        mp_cfgs_new.append( (copy_config, tasks, starting_task) )
+    return mp_cfgs_new
 
 
 def do_network_based_leo(base_args, cores, name, nn_params, runs, tasks, starting_task):
