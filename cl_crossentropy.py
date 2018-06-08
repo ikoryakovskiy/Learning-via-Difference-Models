@@ -53,11 +53,27 @@ def main():
 #    use_mp = False
 
     # Tasks
-    tasks = {
-            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-            'balancing':    'cfg/leo_balancing.yaml',
-            'walking':      'cfg/leo_walking.yaml'
-            }
+    mass_normal, mass_m30, mass_p30 = 0, 1, 2
+    experiment = 1
+    if experiment == mass_normal:
+        tasks = {
+                'balancing_tf': 'cfg/leo_balancing_tf.yaml',
+                'balancing':    'cfg/leo_balancing.yaml',
+                'walking':      'cfg/leo_walking.yaml'
+                }
+    elif experiment == mass_m30:
+        tasks = {
+                'balancing_tf': 'cfg/perturbed/leo_balancing_tf_tm_-0.300.yaml',
+                'balancing':    'cfg/perturbed/leo_balancing_tm_-0.300.yaml',
+                'walking':      'cfg/perturbed/leo_walking_tm_-0.300.yaml'
+                }
+    elif experiment == mass_p30:
+        tasks = {
+                'balancing_tf': 'cfg/perturbed/leo_balancing_tf_tm_0.300.yaml',
+                'balancing':    'cfg/perturbed/leo_balancing_tm_0.300.yaml',
+                'walking':      'cfg/perturbed/leo_walking_tm_0.300.yaml'
+                }
+
     starting_task = 'balancing_tf'
 
     root = "cl"

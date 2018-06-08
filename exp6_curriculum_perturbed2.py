@@ -26,43 +26,26 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(1,16)
+    runs = range(48)
 
-    # create perturbed models of leo
-    model_paths = (
-            '/home/ivan/work/Project/Software/grl/src/grl/addons/rbdl/cfg/leo_vc',
-            '/grl/src/grl/addons/rbdl/cfg/leo_vc',
-            )
-
-    models, names = create_models(model_paths)
-    tasks, names = create_tasks(models, names)
-
+    tasks = {
+            'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
+            'balancing':    'cfg/leo_perturbed_balancing.yaml',
+            'walking':      'cfg/leo_perturbed_walking.yaml'
+            }
 
     starting_task = 'balancing_tf'
     mp_cfgs = []
-    for task, name in zip(tasks, names):
-        misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
-
-#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
-
-        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long'+name, nn_params=nn_params, **misc)
-
-
-    # walker2d
-    tasks = {
-        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
-        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-        'walking':      'RoboschoolWalker2dGRL-v1'
-        }
-    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
     nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
+    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+    mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed', nn_params=nn_params, **misc)
 
-    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_long_walker2d', nn_params=nn_params, **misc)
+
+    # regular
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed', steps=(20000, 30000, 250000), options=options, **misc)
+
 
 
     # DBG: export configuration
@@ -76,13 +59,25 @@ def main():
     #cl_run(tasks, starting_task, **config)
 
 
-def do_steps_based(base_args, cores, name, steps, runs, tasks, starting_task):
+def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['steps'] = steps
 
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
+
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
-    # Weights of the NN
+    # generate configurations
     solutions = [None]*len(runs)
     begin = runs[0]
 

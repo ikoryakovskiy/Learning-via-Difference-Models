@@ -16,6 +16,13 @@ from ptracker import PerformanceTracker
 from cl_network import CurriculumNetwork
 from ddpg import parse_args
 
+subfigprop3 = {
+    'figsize': (4, 4),
+    'dpi': 80,
+    'facecolor': 'w',
+    'edgecolor': 'k'
+}
+
 tt  = 0 # duration
 ee  = 1 # td error
 cc  = 2 # complexity
@@ -350,16 +357,17 @@ def main():
     config['cl_dropout_keep'] = 0.7
     config["cl_l2_reg"] = 0.001
     config["minibatch_size"] = 128
+    config["cl_stages"] = 'balancing_tf;balancing;walking:monotonic'
 
     random_shuffle = False #True
     test_percentage = 0.3
 #    config["cl_lr"] = 0.001
 #    training_epochs = 10000
-#    export_names = "long_curriculum_network"
+#    export_names = "new_long_curriculum_network"
     config["cl_lr"] = 0.01
     training_epochs = 1000
-    export_names = "short_curriculum_network"
-    nn_params = (export_names, "{}_stat.pkl".format(export_names))
+    export_names = "new_short_curriculum_network"
+    nn_params = (export_names, "new_{}_stat.pkl".format(export_names))
 
     #dd = load_data('leo_supervised_learning_regression2/', params, gens = [2])
     dd = load_data('leo_supervised_learning_regression/', params, gens = range(1,7))
@@ -398,7 +406,7 @@ def main():
 
     # fill in replay beuffer
     print(len(seq_train), len(seq_test))
-    plot_train, plot_test = [], []
+    plot_train, plot_test, tpfn_test = [], [], []
     plt.gca().set_color_cycle(['red', 'green', 'blue'])
 
     with tf.Graph().as_default() as sl:
@@ -407,6 +415,7 @@ def main():
         cl_nn = cl_rnn_classification(pt.get_v_size(), config)
 
 
+    print_step = 10
     display_step = 10
     with tf.Session(graph=sl) as sess:
         # random initialization of variables
@@ -437,43 +446,108 @@ def main():
             avg_loss += avg_loss / len(seq_train)
 
             # Display logs per epoch step
-            if epoch % display_step == 0:
+            if epoch % print_step == 0:
                 print("Epoch:", '%04d' % (epoch+1), "loss=", "{:.9f}".format(avg_loss))
 
-                if epoch % 100 == 0:
-                    plot_train.append(calc_error(sess, cl_nn, seq_train, params))
-                    plot_test.append(calc_error(sess, cl_nn, seq_test, params))
-                    plot_train_ = np.reshape(plot_train, (-1, 3))
-                    plot_test_ = np.reshape(plot_test, (-1, 3))
-                    plt.plot(plot_train_, linestyle='-')
-                    plt.plot(plot_test_, linestyle=':')
+            if epoch % display_step == 0:
+                acc, tfpn, confusion_train = calc_error(sess, cl_nn, seq_train, params)
+                plot_train.append(acc)
+                acc, tfpn, confusion_test = calc_error(sess, cl_nn, seq_test, params)
+                plot_test.append(acc)
+                tpfn_test.append(tfpn)
+                print(tfpn)
+                plot_train_ = np.reshape(plot_train, (-1, 3))
+                plot_test_ = np.reshape(plot_test, (-1, 3))
+                plt.plot(plot_train_, linestyle='-')
+                plt.plot(plot_test_, linestyle=':')
 
-                    plt.pause(0.05)
+                print(confusion_train)
+                print(confusion_test)
+
+                plt.pause(0.05)
 
 
         print("Optimization Finished!")
+
+        with open('cl_sl3_results.pkl', 'wb') as handle:
+            pickle.dump(tpfn_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print(confusion_train)
+        print(confusion_test)
 
         cl_nn.save(sess, nn_params[0])
         plt.show(block=True)
 
 
+#def calc_error(sess, cl_nn, sseq, params):
+#    plabels = np.zeros(3)
+#    num_labels = np.zeros(3)
+#    for seq in sseq:
+#        xx = np.reshape(seq['seq_data'], [-1, params['steps_of_history'], 3])
+#        for x, softmaxl in zip(xx,seq['seq_softmax_stage']):
+#            x = np.reshape(x, [-1, params['steps_of_history'], 3])
+#            rr = cl_nn.predict(sess, x)
+#            label = np.argmax(rr)
+#            softmaxli = np.argmax(softmaxl)
+#            plabels[softmaxli] += softmaxl[label]
+#            num_labels[softmaxli] += 1
+#
+#    accuracy = plabels/num_labels
+#    for i in range(dim):
+#        print('accuracy = {} of {}'.format(accuracy[i], num_labels[i]))
+#    return accuracy
+
+
+#def calc_error(sess, cl_nn, sseq, params):
+#    true_positive = np.zeros(3)
+#    num_labels = np.zeros(3)
+#    for seq in sseq:
+#        xx = np.reshape(seq['seq_data'], [-1, params['steps_of_history'], 3])
+#        for x, softmaxl in zip(xx,seq['seq_softmax_stage']):
+#            x = np.reshape(x, [-1, params['steps_of_history'], 3])
+#            rr = cl_nn.predict(sess, x)
+#            label = np.argmax(rr)
+#
+#            true_label = np.argmax(softmaxl)
+#            true_positive[true_label] += int(label==true_label)
+#            num_labels[true_label] += 1
+#
+#    accuracy = true_positive/num_labels
+#    for i in range(dim):
+#        print('accuracy = {} of {}'.format(accuracy[i], num_labels[i]))
+#    return accuracy
+
+
 def calc_error(sess, cl_nn, sseq, params):
-    plabels = np.zeros(3)
+    true_positive = np.zeros(3)
+    false_negative = np.zeros(3)
+    true_negative = np.zeros(3)
+    false_positive = np.zeros(3)
     num_labels = np.zeros(3)
+    confusion = np.zeros((3,3))
     for seq in sseq:
         xx = np.reshape(seq['seq_data'], [-1, params['steps_of_history'], 3])
         for x, softmaxl in zip(xx,seq['seq_softmax_stage']):
             x = np.reshape(x, [-1, params['steps_of_history'], 3])
             rr = cl_nn.predict(sess, x)
             label = np.argmax(rr)
-            softmaxli = np.argmax(softmaxl)
-            plabels[softmaxli] += softmaxl[label]
-            num_labels[softmaxli] += 1
 
-    accuracy = plabels/num_labels
+            true_label = np.argmax(softmaxl)
+            true_positive[true_label]   += int(label==true_label) # from class X, and was recognized as X
+            false_negative[true_label]  += int(label!=true_label)
+            true_negative[label]        += int(label==true_label)
+            false_positive[label]       += int(label!=true_label) # from other classes, but were recognized as X
+
+            num_labels[true_label] += 1
+
+            # confusion matrix
+            confusion[label, true_label] += 1
+
+
+    accuracy = true_positive/num_labels
     for i in range(dim):
         print('accuracy = {} of {}'.format(accuracy[i], num_labels[i]))
-    return accuracy
+    return accuracy, [true_positive, false_negative, true_negative, false_positive], confusion
 
 
 ######################################################################################
