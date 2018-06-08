@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(1)
+    runs = range(16)
 
     # create perturbed models of leo
     model_paths = (
@@ -47,7 +47,7 @@ def main():
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
 
         nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long'+name, nn_params=nn_params, **misc)
+        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
 
 
     # walker2d
