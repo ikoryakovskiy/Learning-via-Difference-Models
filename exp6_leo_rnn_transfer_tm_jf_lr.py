@@ -26,7 +26,9 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(48)
+    runs = range(1)
+    args['actor_lr'] = 0.5*1e-4
+    args['critic_lr'] = 0.5*1e-3
 
     tasks = {
             'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
@@ -35,16 +37,17 @@ def main():
             }
 
     starting_task = 'balancing_tf'
+    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+
     mp_cfgs = []
 
     nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+    args['steps'] = 500000
     mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed', nn_params=nn_params, **misc)
 
-
-    # regular
-    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
-    mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed', steps=(20000, 30000, 250000), options=options, **misc)
+#    # regular
+#    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+#    mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed', steps=(20000, 30000, 450000), options=options, **misc)
 
 
 
@@ -140,7 +143,6 @@ def do_network_based_leo(base_args, cores, name, nn_params, runs, tasks, startin
     args['default_damage'] = 4035.00
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
-    args['steps'] = 300000
     args["cl_batch_norm"] = False
     args['cl_structure'] = 'rnnc:gru_tanh_6_dropout;fc_linear_3'
     args['cl_stages'] = 'balancing_tf;balancing;walking:monotonic'
