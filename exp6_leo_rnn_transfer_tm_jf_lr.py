@@ -27,8 +27,8 @@ def main():
 
     # Parameters
     runs = range(8)
-    measurment_noise = 0.1
-    actuation_noise = 1.0
+    measurment_noise = 0.02
+    actuation_noise = 0.2
 
     tasks = {
             'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
@@ -41,10 +41,10 @@ def main():
 
     mp_cfgs = []
 
-    for i in range(1,5):
+    for i in range(0,5):
         args['measurment_noise'] = i/5.0 * measurment_noise
         args['actuation_noise'] = i/5.0 * actuation_noise
-        str_noise = 'mn_{}_an_{}'.format(int(args['measurment_noise']*100), int(args['actuation_noise']*100))
+        str_noise = 'mn_{}_an_{}'.format(int(args['measurment_noise']*1000), int(args['actuation_noise']*1000))
 
         nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
         args['steps'] = 300000
@@ -60,7 +60,7 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-    do_multiprocessing_pool(cores, mp_cfgs)
+    #do_multiprocessing_pool(cores, mp_cfgs)
     #config, tasks, starting_task = mp_cfgs[0]
     #cl_run(tasks, starting_task, **config)
 
