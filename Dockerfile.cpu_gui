@@ -142,8 +142,10 @@ ARG BULLET_REPO=https://github.com/ikoryakovskiy/bullet3.git
 
 ADD https://api.github.com/repos/ikoryakovskiy/bullet3/git/refs/heads/roboschool_self_collision  version.json
 RUN git clone $BULLET_REPO -b roboschool_self_collision \
-    && mkdir bullet3/build \
-    && cd    bullet3/build \
+    && cd    bullet3 \
+#    && git   checkout cfadd16c6225c328f13416df73cb4774d476cf26 . \
+    && mkdir build \
+    && cd    build \
     && cmake -DBUILD_SHARED_LIBS=ON -DUSE_DOUBLE_PRECISION=1 -DCMAKE_INSTALL_PREFIX:PATH=$ROBOSCHOOL_PATH/roboschool/cpp-household/bullet_local_install -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF  -DBUILD_UNIT_TESTS=OFF -DBUILD_CLSOCKET=OFF -DBUILD_ENET=OFF -DBUILD_OPENGL3_DEMOS=OFF .. \
     && make -j4 \
     && make install

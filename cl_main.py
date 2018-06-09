@@ -116,6 +116,10 @@ def cl_run(tasks, cl_mode, **base_cfg):
         #pdb.set_trace()
         env = env_connect(config['cfg'])
         env = MyMonitor(env, config['output'], report='all')
+        if base_cfg['measurment_noise']:
+            env.reconfigure({'measurment_noise': base_cfg['measurment_noise']})
+        if base_cfg['actuation_noise']:
+            env.reconfigure({'actuation_noise': base_cfg['actuation_noise']})
 
         # load previous stage actor, critic and curriculum
         if prev_config:

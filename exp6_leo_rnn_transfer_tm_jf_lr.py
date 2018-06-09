@@ -26,9 +26,9 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(1)
-    args['actor_lr'] = 0.5*1e-4
-    args['critic_lr'] = 0.5*1e-3
+    runs = range(8)
+    args['measurment_noise'] = 0.1
+    args['actuation_noise'] = 1.0
 
     tasks = {
             'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
@@ -41,15 +41,15 @@ def main():
 
     mp_cfgs = []
 
+    str_noise = 'mn_{}_an_{}'.format(int(args['measurment_noise']*100), int(args['actuation_noise']*100))
+
     nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    args['steps'] = 500000
-    mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed', nn_params=nn_params, **misc)
+    args['steps'] = 300000
+    mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, **misc)
 
-#    # regular
-#    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
-#    mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed', steps=(20000, 30000, 450000), options=options, **misc)
-
-
+    # regular
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)

@@ -78,6 +78,8 @@ def parse_args():
     parser.add_argument('--test-interval', type=int, default=30)
     parser.add_argument('--curriculum', type=str, default='')
     boolean_flag(parser,  'render', default=False)
+    parser.add_argument('--measurment-noise', type=float, default=None)
+    parser.add_argument('--actuation-noise', type=float, default=None)
 
     # Curriculum
     parser.add_argument('--cl-structure', type=str, default='') # cl:relu_3;tanh_1
