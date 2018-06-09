@@ -31,10 +31,16 @@ def main():
     actuation_noise = 0.2
 
     tasks = {
-            'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
-            'balancing':    'cfg/leo_perturbed_balancing.yaml',
-            'walking':      'cfg/leo_perturbed_walking.yaml'
+            'balancing_tf': 'cfg/leo_balancing_tf.yaml',
+            'balancing':    'cfg/leo_balancing.yaml',
+            'walking':      'cfg/leo_walking.yaml'
             }
+
+#    tasks = {
+#            'balancing_tf': 'cfg/leo_perturbed_balancing_tf.yaml',
+#            'balancing':    'cfg/leo_perturbed_balancing.yaml',
+#            'walking':      'cfg/leo_perturbed_walking.yaml'
+#            }
 
     starting_task = 'balancing_tf'
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
@@ -60,7 +66,7 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-    #do_multiprocessing_pool(cores, mp_cfgs)
+    do_multiprocessing_pool(cores, mp_cfgs)
     #config, tasks, starting_task = mp_cfgs[0]
     #cl_run(tasks, starting_task, **config)
 
