@@ -27,8 +27,8 @@ def main():
 
     # Parameters
     runs = range(8)
-    measurment_noise = 0.02
-    actuation_noise = 0.2
+    measurment_noise = 0.005
+    actuation_noise = 0.05
 
     tasks = {
             'balancing_tf': 'cfg/leo_balancing_tf.yaml',
