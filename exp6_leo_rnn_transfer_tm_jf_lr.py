@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(8)
+    runs = range(16)
     measurment_noise = 0.005
     actuation_noise = 0.05
 
@@ -52,12 +52,15 @@ def main():
         args['actuation_noise'] = i/5.0 * actuation_noise
         str_noise = 'mn_{}_an_{}'.format(int(args['measurment_noise']*1000), int(args['actuation_noise']*1000))
 
-        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-        args['steps'] = 300000
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, **misc)
+#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#        args['steps'] = 300000
+#        args['cl_keep_samples'] = True
+#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, **misc)
 
         # regular
         options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+        args['cl_keep_samples'] = False
+        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
         mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
     # DBG: export configuration
@@ -67,8 +70,8 @@ def main():
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
     do_multiprocessing_pool(cores, mp_cfgs)
-    #config, tasks, starting_task = mp_cfgs[0]
-    #cl_run(tasks, starting_task, **config)
+#    config, tasks, starting_task = mp_cfgs[0]
+#    cl_run(tasks, starting_task, **config)
 
 
 def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, starting_task=''):
