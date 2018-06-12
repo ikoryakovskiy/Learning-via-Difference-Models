@@ -44,8 +44,10 @@ def main():
 
     starting_task = 'balancing_tf'
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
 
     mp_cfgs = []
+
 
     for i in range(0,5):
         args['measurment_noise'] = i/5.0 * measurment_noise
@@ -57,11 +59,25 @@ def main():
 #        args['cl_keep_samples'] = True
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, **misc)
 
-        # regular
-        options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+#        # regular with keepsamples = True
+#        args['cl_keep_samples'] = True
+#        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
+
+#        # regular with keepsamples = False
+#        args['cl_keep_samples'] = False
+#        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
+#        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
+
+        # reach timeout
+        args['cl_keep_samples'] = True
+        args['reach_timeout_num'] = 2
+        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+str_noise, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+        args['reach_timeout_num'] = 0
         args['cl_keep_samples'] = False
-        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
+
+        # direct learning
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+str_noise, steps=(-1,  -1, 300000), options=options, **misc)
+
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
@@ -100,10 +116,24 @@ def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, 
     return mp_cfgs
 
 
-def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, tasks, starting_task):
+def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['reach_timeout'] = reach_timeout
-    args['steps'] = 300000
+    steps = 300000
+    args['steps'] = steps
+    args['rb_max_size'] = steps
+
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
 
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
