@@ -31,26 +31,26 @@ def main():
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
     args['cl_keep_samples'] = True
-    options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
 
     mp_cfgs = []
 
     # naive switching after achieving the balancing for n number of seconds happening once. 0 means not used
     args['reach_timeout_num'] = 1
     mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb5', reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb5', reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb5', reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
 
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb20', reach_timeout=(20.0, 20.0, 0.0), options=options, **misc)
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb20', reach_timeout=(-1.0, 20.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb20', reach_timeout=(20.0, 20.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb20', reach_timeout=(-1.0, 20.0, 0.0), options=options, **misc)
 
 
     # naive switching after achieving the balancing for n number of seconds happening twice. 0 means not used
     args['reach_timeout_num'] = 2
     mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb55', reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb55', reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb55', reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
 
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb2020', reach_timeout=(20.0, 20.0, 0.0), options=options, **misc)
-    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb2020', reach_timeout=(-1.0, 20.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-three_stage-rb2020', reach_timeout=(20.0, 20.0, 0.0), options=options, **misc)
+#    mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-exp3-two_stage-rb2020', reach_timeout=(-1.0, 20.0, 0.0), options=options, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
