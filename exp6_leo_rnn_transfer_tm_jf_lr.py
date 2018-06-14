@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(16)
+    runs = range(8)
     measurment_noise = 0.005
     actuation_noise = 0.05
 
@@ -44,7 +44,8 @@ def main():
 
     starting_task = 'balancing_tf'
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
-    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    #options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
     mp_cfgs = []
 
@@ -54,29 +55,30 @@ def main():
         args['actuation_noise'] = i/5.0 * actuation_noise
         str_noise = 'mn_{}_an_{}'.format(int(args['measurment_noise']*1000), int(args['actuation_noise']*1000))
 
-#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#        args['steps'] = 300000
-#        args['cl_keep_samples'] = True
-#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, **misc)
+        # RNN keep samples, but (empty) first replay buffer
+        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+        args['steps'] = 300000
+        args['cl_keep_samples'] = True
+        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_perturbed-'+str_noise, nn_params=nn_params, options=options, **misc)
 
 #        # regular with keepsamples = True
 #        args['cl_keep_samples'] = True
 #        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
-#        # regular with keepsamples = False
-#        args['cl_keep_samples'] = False
-#        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
-
-        # reach timeout
-        args['cl_keep_samples'] = True
-        args['reach_timeout_num'] = 2
-        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+str_noise, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-        args['reach_timeout_num'] = 0
+        # regular with keepsamples = False
         args['cl_keep_samples'] = False
+        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
-        # direct learning
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+str_noise, steps=(-1,  -1, 300000), options=options, **misc)
+#        # reach timeout
+#        args['cl_keep_samples'] = True
+#        args['reach_timeout_num'] = 2
+#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+str_noise, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+#        args['reach_timeout_num'] = 0
+#        args['cl_keep_samples'] = False
+#
+#        # direct learning
+#        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+str_noise, steps=(-1,  -1, 300000), options=options, **misc)
 
 
     # DBG: export configuration
@@ -179,7 +181,7 @@ def do_network_based_mujoco(base_args, cores, name, nn_params, runs, tasks, star
     return mp_cfgs_new
 
 
-def do_network_based_leo(base_args, cores, name, nn_params, runs, tasks, starting_task):
+def do_network_based_leo(base_args, cores, name, nn_params, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['rb_min_size'] = 1000
     args['default_damage'] = 4035.00
@@ -192,6 +194,18 @@ def do_network_based_leo(base_args, cores, name, nn_params, runs, tasks, startin
     args['cl_pt_shape'] = (2,3)
     args["cl_pt_load"] = nn_params[1]
     cl_load = nn_params[0]
+
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
 
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
