@@ -83,9 +83,9 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-#    do_multiprocessing_pool(cores, mp_cfgs)
-    config, tasks, starting_task = mp_cfgs[0]
-    cl_run(tasks, starting_task, **config)
+    do_multiprocessing_pool(cores, mp_cfgs)
+    #config, tasks, starting_task = mp_cfgs[0]
+    #cl_run(tasks, starting_task, **config)
 
 
 def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, starting_task=''):
