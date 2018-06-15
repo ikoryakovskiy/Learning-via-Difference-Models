@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(8)
+    runs = range(1)
     measurment_noise = 0.005
     actuation_noise = 0.05
 
@@ -44,8 +44,8 @@ def main():
 
     starting_task = 'balancing_tf'
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
-    #options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
-    options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    #options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
     mp_cfgs = []
 
@@ -65,10 +65,10 @@ def main():
 #        args['cl_keep_samples'] = True
 #        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
-        # regular with keepsamples = False
-        args['cl_keep_samples'] = False
-        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
+#        # regular with keepsamples = False
+#        args['cl_keep_samples'] = False
+#        str_noise += '_ks_{}'.format(int(args['cl_keep_samples']))
+#        mp_cfgs += do_steps_based(args, cores, name='ddpg-perturbed-'+str_noise, steps=(20000, 30000, 250000), options=options, **misc)
 
 #        # reach timeout
 #        args['cl_keep_samples'] = True
@@ -87,9 +87,9 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-    do_multiprocessing_pool(cores, mp_cfgs)
-#    config, tasks, starting_task = mp_cfgs[0]
-#    cl_run(tasks, starting_task, **config)
+#    do_multiprocessing_pool(cores, mp_cfgs)
+    config, tasks, starting_task = mp_cfgs[0]
+    cl_run(tasks, starting_task, **config)
 
 
 def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, starting_task=''):
