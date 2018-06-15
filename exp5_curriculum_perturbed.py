@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(16)
+    runs = range(8)
 
     # create perturbed models of leo
     model_paths = (
@@ -34,35 +34,47 @@ def main():
             '/grl/src/grl/addons/rbdl/cfg/leo_vc',
             )
 
-    models, names = create_models(model_paths)
+    models, names = create_models(model_paths, ['tm']) # 'tm', 'jf'
     tasks, names = create_tasks(models, names)
 
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    #options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
     starting_task = 'balancing_tf'
     mp_cfgs = []
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
+
 #        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
 
-        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
+#        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
 
+        # reach timeout
+        args['cl_keep_samples'] = True
+        args['reach_timeout_num'] = 2
+        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+        args['reach_timeout_num'] = 0
+        args['cl_keep_samples'] = False
 
-    # walker2d
-    tasks = {
-        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
-        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-        'walking':      'RoboschoolWalker2dGRL-v1'
-        }
-    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+        # direct learning
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
 
-    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
-
-    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_long_walker2d', nn_params=nn_params, **misc)
+#    # walker2d
+#    tasks = {
+#        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
+#        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+#        'walking':      'RoboschoolWalker2dGRL-v1'
+#        }
+#    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+#
+#    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
+#
+#    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
+#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_long_walker2d', nn_params=nn_params, **misc)
 
 
     # DBG: export configuration
@@ -71,18 +83,30 @@ def main():
     # Run all scripts at once
     random.shuffle(mp_cfgs)
     prepare_multiprocessing()
-    do_multiprocessing_pool(cores, mp_cfgs)
-    #config, tasks, starting_task = mp_cfgs[0]
-    #cl_run(tasks, starting_task, **config)
+#    do_multiprocessing_pool(cores, mp_cfgs)
+    config, tasks, starting_task = mp_cfgs[0]
+    cl_run(tasks, starting_task, **config)
 
 
-def do_steps_based(base_args, cores, name, steps, runs, tasks, starting_task):
+def do_steps_based(base_args, cores, name, steps, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['steps'] = steps
 
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
+
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
-    # Weights of the NN
+    # generate configurations
     solutions = [None]*len(runs)
     begin = runs[0]
 
@@ -90,10 +114,24 @@ def do_steps_based(base_args, cores, name, steps, runs, tasks, starting_task):
     return mp_cfgs
 
 
-def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, tasks, starting_task):
+def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['reach_timeout'] = reach_timeout
-    args['steps'] = 300000
+    steps = 300000
+    args['steps'] = steps
+    args['rb_max_size'] = steps
+
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
 
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
@@ -180,7 +218,7 @@ def export_cfg(mp_cfgs):
 
 ######################################################################################
 ######################################################################################
-def create_models(paths):
+def create_models(paths, options):
     for path in paths:
         if os.path.isdir(path):
             break
@@ -205,35 +243,38 @@ def create_models(paths):
 
     models = []
     names = []
-    for tmp in torsoMassPro:
-        model = {}
-        for key in content:
-            filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-            foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
-            with open(foutname, 'w') as fout:
-                new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
-                fout.write( content[key].replace('torsoMass = 0.94226', new_mass) )
-            if key == 'tf':
-                model['balancing_tf'] = foutname
-            else:
-                model['balancing'] = model['walking'] = foutname
-        models.append(model)
-        names.append('tm_{:.03f}'.format(tmp))
+    if 'tm' in options:
+        for tmp in torsoMassPro:
+            model = {}
+            for key in content:
+                filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
+                foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
+                with open(foutname, 'w') as fout:
+                    new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
+                    fout.write( content[key].replace('torsoMass = 0.94226', new_mass) )
+                if key == 'tf':
+                    model['balancing_tf'] = foutname
+                else:
+                    model['balancing'] = model['walking'] = foutname
+            models.append(model)
+            names.append('tm_{:.03f}'.format(tmp))
 
-    for tmp in jointFriction:
-        model = {}
-        for key in content:
-            filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-            foutname = '{}_jf_{:.03f}{}'.format(filename, tmp, file_extension)
-            with open(foutname, 'w') as fout:
-                new_mass = 'jointFriction = {}'.format(tmp)
-                fout.write( content[key].replace('jointFriction = 0.00', new_mass) )
-            if key == 'tf':
-                model['balancing_tf'] = foutname
-            else:
-                model['balancing'] = model['walking'] = foutname
-        models.append(model)
-        names.append('jf_{:.03f}'.format(tmp))
+    if 'jf' in options:
+        for tmp in jointFriction:
+            model = {}
+            for key in content:
+                filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
+                foutname = '{}_jf_{:.03f}{}'.format(filename, tmp, file_extension)
+                with open(foutname, 'w') as fout:
+                    new_mass = 'jointFriction = {}'.format(tmp)
+                    fout.write( content[key].replace('jointFriction = 0.00', new_mass) )
+                if key == 'tf':
+                    model['balancing_tf'] = foutname
+                else:
+                    model['balancing'] = model['walking'] = foutname
+            models.append(model)
+            names.append('jf_{:.03f}'.format(tmp))
+
     return models, names
 
 
