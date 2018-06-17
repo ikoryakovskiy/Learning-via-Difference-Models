@@ -16,6 +16,7 @@ from my_stat.stat import mean_confidence_dd
 from matplotlib.patches import Polygon
 import pickle
 import os
+import colorsys, struct
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 plt.close('all')
@@ -28,6 +29,18 @@ subfigprop3 = {
         'facecolor': 'w',
         'edgecolor': 'k'
 }
+
+def hex_to_rgb(value, div = 1):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16)/div for i in range(0, lv, lv // 3))
+
+def whiten(palette, alpha=0.3):
+    hsv_palette = [colorsys.rgb_to_hsv(*hex_to_rgb(pp, div = 255)) for pp in palette]
+    palette = [colorsys.hsv_to_rgb(pp[0], pp[1]*alpha, pp[2]) for pp in hsv_palette]
+    #palette = [ [p/255 for p in pp] for pp in palette]
+    return palette
+
 
 def compsim(data, arg):
 
@@ -183,7 +196,7 @@ def main():
             "use_state":"all",
             "xlog": False,
             "ylog": False,
-            "hours2plot": 2.0,
+            "hours2plot": 2.0, #2
             "naming": ['walking', 'curriculum'],
             "colors": (palette[1], palette[3])
             }
@@ -192,7 +205,7 @@ def main():
 
     ###
     kwargs["surprise_threshold"] = 2.0
-    legends = ['I (w)', 'II (nn.rb)']
+    legends = ['direct', '\\pvrb']
     w =  ['{path}/ddpg-exp1_two_stage_{env}_ga_w-g0001-mp{mp}-02_walking.pkl']
     bw = [
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload_rbload-g0001-mp{mp}-01_balancing.pkl',
@@ -204,7 +217,7 @@ def main():
     skip = 1000
     ###
     kwargs["surprise_threshold"] = 1.0
-    legends = ['I (w)', 'II (nn)']
+    legends = ['direct', '\\pv']
     w =  ['{path}/ddpg-exp1_two_stage_{env}_ga_w-g0001-mp{mp}-02_walking.pkl']
     bw = [
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
@@ -272,14 +285,15 @@ def plot_single_system(env, w, bw, state, skip, legends, **kwargs):
             #ax0[-1].axvspan(t[0], t[1], facecolor='0.8', zorder=0)
             tt = np.mean(t)
             for ax in axarr:
-                ax.plot((tt, tt), ax.get_ylim(), 'r-.', zorder=0)
+                ax.plot((tt, tt), ax.get_ylim(), 'r--', linewidth=1.2, zorder=10)
+
+    plt.subplots_adjust(left=0.15, bottom=0.13, right=0.9, top=0.98, wspace=0.0, hspace=0.1)
 
     axarr[1].set_xlabel('Time (h)')
-    plt.subplots_adjust(left=0.15, bottom=0.13, right=0.9, top=0.98, wspace=0.0, hspace=0.1)
     export_plot('surprise_fall_rate_{}'.format(env))#, export_latex=False)
 
     # surprise plot
-    surprise_plot((dd1, dd2), env, **kwargs)
+    #surprise_plot((dd1, dd2), env, **kwargs)
 
     plt.show()
 
@@ -448,10 +462,13 @@ def plot_single(mc, ax, color, use_cols, idx_to_plot):
         ts = mc['ts'][idx_to_plot]
         mean = mc[col][0][idx_to_plot]
         ci = mc[col][1][idx_to_plot]
-        ax.plot(ts, mean, color=color)
+        ax.plot(ts, mean, color=color, zorder=2)
         verts = list(zip(ts, mean+ci)) + list(zip(ts[::-1], (mean-ci)[::-1]))
+
+        #colors = whiten([color], alpha=0.3)
         poly = Polygon(verts, facecolor=color, alpha=0.3)
-        ax.add_patch(poly)
+        patch = ax.add_patch(poly)
+        patch.set_zorder(1)
 
 def surprise_simple(mc, flmc, name, **kwargs):
     surprise_threshold = kwargs["surprise_threshold"]

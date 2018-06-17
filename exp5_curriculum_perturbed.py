@@ -52,15 +52,24 @@ def main():
 #        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
 
-        # reach timeout
-        args['cl_keep_samples'] = True
-        args['reach_timeout_num'] = 2
-        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-        args['reach_timeout_num'] = 0
-        args['cl_keep_samples'] = False
+#        # reach timeout
+#        args['cl_keep_samples'] = True
+#        args['reach_timeout_num'] = 2
+#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+#        args['reach_timeout_num'] = 0
+#        args['cl_keep_samples'] = False
+#
+#        # direct learning
+#        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
 
-        # direct learning
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
+        # regular with keepsamples = True
+        args['cl_keep_samples'] = True
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-'+name, steps=(20000, 30000, 250000), options=options, **misc)
+
+        # regular with keepsamples = False
+        args['cl_keep_samples'] = False
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks0-'+name, steps=(20000, 30000, 250000), options=options, **misc)
+
 
 #    # walker2d
 #    tasks = {
