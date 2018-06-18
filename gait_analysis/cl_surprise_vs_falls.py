@@ -526,7 +526,7 @@ def plot_together(dd, timing, axarr, legends, naming, colors, **kwargs):
     ylog = kwargs["ylog"]
     hours2plot = kwargs["hours2plot"]
 
-    blowup = 0.8
+    blowup = 0.15
     for d, color, name in zip(dd, colors, naming):
         mc = mean_confidence_dd(d, use_cols)
         flmc = mean_confidence_dd(d, ['fl', 'cumfalls'])
