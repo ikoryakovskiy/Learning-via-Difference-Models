@@ -45,22 +45,21 @@ def main():
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
-
-#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
+        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, **misc)
 
 #        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
 
-#        # reach timeout
-#        args['cl_keep_samples'] = True
-#        args['reach_timeout_num'] = 2
-#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-#        args['reach_timeout_num'] = 0
-#        args['cl_keep_samples'] = False
-#
-#        # direct learning
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
+        # reach timeout
+        args['cl_keep_samples'] = True
+        args['reach_timeout_num'] = 2
+        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+        args['reach_timeout_num'] = 0
+        args['cl_keep_samples'] = False
+
+        # direct learning
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
 
         # regular with keepsamples = True
         args['cl_keep_samples'] = True
@@ -242,7 +241,8 @@ def create_models(paths, options):
             }
 
     torsoMass = 0.94226
-    torsoMassPro = np.arange(-3, +4) * 0.1
+    #torsoMassPro = np.arange(-3, +4) * 0.1
+    torsoMassPro = [-0.6, -0.4, 0.4, 0.6]
     jointFriction = np.arange(0, +7) * 0.005
 
     content = {}
