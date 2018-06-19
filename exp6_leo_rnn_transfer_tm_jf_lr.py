@@ -187,6 +187,7 @@ def do_network_based_leo(base_args, cores, name, nn_params, runs, options=None, 
     args['default_damage'] = 4035.00
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
+    args['steps'] = 300000
     args["cl_batch_norm"] = False
     args['cl_structure'] = 'rnnc:gru_tanh_6_dropout;fc_linear_3'
     args['cl_stages'] = 'balancing_tf;balancing;walking:monotonic'
