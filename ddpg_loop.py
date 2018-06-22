@@ -361,8 +361,8 @@ def train(env, ddpg_graph, actor, critic, cl_nn = None, pt = None, cl_mode=None,
                 avg_test_return = np.mean(test_returns[max([0, len(test_returns)-10]):])
                 if float(info.split()[0]) > config['reach_timeout']:
                     reach_timeout_num += 1
-                else:
-                    reach_timeout_num = 0
+                #else:
+                #    reach_timeout_num = 0
 
                 if not config['mp_debug']:
                     msg = "{:>10} {:>10} {:>10.3f} {:>10}" \
