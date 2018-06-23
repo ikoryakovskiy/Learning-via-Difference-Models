@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(8)
+    runs = range(16)
 
     # create perturbed models of leo
     model_paths = (
@@ -37,35 +37,44 @@ def main():
     models, names = create_models(model_paths, ['tm']) # 'tm', 'jf'
     tasks, names = create_tasks(models, names)
 
-    #options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
-    options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
+    options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
+    #options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
     starting_task = 'balancing_tf'
     mp_cfgs = []
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
-        args['cl_keep_samples'] = True
-        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
+#        args['cl_keep_samples'] = True
+#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
 
+        # long is not used!
 #        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
 #        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
 
-#        # reach timeout
-#        args['cl_keep_samples'] = True
-#        args['reach_timeout_num'] = 2
-#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-#        args['reach_timeout_num'] = 0
-#        args['cl_keep_samples'] = False
-#
+        # reach balaning 2 times in 3-task curriculum
+        args['cl_keep_samples'] = True
+        args['reach_timeout_num'] = 2
+        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
+        args['reach_timeout_num'] = 0
+        args['cl_keep_samples'] = False
+
+        # reach balaning 2 times in 3-task curriculum
+        args['cl_keep_samples'] = True
+        args['reach_timeout_num'] = 2
+        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-tuned-'+name, reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
+        args['reach_timeout_num'] = 0
+        args['cl_keep_samples'] = False
+
+
 #        # direct learning
 #        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
-#
-#        # regular with keepsamples = True
-#        args['cl_keep_samples'] = True
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-'+name, steps=(20000, 30000, 250000), options=options, **misc)
-#
+
+        # regular with keepsamples = True
+        args['cl_keep_samples'] = True
+        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-tuned-'+name, steps=(1833, 45000, 253167), options=options, **misc)
+
 #        # regular with keepsamples = False
 #        args['cl_keep_samples'] = False
 #        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks0-'+name, steps=(20000, 30000, 250000), options=options, **misc)
