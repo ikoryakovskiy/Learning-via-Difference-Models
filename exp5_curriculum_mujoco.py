@@ -26,7 +26,7 @@ def main():
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
     # Parameters
-    runs = range(16)
+    runs = range(1)
 
     # create perturbed models of leo
     model_paths = (
@@ -38,61 +38,20 @@ def main():
     tasks, names = create_tasks(models, names)
 
     options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
-    #options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
     starting_task = 'balancing_tf'
     mp_cfgs = []
-    for task, name in zip(tasks, names):
-        misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
-#        args['cl_keep_samples'] = True
-#        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
+    # walker2d
+    tasks = {
+        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
+        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+        'walking':      'RoboschoolWalker2dGRL-v1'
+        }
+    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
-        # long is not used!
-#        nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-#        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
-
-#        # reach balaning 2 times in 3-task curriculum
-#        args['cl_keep_samples'] = True
-#        args['reach_timeout_num'] = 2
-#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-#        args['reach_timeout_num'] = 0
-#        args['cl_keep_samples'] = False
-
-        # reach balaning 2 times in 3-task curriculum
-        args['cl_keep_samples'] = True
-        args['reach_timeout_num'] = 2
-        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-tuned-'+name, reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
-        args['reach_timeout_num'] = 0
-        args['cl_keep_samples'] = False
-
-
-#        # direct learning
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
-
-        # regular with keepsamples = True
-        args['cl_keep_samples'] = True
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-tuned-'+name, steps=(1833, 45000, 253167), options=options, **misc)
-
-#        # regular with keepsamples = False
-#        args['cl_keep_samples'] = False
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks0-'+name, steps=(20000, 30000, 250000), options=options, **misc)
-
-
-#    # walker2d
-#    tasks = {
-#        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
-#        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-#        'walking':      'RoboschoolWalker2dGRL-v1'
-#        }
-#    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
-#
-#    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', nn_params=nn_params, **misc)
-#
-#    nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_long_walker2d', nn_params=nn_params, **misc)
+    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', options=options, nn_params=nn_params, **misc)
 
 
     # DBG: export configuration
@@ -161,7 +120,7 @@ def do_reach_timeout_based(base_args, cores, name, reach_timeout, runs, options=
     return mp_cfgs
 
 
-def do_network_based_mujoco(base_args, cores, name, nn_params, runs, tasks, starting_task):
+def do_network_based_mujoco(base_args, cores, name, nn_params, runs, options=None, tasks={}, starting_task=''):
     args = base_args.copy()
     args['env_td_error_scale'] = 600.0
     args['env_timeout'] = 16.5
@@ -178,6 +137,18 @@ def do_network_based_mujoco(base_args, cores, name, nn_params, runs, tasks, star
     args['cl_pt_shape'] = (2,3)
     args["cl_pt_load"] = nn_params[1]
     cl_load = nn_params[0]
+
+    if options:
+        suffix = ''
+        if options['balancing_tf']:
+            suffix += '1_' + options['balancing_tf'] + '_'
+        if options['balancing']:
+            suffix += '2_' + options['balancing'] + '_'
+        if options['walking']:
+            suffix += '3_' + options['walking']
+        if suffix:
+            name += '-' + suffix
+        args['options'] = options
 
     hp = Helper(args, 'cl', name, tasks, starting_task, cores, use_mp=True)
 
@@ -263,8 +234,8 @@ def create_models(paths, options):
             }
 
     torsoMass = 0.94226
-    #torsoMassPro = np.arange(-3, +4) * 0.1
-    torsoMassPro = [-0.6, -0.4, 0.4, 0.6]
+    torsoMassPro = np.arange(-3, +4) * 0.1
+    #torsoMassPro = [-0.5, -0.25, 0.0, 0.25, 0.5]
     jointFriction = np.arange(0, +7) * 0.005
 
     content = {}

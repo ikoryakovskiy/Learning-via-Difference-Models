@@ -197,7 +197,7 @@ def main():
             "xlog": False,
             "ylog": False,
             "hours2plot": 2.0, #2
-            "naming": ['walking', 'curriculum'],
+            "naming": ['direct', 'curriculum'],
             }
 
     leo_state, hopper_state, halfcheetah_state, walker2d_state = model_states()
@@ -387,6 +387,7 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
     hours2plot = kwargs["hours2plot"]
 
     cumsur = True
+    #cumsur = False
     for d, name in zip(dd, naming):
 
         print(name)
@@ -422,6 +423,86 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
         f = mean_confidence_interval(f2)
         print('    At surprise {} cumulative number of falls is {}'.format(str(s), str(f)))
     print('###################')
+
+
+def find_idx_at(x, threshold = 0.63):
+    sur_cumsum = np.cumsum(x)
+    sur_th = sur_cumsum[-1]*threshold
+    sur_last = np.nonzero(sur_cumsum < sur_th)[-1][-1]
+    return sur_last, sur_cumsum[sur_last]
+
+
+def calc_surprise(dd, hours2switch, legends, naming, **kwargs):
+    use_cols = kwargs["use_cols"][0] #['min', 'mean', 'max']
+    hours2plot = kwargs["hours2plot"]
+
+    #cumsur = True
+    cumsur = False
+    joined_sur1, joined_sur2, joined_fl1, joined_fl2 = [], [], [], []
+    named_indi_fl1, named_indi_fl2 = {}, {}
+    for d, name in zip(dd, naming):
+
+        indi_fl1, indi_fl2 = [], []
+        for rollout in d:
+            stage1 = rollout['ts'] < hours2switch
+            stage2 = (rollout['ts'] < hours2plot) & (rollout['ts'] >= hours2switch)
+
+            ts1 = rollout['ts'][stage1]
+            ts2 = rollout['ts'][stage2] - rollout['ts'][stage2][0]
+
+            sur1 = rollout[use_cols][stage1]
+            sur2 = rollout[use_cols][stage2]
+            if cumsur:
+                sur1 = np.cumsum(sur1)
+                sur2 = np.cumsum(sur2)
+#            else:
+#                sur1 = np.mean(sur1)
+#                sur2 = np.mean(sur2)
+
+            fl1 = rollout['cumfalls'][stage1]
+            fl2 = rollout['cumfalls'][stage2] - rollout['cumfalls'][stage2][0]
+            joined_sur1.append({'ts':ts1, 'sur1':sur1})
+            joined_sur2.append({'ts':ts2, 'sur2':sur2})
+            joined_fl1.append({'ts':ts1, 'fl1':fl1})
+            joined_fl2.append({'ts':ts2, 'fl2':fl2})
+
+            indi_fl1.append({'ts':ts1, 'fl1':fl1})
+            indi_fl2.append({'ts':ts2, 'fl2':fl2})
+
+        named_indi_fl1[name] = indi_fl1
+        named_indi_fl2[name] = indi_fl2
+
+
+    #find mean surprise during the first stage
+    mc_sur1 = mean_confidence_dd(joined_sur1, ['sur1'], cutok=True)
+    mc_sur2 = mean_confidence_dd(joined_sur2, ['sur2'], cutok=True)
+
+    sur_idx1, mc_sur1_val = find_idx_at(mc_sur1['sur1'][0])
+    sur_idx2, mc_sur2_val = find_idx_at(mc_sur2['sur2'][0])
+
+    for name in naming:
+        print('For {}:'.format(name))
+
+        # find number of falls at given surprise
+        mc_fl1 = mean_confidence_dd(named_indi_fl1[name], ['fl1'], cutok=True)
+        mc_fl2 = mean_confidence_dd(named_indi_fl2[name], ['fl2'], cutok=True)
+
+        print('  Balancing stage:')
+        print('    At surprise {} cumulative number of falls is {} +/- {}'.format(
+                mc_sur1_val,
+                mc_fl1['fl1'][0][sur_idx1],
+                mc_fl1['fl1'][1][sur_idx1],
+                ))
+
+        print('  Walking stage:')
+        print('    At surprise {} cumulative number of falls is {} +/- {}'.format(
+                mc_sur2_val,
+                mc_fl2['fl2'][0][sur_idx2],
+                mc_fl2['fl2'][1][sur_idx2],
+                ))
+
+    print('###################')
+
 
 
 
