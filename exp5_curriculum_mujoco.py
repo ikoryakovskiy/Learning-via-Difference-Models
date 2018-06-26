@@ -42,17 +42,28 @@ def main():
     starting_task = 'balancing_tf'
     mp_cfgs = []
 
-    # walker2d
+    # hopper
     tasks = {
-        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
-        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
-        'walking':      'RoboschoolWalker2dGRL-v1'
+        'balancing_tf': 'RoboschoolHopperBalancingGRL_TF-v1',
+        'balancing':    'RoboschoolHopperBalancingGRL-v1',
+        'walking':      'RoboschoolHopperGRL-v1'
         }
     misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
 
     nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', options=options, nn_params=nn_params, **misc)
+    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_hopper', options=options, nn_params=nn_params, **misc)
 
+
+#    # walker2d
+#    tasks = {
+#        'balancing_tf': 'RoboschoolWalker2dBalancingGRL_TF-v1',
+#        'balancing':    'RoboschoolWalker2dBalancingGRL-v1',
+#        'walking':      'RoboschoolWalker2dGRL-v1'
+#        }
+#    misc = {'tasks':tasks, 'starting_task':starting_task, 'runs':runs}
+#
+#    nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
+#    mp_cfgs += do_network_based_mujoco(args, cores, name='ddpg-cl_short_walker2d', options=options, nn_params=nn_params, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
