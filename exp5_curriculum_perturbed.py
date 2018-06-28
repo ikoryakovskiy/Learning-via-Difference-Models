@@ -25,87 +25,46 @@ def main():
     yaml.add_representer(collections.OrderedDict, dict_representer)
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
-    # Parameters
-    runs = range(8,16)
-
     # create perturbed models of leo
     model_paths = (
             '/home/ivan/work/Project/Software/grl/src/grl/addons/rbdl/cfg/leo_vc',
             '/grl/src/grl/addons/rbdl/cfg/leo_vc',
             )
 
-
+    mp_cfgs = []
     starting_task = 'balancing_tf'
     options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
     #options = {'balancing_tf': '', 'balancing': 'nnload', 'walking': 'nnload_rbload'}
 
 
-    #tm_noise = np.arange(-3, +4) * 0.1
-    tm_noise = [-0.6, -0.4, 0.4, 0.6]
-    models, names = create_models(model_paths, ['tm'], {'tm_noise':tm_noise})
-    tasks, names = create_tasks(models, names)
+    runs = range(8)
+    tm_noise = (np.arange(-3, +4) * 0.2).tolist() + [0.8, 1.0]
+    jf_noise = [0.015, 0.030]
 
-    mp_cfgs = []
+    # prepare
+    models, names = create_models(model_paths, ['tm', 'jf'], {'tm_noise':tm_noise, 'jf_noise':jf_noise})
+    tasks, names = create_tasks(models, names)
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
         args['cl_keep_samples'] = True
         nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
         mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
-
-        ## long is not used!
-        #nn_params=("long_curriculum_network", "long_curriculum_network_stat.pkl")
-        #mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_long_'+name, nn_params=nn_params, **misc)
-
-        ## reach balaning 2 times in 3-task curriculum
-        #args['cl_keep_samples'] = True
-        #args['reach_timeout_num'] = 2
-        #mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-'+name, reach_timeout=(5.0, 5.0, 0.0), options=options, **misc)
-        #args['reach_timeout_num'] = 0
-        #args['cl_keep_samples'] = False
 
 #        # reach balaning 2 times in 3-task curriculum
 #        args['cl_keep_samples'] = True
-#        args['reach_timeout_num'] = 2
-#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-tuned-'+name, reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
+#        args['reach_timeout_num'] = 5
+#        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55555-tuned-'+name, reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
 #        args['reach_timeout_num'] = 0
 #        args['cl_keep_samples'] = False
 
-
         # direct learning
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
-
-#        # regular with keepsamples = True
-#        args['cl_keep_samples'] = True
-#        mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-tuned-'+name, steps=(1833, 45000, 253167), options=options, **misc)
-
-
-
-    runs = range(16)
-    tm_noise = [0.8, 1.0]
-    models, names = create_models(model_paths, ['tm'], {'tm_noise':tm_noise})
-    tasks, names = create_tasks(models, names)
-    for task, name in zip(tasks, names):
-        misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
-
-        args['cl_keep_samples'] = True
-        nn_params=("short_curriculum_network", "short_curriculum_network_stat.pkl")
-        mp_cfgs += do_network_based_leo(args, cores, name='ddpg-cl_short_'+name, nn_params=nn_params, options=options, **misc)
-
-        # reach balaning 2 times in 3-task curriculum
-        args['cl_keep_samples'] = True
-        args['reach_timeout_num'] = 2
-        mp_cfgs += do_reach_timeout_based(args, cores, name='ddpg-rb55-tuned-'+name, reach_timeout=(-1.0, 5.0, 0.0), options=options, **misc)
-        args['reach_timeout_num'] = 0
-        args['cl_keep_samples'] = False
-
-        # direct learning
-        mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
+        #mp_cfgs += do_steps_based(args, cores, name='ddpg-direct-'+name, steps=(-1,  -1, 300000), options=options, **misc)
 
         # regular with keepsamples = True
         args['cl_keep_samples'] = True
         mp_cfgs += do_steps_based(args, cores, name='ddpg-steps_based-ks1-tuned-'+name, steps=(1833, 45000, 253167), options=options, **misc)
-
+    # \prepare
 
 
 
@@ -262,7 +221,7 @@ def export_cfg(mp_cfgs):
 
 ######################################################################################
 ######################################################################################
-def create_models(paths, options, noise):
+def create_models(paths, options, noise, join=True):
     for path in paths:
         if os.path.isdir(path):
             break
@@ -278,7 +237,7 @@ def create_models(paths, options, noise):
 
     torsoMass = 0.94226
     torsoMassPro = noise['tm_noise']
-    jointFriction = np.arange(0, +7) * 0.005
+    jointFriction = noise['jf_noise']
 
     content = {}
     for key in files:
@@ -287,37 +246,59 @@ def create_models(paths, options, noise):
 
     models = []
     names = []
-    if 'tm' in options:
-        for tmp in torsoMassPro:
-            model = {}
-            for key in content:
-                filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-                foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
-                with open(foutname, 'w') as fout:
-                    new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
-                    fout.write( content[key].replace('torsoMass = 0.94226', new_mass) )
-                if key == 'tf':
-                    model['balancing_tf'] = foutname
-                else:
-                    model['balancing'] = model['walking'] = foutname
-            models.append(model)
-            names.append('tm_{:.03f}'.format(tmp))
 
-    if 'jf' in options:
-        for tmp in jointFriction:
-            model = {}
-            for key in content:
-                filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-                foutname = '{}_jf_{:.03f}{}'.format(filename, tmp, file_extension)
-                with open(foutname, 'w') as fout:
-                    new_mass = 'jointFriction = {}'.format(tmp)
-                    fout.write( content[key].replace('jointFriction = 0.00', new_mass) )
-                if key == 'tf':
-                    model['balancing_tf'] = foutname
-                else:
-                    model['balancing'] = model['walking'] = foutname
-            models.append(model)
-            names.append('jf_{:.03f}'.format(tmp))
+    if not join:
+        if 'tm' in options:
+            for tmp in torsoMassPro:
+                model = {}
+                for key in content:
+                    filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
+                    foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
+                    with open(foutname, 'w') as fout:
+                        new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
+                        fout.write( content[key].replace('torsoMass = 0.94226', new_mass) )
+                    if key == 'tf':
+                        model['balancing_tf'] = foutname
+                    else:
+                        model['balancing'] = model['walking'] = foutname
+                models.append(model)
+                names.append('tm_{:.03f}'.format(tmp))
+
+        if 'jf' in options:
+            for jfp in jointFriction:
+                model = {}
+                for key in content:
+                    filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
+                    foutname = '{}_jf_{:.03f}{}'.format(filename, jfp, file_extension)
+                    with open(foutname, 'w') as fout:
+                        new_friction = 'jointFriction = {}'.format(jfp)
+                        fout.write( content[key].replace('jointFriction = 0.00', new_friction) )
+                    if key == 'tf':
+                        model['balancing_tf'] = foutname
+                    else:
+                        model['balancing'] = model['walking'] = foutname
+                models.append(model)
+                names.append('jf_{:.03f}'.format(jfp))
+    else:
+        if 'tm' in options and 'jf' in options:
+            for tmp in torsoMassPro:
+                for jfp in jointFriction:
+                    model = {}
+                    for key in content:
+                        filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
+                        foutname = '{}_tm_{:.03f}_jf_{:.03f}{}'.format(filename, tmp, jfp, file_extension)
+                        with open(foutname, 'w') as fout:
+                            new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
+                            new_content = content[key].replace('torsoMass = 0.94226', new_mass)
+                            new_friction = 'jointFriction = {}'.format(jfp)
+                            new_content = new_content.replace('jointFriction = 0.00', new_friction)
+                            fout.write(new_content)
+                        if key == 'tf':
+                            model['balancing_tf'] = foutname
+                        else:
+                            model['balancing'] = model['walking'] = foutname
+                    models.append(model)
+                    names.append('tm_{:.03f}_jf_{:.03f}'.format(tmp, jfp))
 
     return models, names
 
