@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 from matplotlib import cm
 import matplotlib.collections as mcoll
+from matplotlib.colors import LinearSegmentedColormap
 
 sys.path.append('/home/ivan/work/scripts/py')
 from my_csv.utils import get_header_size, listsubsample
@@ -157,6 +158,8 @@ def plot_trajectories(env, mp, sd, contacts, sim):
     sd[:, 0] = sd[:, state['Time']] - t0
     sim = sim[tr0:tr1, :]
 
+    cmap = LinearSegmentedColormap.from_list("", ["black","#80d5ff"])
+
     meansim = False
     if meansim:
         sim = np.mean(sim, axis=1)
@@ -168,7 +171,7 @@ def plot_trajectories(env, mp, sd, contacts, sim):
         seg = [(sd[0, state['Time']], sd[0, idx])]
         for j in range(1, len(sd[:, state['Time']])):
             if (contacts[j, bf] == 1):
-                ax.axvspan(sd[j-1, state['Time']], sd[j, state['Time']], facecolor='0.8', alpha=1)
+                ax.axvspan(sd[j-1, state['Time']], sd[j, state['Time']], facecolor='0.9', alpha=1)
             seg.append((sd[j, state['Time']], sd[j, idx]))
 
         seg = np.array(seg)
@@ -180,7 +183,7 @@ def plot_trajectories(env, mp, sd, contacts, sim):
             z = sim
         else:
             z = sim[:, idx_sim]
-        lc = mcoll.LineCollection(segments, array=z, cmap='copper', linewidth=2) #, norm=plt.Normalize(0.0, 1.0)
+        lc = mcoll.LineCollection(segments, array=z, cmap=cmap, linewidth=2) #, norm=plt.Normalize(0.0, 1.0)
         ax.add_collection(lc)
         cbaxes = fig.add_axes([0.82, 0.65, 0.02, 0.3])
         lc.set_clim(vmin=0, vmax=1)
