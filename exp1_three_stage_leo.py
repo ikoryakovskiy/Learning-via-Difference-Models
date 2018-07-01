@@ -18,7 +18,7 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(16, 32)
+    runs = range(16, 37)
     exp_name = "ddpg-exp1_three_stage"
 
     tasks = {
