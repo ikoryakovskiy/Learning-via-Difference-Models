@@ -37,7 +37,7 @@ def main():
     args['rb_max_size'] = steps
     args['cl_keep_samples'] = False
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    #mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, **misc)
 
     btfsteps = 20000
     bsteps = 30000
