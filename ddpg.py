@@ -99,7 +99,7 @@ def parse_args():
     parser.add_argument('--cl-save', type=str, default='')
     parser.add_argument('--cl-pt-load', type=str, default='')
     parser.add_argument('--cl-pt-shape', type=tuple, default=None)
-    boolean_flag(parser,  'cl-keep_samples', default=True)
+    boolean_flag(parser,  'cl-keep-samples', default=True)
 
     # Comparison of tasks (e.g. walking and balancing)
     parser.add_argument('--compare-with', type=str, default='')

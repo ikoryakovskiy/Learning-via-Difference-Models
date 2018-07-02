@@ -19,7 +19,7 @@ def main():
     print('Using {} cores.'.format(cores))
 
     # Parameters
-    runs = range(6)
+    runs = range(16)
     exp_name = "ddpg-exp1_two_stage"
 
     starting_task = 'balancing_tf'
@@ -27,6 +27,11 @@ def main():
     mp_cfgs = []
 
     keep_samples = False
+    args['cl_keep_samples'] = keep_samples
+
+    # learn the balancing policy if needed to plot examplar trajectories.
+    # for surprise analysis it is not needed
+    learn_balancing = False
 
     # Leo
     tasks = {
@@ -40,7 +45,7 @@ def main():
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     args['env_timestep'] = 0.03
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload_rbload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_leo', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_leo', bsteps, steps, reassess_for, tasks, cl_options, learn_balancing, **misc)
 
     # Hopper
     tasks = {
@@ -54,7 +59,7 @@ def main():
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     args['env_timestep'] = 0.0165
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_hopper', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_hopper', bsteps, steps, reassess_for, tasks, cl_options, learn_balancing, **misc)
 
     # HalfCheetah
     tasks = {
@@ -68,7 +73,7 @@ def main():
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     args['env_timestep'] = 0.0165
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_halfcheetah', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_halfcheetah', bsteps, steps, reassess_for, tasks, cl_options, learn_balancing, **misc)
 
     # Walker2d
     tasks = {
@@ -82,7 +87,7 @@ def main():
     args['rb_max_size'] = steps if keep_samples else steps - bsteps
     args['env_timestep'] = 0.0165
     cl_options = {'balancing_tf': '', 'balancing': '', 'walking': 'nnload'}
-    mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d', bsteps, steps, reassess_for, tasks, cl_options, **misc)
+    mp_cfgs += create_tasks(args, cores, exp_name+'_walker2d', bsteps, steps, reassess_for, tasks, cl_options, learn_balancing, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
@@ -95,14 +100,15 @@ def main():
 #    cl_run(tasks, starting_task, **config)
 
 
-def create_tasks(args, cores, exp_name, bsteps, steps, reassess_for, tasks, cl_options={}, **misc):
+def create_tasks(args, cores, exp_name, bsteps, steps, reassess_for, tasks, cl_options={}, learn_balancing=True, **misc):
     mp_cfgs = []
 
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
     mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_w',   steps=(-1,  -1, steps), options=options, tasks=tasks, **misc)
 
-    options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_b',   steps=(-1,  bsteps, -1), options=options, tasks=tasks, **misc)
+    if learn_balancing:
+        options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
+        mp_cfgs += do_steps_based(args, cores, name=exp_name+'_ga_b',   steps=(-1,  bsteps, -1), options=options, tasks=tasks, **misc)
 
     # curriculum option
     wsteps = steps - bsteps
