@@ -88,6 +88,11 @@ RUN pip3 --no-cache-dir install \
         pyopengl \
         cma
 
+# Install my Python library
+ADD https://api.github.com/repos/ikoryakovskiy/brl/git/refs/heads/master version.json
+RUN git clone https://github.com/ikoryakovskiy/brl.git
+
+
 # Install OpenAI Baselines
 ADD https://api.github.com/repos/ikoryakovskiy/baselines/git/refs/heads/master version.json
 RUN git clone https://github.com/ikoryakovskiy/baselines.git \
