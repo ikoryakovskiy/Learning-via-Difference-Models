@@ -189,10 +189,10 @@ def extract_state(data, state, pick=None):
     return ret
 
 def main():
-    skip = 500 #100
+    skip = 1000 #100
     kwargs = {
             "use_cols": ['mean'],
-            "load": 1,
+            "load": 0,
             "use_state":"all",
             "xlog": False,
             "ylog": False,
@@ -221,7 +221,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    plot_single_system('hopper', w, bw, hopper_state, skip, legends, **kwargs)
+    #plot_single_system('hopper', w, bw, hopper_state, skip, legends, **kwargs)
 
     ###
     kwargs["surprise_threshold"] = 1.0
@@ -230,7 +230,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    plot_single_system('halfcheetah', w, bw, halfcheetah_state, skip, legends, **kwargs)
+    #plot_single_system('halfcheetah', w, bw, halfcheetah_state, skip, legends, **kwargs)
 
     ###
     kwargs["surprise_threshold"] = 1.0
@@ -239,7 +239,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    plot_single_system('walker2d', w, bw, walker2d_state, skip, legends, **kwargs)
+    #plot_single_system('walker2d', w, bw, walker2d_state, skip, legends, **kwargs)
 
 
 def plot_single_system(env, w, bw, state, skip, legends, **kwargs):
