@@ -180,13 +180,13 @@ def main():
     skip = 500 #100
     kwargs = {
             "use_cols": ['mean'],
-            "load": 0,
+            "load": 1,
             "use_state":"all",
             "xlog": False,
             "ylog": False,
             "hours2plot": 2.0, #2
             "naming": ['direct', 'curriculum'],
-            "mps": range(16)
+            "mps": range(6)
             }
 
     leo_state, hopper_state, halfcheetah_state, walker2d_state = model_states()
@@ -391,7 +391,7 @@ def find_surprise_th(two_task_results, hours2switch, threshold = 0.63, **kwargs)
 
     th1 = np.mean(s1)*threshold
     th2 = np.mean(s2)*threshold
-    print('> Surprise thresholds {}, {}'.format(th1, th2))
+    #print('> Surprise thresholds {}, {}'.format(th1, th2))
     return (th1, th2)
 
 
@@ -406,7 +406,7 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
         th2.append(th2_)
     th1 = min(th1)
     th2 = min(th2)
-    print('> Min surprise thresholds {}, {}'.format(th1, th2))
+    print('> Min surprise thresholds {:.1f}, {:.1f}'.format(th1, th2))
 
     cumsur = True
     #cumsur = False
@@ -442,12 +442,12 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
         print('  Balancing stage:')
         s = mean_confidence_interval(s1)
         f = mean_confidence_interval(f1)
-        print('    At surprise {} cumulative number of falls is {}'.format(str(s), str(f)))
+        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{:.0f}}}\\pm{{{:.0f}}}'.format(s[0], s[1], f[0], f[1]))
 
         print('  Walking stage:')
         s = mean_confidence_interval(s2)
         f = mean_confidence_interval(f2)
-        print('    At surprise {} cumulative number of falls is {}'.format(str(s), str(f)))
+        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{:.0f}}}\\pm{{{:.0f}}}'.format(s[0], s[1], f[0], f[1]))
     print('###################')
 
 
