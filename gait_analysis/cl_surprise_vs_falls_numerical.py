@@ -74,7 +74,7 @@ def single(data, change, sm_batch_sz=30):
 
     mp_args = zip(mp_sm_begs, mp_sm_ends, mp_ex_begs, mp_ex_ends)
 
-    similarity = Parallel(n_jobs=-1, verbose=10, backend="multiprocessing")(
+    similarity = Parallel(n_jobs=68, verbose=10, backend="multiprocessing")(
                  delayed(compsim)(data, arg) for arg in mp_args)
     similarity = np.array(similarity)
 
@@ -413,7 +413,7 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
     for d, name in zip(dd, naming):
 
         print(name)
-        s1, s2, f1, f2 = [], [], [], []
+        s1, s2, s3, f1, f2, f3 = [], [], [], [], [], []
         for ii, rollout in enumerate(d):
             stage1 = rollout['ts'] < hours2switch
             stage2 = (rollout['ts'] < hours2plot) & (rollout['ts'] >= hours2switch)
@@ -426,20 +426,24 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
                 sur_idx1 = np.argmax(cum_sur1 > th1)
                 assert sur_idx1>0, "Trajectory {} could not reach surprise threshold {} in task 1".format(ii, th1)
                 sur_idx2 = np.argmax(cum_sur2 > th2)
-                assert sur_idx2>0, "Trajectory {} could not reach surprise threshold {} in task 2".format(ii, th2)
+                #assert sur_idx2>0, "Trajectory {} could not reach surprise threshold {} in task 2".format(ii, th2)
                 sur1 = cum_sur1[sur_idx1]
                 sur2 = cum_sur2[sur_idx2]
+                sur3 = cum_sur2[-1]
             else:
                 sur1 = np.mean(sur1)
                 sur2 = np.mean(sur2)
 
             fl1 = rollout['cumfalls'][stage1][sur_idx1]
             fl2 = rollout['cumfalls'][stage2][sur_idx2] - rollout['cumfalls'][stage1][-1]
+            fl3 = rollout['cumfalls'][stage2][-1] - rollout['cumfalls'][stage1][-1]
 
             s1.append(sur1)
             s2.append(sur2)
+            s3.append(sur3)
             f1.append(fl1)
             f2.append(fl2)
+            f3.append(fl3)
 
         print('  Balancing stage:')
         s = mean_confidence_interval(s1)
@@ -450,6 +454,12 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
         s = mean_confidence_interval(s2)
         f = mean_confidence_interval(f2)
         print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{{{:.0f}}}\\pm{{{:.0f}}}}}'.format(s[0], s[1], f[0], f[1]))
+
+        print('  Walking stage (total surprise and falls):')
+        s = mean_confidence_interval(s3)
+        f = mean_confidence_interval(f3)
+        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{{{:.0f}}}\\pm{{{:.0f}}}}}'.format(s[0], s[1], f[0], f[1]))
+
     print('###################')
 
 
