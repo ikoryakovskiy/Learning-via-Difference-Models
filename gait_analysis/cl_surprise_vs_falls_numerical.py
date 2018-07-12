@@ -1,25 +1,13 @@
 """RL data container."""
 
-import sys
+import os
+import pickle
+import colorsys
 import numpy as np
-import matplotlib.pyplot as plt
-import glob
-from matplotlib import cm
-
 from joblib import Parallel, delayed
 from collections import OrderedDict
 
-sys.path.append('/home/ivan/work/scripts/py')
-from my_plot.plot import export_plot
-from my_csv.utils import get_header_size, listsubsample
-from my_stat.stat import mean_confidence_dd, mean_confidence_interval
-from matplotlib.patches import Polygon
-import pickle
-import os
-import colorsys, struct
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-plt.close('all')
+from pyrl.stat.stat import mean_confidence_dd, mean_confidence_interval
 
 palette = ['#C0C0C0', '#4355bf', '#51843b', '#ffb171', '#408da9', '#408da9']
 
