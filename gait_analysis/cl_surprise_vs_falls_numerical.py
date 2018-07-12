@@ -442,12 +442,12 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
         print('  Balancing stage:')
         s = mean_confidence_interval(s1)
         f = mean_confidence_interval(f1)
-        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{:.0f}}}\\pm{{{:.0f}}}'.format(s[0], s[1], f[0], f[1]))
+        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{{{:.0f}}}\\pm{{{:.0f}}}}}'.format(s[0], s[1], f[0], f[1]))
 
         print('  Walking stage:')
         s = mean_confidence_interval(s2)
         f = mean_confidence_interval(f2)
-        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{:.0f}}}\\pm{{{:.0f}}}'.format(s[0], s[1], f[0], f[1]))
+        print('    At surprise {:.1f} +/- {:.1f} cumulative number of falls is {{{{{:.0f}}}\\pm{{{:.0f}}}}}'.format(s[0], s[1], f[0], f[1]))
     print('###################')
 
 
