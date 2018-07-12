@@ -210,7 +210,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    #plot_single_system('hopper', w, bw, hopper_state, skip, legends, **kwargs)
+    plot_single_system('hopper', w, bw, hopper_state, skip, legends, **kwargs)
 
     ###
     kwargs["surprise_threshold"] = 1.0
@@ -219,7 +219,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    #plot_single_system('halfcheetah', w, bw, halfcheetah_state, skip, legends, **kwargs)
+    plot_single_system('halfcheetah', w, bw, halfcheetah_state, skip, legends, **kwargs)
 
     ###
     kwargs["surprise_threshold"] = 1.0
@@ -228,7 +228,7 @@ def main():
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-01_balancing.pkl',
           '{path}/ddpg-exp1_two_stage_{env}_ga_bw-3_nnload-g0001-mp{mp}-02_walking.pkl',
          ]
-    #plot_single_system('walker2d', w, bw, walker2d_state, skip, legends, **kwargs)
+    plot_single_system('walker2d', w, bw, walker2d_state, skip, legends, **kwargs)
 
 
 def plot_single_system(env, w, bw, state, skip, legends, mps, **kwargs):
@@ -399,7 +399,14 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
     use_cols = kwargs["use_cols"][0] #['min', 'mean', 'max']
     hours2plot = kwargs["hours2plot"]
 
-    th1, th2 = find_surprise_th(dd[1], hours2switch, **kwargs)
+    th1, th2 = [], []
+    for d in dd:
+        th1_, th2_ = find_surprise_th(d, hours2switch, **kwargs)
+        th1.append(th1_)
+        th2.append(th2_)
+    th1 = min(th1)
+    th2 = min(th2)
+    print('> Min surprise thresholds {}, {}'.format(th1, th2))
 
     cumsur = True
     #cumsur = False
