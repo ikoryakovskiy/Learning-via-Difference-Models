@@ -414,7 +414,7 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
 
         print(name)
         s1, s2, f1, f2 = [], [], [], []
-        for rollout in d:
+        for ii, rollout in enumerate(d):
             stage1 = rollout['ts'] < hours2switch
             stage2 = (rollout['ts'] < hours2plot) & (rollout['ts'] >= hours2switch)
 
@@ -424,7 +424,9 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
                 cum_sur1 = np.cumsum(sur1)
                 cum_sur2 = np.cumsum(sur2)
                 sur_idx1 = np.argmax(cum_sur1 > th1)
+                assert sur_idx1>0, "Trajectory {} could not reach surprise threshold {} in task 1".format(ii, th1)
                 sur_idx2 = np.argmax(cum_sur2 > th2)
+                assert sur_idx2>0, "Trajectory {} could not reach surprise threshold {} in task 2".format(ii, th2)
                 sur1 = cum_sur1[sur_idx1]
                 sur2 = cum_sur2[sur_idx2]
             else:
