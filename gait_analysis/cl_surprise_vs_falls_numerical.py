@@ -177,7 +177,7 @@ def extract_state(data, state, pick=None):
     return ret
 
 def main():
-    skip = 1000 #100
+    skip = 500 #100
     kwargs = {
             "use_cols": ['mean'],
             "load": 0,
@@ -186,7 +186,7 @@ def main():
             "ylog": False,
             "hours2plot": 2.0, #2
             "naming": ['direct', 'curriculum'],
-            "mps": range(0,6)
+            "mps": range(16)
             }
 
     leo_state, hopper_state, halfcheetah_state, walker2d_state = model_states()
@@ -365,11 +365,41 @@ def surprise_simple(mc, flmc, name, **kwargs):
     print("{}, surprise > {}, total falls = {}".format(name, surprise_threshold, total_falls))
 
 
+def find_surprise_th(two_task_results, hours2switch, threshold = 0.63, **kwargs):
+    use_cols = kwargs["use_cols"][0] #['min', 'mean', 'max']
+    hours2plot = kwargs["hours2plot"]
+
+    cumsur = True
+    #cumsur = False
+
+    s1, s2 = [], []
+    for rollout in two_task_results:
+        stage1 = rollout['ts'] < hours2switch
+        stage2 = (rollout['ts'] < hours2plot) & (rollout['ts'] >= hours2switch)
+
+        sur1 = rollout[use_cols][stage1]
+        sur2 = rollout[use_cols][stage2]
+        if cumsur:
+            sur1 = np.cumsum(sur1)[-1]
+            sur2 = np.cumsum(sur2)[-1]
+        else:
+            sur1 = np.mean(sur1)
+            sur2 = np.mean(sur2)
+
+        s1.append(sur1)
+        s2.append(sur2)
+
+    th1 = np.mean(s1)*threshold
+    th2 = np.mean(s2)*threshold
+    print('> Surprise thresholds {}, {}'.format(th1, th2))
+    return (th1, th2)
 
 
 def plot_together(dd, hours2switch, legends, naming, **kwargs):
     use_cols = kwargs["use_cols"][0] #['min', 'mean', 'max']
     hours2plot = kwargs["hours2plot"]
+
+    th1, th2 = find_surprise_th(dd[1], hours2switch, **kwargs)
 
     cumsur = True
     #cumsur = False
@@ -384,14 +414,18 @@ def plot_together(dd, hours2switch, legends, naming, **kwargs):
             sur1 = rollout[use_cols][stage1]
             sur2 = rollout[use_cols][stage2]
             if cumsur:
-                sur1 = np.cumsum(sur1)[-1]
-                sur2 = np.cumsum(sur2)[-1]
+                cum_sur1 = np.cumsum(sur1)
+                cum_sur2 = np.cumsum(sur2)
+                sur_idx1 = np.argmax(cum_sur1 > th1)
+                sur_idx2 = np.argmax(cum_sur2 > th2)
+                sur1 = cum_sur1[sur_idx1]
+                sur2 = cum_sur2[sur_idx2]
             else:
                 sur1 = np.mean(sur1)
                 sur2 = np.mean(sur2)
 
-            fl1 = rollout['cumfalls'][stage1][-1]
-            fl2 = rollout['cumfalls'][stage2][-1] - fl1
+            fl1 = rollout['cumfalls'][stage1][sur_idx1]
+            fl2 = rollout['cumfalls'][stage2][sur_idx2] - rollout['cumfalls'][stage1][-1]
 
             s1.append(sur1)
             s2.append(sur2)
