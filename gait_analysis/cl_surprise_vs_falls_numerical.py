@@ -186,6 +186,7 @@ def main():
             "ylog": False,
             "hours2plot": 2.0, #2
             "naming": ['direct', 'curriculum'],
+            "mps": range(0,6)
             }
 
     leo_state, hopper_state, halfcheetah_state, walker2d_state = model_states()
@@ -230,10 +231,8 @@ def main():
     #plot_single_system('walker2d', w, bw, walker2d_state, skip, legends, **kwargs)
 
 
-def plot_single_system(env, w, bw, state, skip, legends, **kwargs):
+def plot_single_system(env, w, bw, state, skip, legends, mps, **kwargs):
     path = 'learning_trjectories'
-    mps = range(1,6)
-
 
     norm_val = min_max(path, env, state, skip=skip, ffiles=(w,bw), mps=mps, **kwargs)
 
@@ -242,8 +241,6 @@ def plot_single_system(env, w, bw, state, skip, legends, **kwargs):
 
     hours2switch = timing[1][1]
     plot_together((dd1, dd2), hours2switch, legends, **kwargs)
-
-
 
 
 def min_max(path, env, state, skip=1000, ffiles=(), mps=[0], **kwargs):
