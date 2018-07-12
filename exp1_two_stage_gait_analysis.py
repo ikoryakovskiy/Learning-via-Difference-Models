@@ -10,7 +10,7 @@ from cl_main import cl_run
 
 def main():
     args = parse_args()
-    args["test_interval"] = -1 # this ensures that only learning trajectory is exported
+    args["test_interval"] = 30 # this ensures that only learning trajectory is exported
 
     if args['cores']:
         cores = min(cpu_count(), args['cores'])
