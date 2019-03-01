@@ -6,10 +6,7 @@ from ddpg import parse_args
 from cl_learning import Helper, prepare_multiprocessing, do_multiprocessing_pool
 import random
 import yaml, collections, io
-from cl_main import cl_run
-import numpy as np
-import os
-import sys
+from cl_create_models_tasks import PerturbedModelsTasks
 
 def main():
     args = parse_args()
@@ -25,12 +22,6 @@ def main():
     yaml.add_representer(collections.OrderedDict, dict_representer)
     yaml.add_constructor(_mapping_tag, dict_constructor)
 
-    # create perturbed models of leo
-    model_paths = (
-            '/home/ivan/work/Project/Software/grl/src/grl/addons/rbdl/cfg/leo_vc',
-            '/grl/src/grl/addons/rbdl/cfg/leo_vc',
-            )
-
     mp_cfgs = []
     starting_task = 'balancing_tf'
     options = {'balancing_tf': '', 'balancing': 'nnload_rbload', 'walking': 'nnload_rbload'}
@@ -38,12 +29,11 @@ def main():
 
 
     runs = range(8)
-    tm_noise = (np.arange(-3, +4) * 0.2).tolist() + [0.8, 1.0]
-    jf_noise = [0.015, 0.030]
 
-    # prepare
-    models, names = create_models(model_paths, ['tm', 'jf'], {'tm_noise':tm_noise, 'jf_noise':jf_noise})
-    tasks, names = create_tasks(models, names)
+    # create perturbed models of leo
+    pmt = PerturbedModelsTasks()
+    tasks, names = pmt.generate()
+
     for task, name in zip(tasks, names):
         misc = {'tasks':task, 'starting_task':starting_task, 'runs':runs}
 
@@ -219,140 +209,6 @@ def export_cfg(mp_cfgs):
             yaml.dump(config, file, default_flow_style=False, allow_unicode=True)
 
 
-######################################################################################
-######################################################################################
-def create_models(paths, options, noise, join=True):
-    for path in paths:
-        if os.path.isdir(path):
-            break
-
-    ppath = '/~perturbed~'
-    if not os.path.exists(path+ppath):
-        os.makedirs(path+ppath)
-
-    files = {
-            'tf': '{}{}/leo_ff_dl{}_tf.lua',
-            'no': '{}{}/leo_ff_dl{}.lua',
-            }
-
-    torsoMass = 0.94226
-    torsoMassPro = noise['tm_noise']
-    jointFriction = noise['jf_noise']
-
-    content = {}
-    for key in files:
-        with open(files[key].format(path, '', ''), 'r') as content_file:
-            content[key] = content_file.read()
-
-    models = []
-    names = []
-
-    if not join:
-        if 'tm' in options:
-            for tmp in torsoMassPro:
-                model = {}
-                for key in content:
-                    filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-                    foutname = '{}_tm_{:.03f}{}'.format(filename, tmp, file_extension)
-                    with open(foutname, 'w') as fout:
-                        new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
-                        fout.write( content[key].replace('torsoMass = 0.94226', new_mass) )
-                    if key == 'tf':
-                        model['balancing_tf'] = foutname
-                    else:
-                        model['balancing'] = model['walking'] = foutname
-                models.append(model)
-                names.append('tm_{:.03f}'.format(tmp))
-
-        if 'jf' in options:
-            for jfp in jointFriction:
-                model = {}
-                for key in content:
-                    filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-                    foutname = '{}_jf_{:.03f}{}'.format(filename, jfp, file_extension)
-                    with open(foutname, 'w') as fout:
-                        new_friction = 'jointFriction = {}'.format(jfp)
-                        fout.write( content[key].replace('jointFriction = 0.00', new_friction) )
-                    if key == 'tf':
-                        model['balancing_tf'] = foutname
-                    else:
-                        model['balancing'] = model['walking'] = foutname
-                models.append(model)
-                names.append('jf_{:.03f}'.format(jfp))
-    else:
-        if 'tm' in options and 'jf' in options:
-            for tmp in torsoMassPro:
-                for jfp in jointFriction:
-                    model = {}
-                    for key in content:
-                        filename, file_extension = os.path.splitext(files[key].format(path,ppath,'_perturbed'))
-                        foutname = '{}_tm_{:.03f}_jf_{:.03f}{}'.format(filename, tmp, jfp, file_extension)
-                        with open(foutname, 'w') as fout:
-                            new_mass = 'torsoMass = {}'.format(torsoMass*(1+tmp))
-                            new_content = content[key].replace('torsoMass = 0.94226', new_mass)
-                            new_friction = 'jointFriction = {}'.format(jfp)
-                            new_content = new_content.replace('jointFriction = 0.00', new_friction)
-                            fout.write(new_content)
-                        if key == 'tf':
-                            model['balancing_tf'] = foutname
-                        else:
-                            model['balancing'] = model['walking'] = foutname
-                    models.append(model)
-                    names.append('tm_{:.03f}_jf_{:.03f}'.format(tmp, jfp))
-
-    return models, names
-
-
-def create_tasks(models, names):
-
-    if not os.path.exists('cfg/perturbed/'):
-        os.makedirs('cfg/perturbed/')
-
-    itasks = {
-        'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-        'balancing':    'cfg/leo_balancing.yaml',
-        'walking':      'cfg/leo_walking.yaml'
-        }
-
-    otasks = []
-    for model, name in zip(models,names):
-        task = {}
-        for key in itasks:
-            conf = read_cfg(itasks[key])
-            conf['environment']['environment']['model']['dynamics']['file'] = model[key]
-            path, filename = os.path.split(itasks[key])
-            filename, file_extension = os.path.splitext(filename)
-            fullname = path + '/perturbed/' + filename + '_' + name + file_extension
-            write_cfg(fullname, conf)
-            task[key] = fullname
-        otasks.append(task)
-
-    return otasks, names
-
-######################################################################################
-######################################################################################
-
-def read_cfg(cfg):
-    """Read configuration file"""
-    # check if file exists
-    yfile = cfg
-    if os.path.isfile(yfile) == False:
-        print('File %s not found' % yfile)
-        sys.exit()
-
-    # open configuration
-    stream = open(yfile, 'r')
-    conf = yaml.load(stream)
-    stream.close()
-    return conf
-######################################################################################
-
-def write_cfg(outCfg, conf):
-    """Write configuration file"""
-    # create local yaml configuration file
-    outfile = open(outCfg, 'w')
-    yaml.dump(conf, outfile)
-    outfile.close()
 ######################################################################################
 
 def remove_viz(conf):

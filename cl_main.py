@@ -106,8 +106,9 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if reach_timeout_based_cl_switching:
             config['reach_timeout'] = base_cfg['reach_timeout'][stage_counter]
 
-        if not base_cfg['cl_keep_samples']:
-            config['rb_max_size'] = config['steps']
+        # Have replay buffer good enough to keep all samples
+        # config['rb_max_size'] = config['steps']
+        # ..., however, discard samples of the balancing_tf task (see below)
 
         # every stage happens when environment is switched over, thus we initialise it every stage
         if env:
@@ -140,6 +141,9 @@ def cl_run(tasks, cl_mode, **base_cfg):
         if cl_mode == 'walking':
             config['cl_structure'] = '' # forbid loading curriculum
             config['rb_save_filename'] = '' # do not save replay beffer since it will not be used anyway
+
+        if cl_mode == 'balancing_tf':
+            config['rb_save_filename'] = '' # do not save replay beffer since 'balancing_tf' task is not allowed to keep samples
 
         cl_info += cl_mode + ' '
 

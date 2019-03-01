@@ -14,10 +14,12 @@ from ptracker import PerformanceTracker
 from cl_main import cl_run
 from ddpg import parse_args
 
-from opt_cmaes import opt_cmaes
 from opt_bo import opt_bo
 from spherical import cart2sph
 from logger import Logger
+
+from cl_create_models_tasks import PerturbedModelsTasks
+
 
 random.seed(datetime.now())
 
@@ -58,7 +60,11 @@ class Helper(object):
             cfg = self.gen_base_(g, begin+run)
             if solution:
                 cfg['steps'] = solution
-            mp_cfgs.append( (cfg, self.tasks, self.starting_task) )
+            if isinstance(self.tasks, list):
+                tasks = self.tasks[ random.randint(0, len(self.tasks)-1) ]
+                mp_cfgs.append( (cfg, tasks, self.starting_task) )
+            else:
+                mp_cfgs.append( (cfg, self.tasks, self.starting_task) )
         return mp_cfgs
 
     def run(self, mp_cfgs, reeval=False):

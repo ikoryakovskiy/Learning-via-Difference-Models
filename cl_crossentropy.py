@@ -13,6 +13,9 @@ from logger import Logger
 import math
 import pickle
 
+from cl_create_models_tasks import PerturbedModelsTasks
+
+
 from cl_main import cl_run
 from ddpg import parse_args
 from cl_learning import Helper
@@ -20,6 +23,15 @@ from cl_learning import Helper
 from opt_ce import opt_ce
 
 random.seed(datetime.now())
+
+def get_tasks(pmt, tm=None, jf=None):
+    tasks = {
+            'balancing_tf': pmt.get_task('balancing_tf', tm, jf),
+            'balancing':    pmt.get_task('balancing', tm, jf),
+            'walking':      pmt.get_task('walking', tm, jf),
+            }
+    return tasks
+
 
 def main():
     prepare_multiprocessing()
@@ -38,41 +50,36 @@ def main():
     args['perf_td_error'] = True
     args['perf_l2_reg'] = True
     args['rb_min_size'] = 1000
-    steps       = 300000
+    args['rb_max_size'] = 300000
+    steps       = args['rb_max_size']
     steps_ub    = 100000
     steps_delta =   5000
+    steps_delta_tf = 1000
     popsize = 16*6
-    G = 100
+    G = 300 # up to 18
     use_mp = True
 
 #    args['mp_debug'] = False
 ##    steps       = 3000
 ##    steps_ub    = 1000
 ##    steps_delta =  500
-#    G = 10
+#    G = 1
+#    popsize = 1
 #    use_mp = False
 
+    # create perturbed models of leo
+
+    pmt = PerturbedModelsTasks()
+    tasks, names = pmt.generate()
+
     # Tasks
-    mass_normal, mass_m30, mass_p30 = 0, 1, 2
+    exp_normal, exp_mixed = 0, 1
     experiment = 1
-    if experiment == mass_normal:
-        tasks = {
-                'balancing_tf': 'cfg/leo_balancing_tf.yaml',
-                'balancing':    'cfg/leo_balancing.yaml',
-                'walking':      'cfg/leo_walking.yaml'
-                }
-    elif experiment == mass_m30:
-        tasks = {
-                'balancing_tf': 'cfg/perturbed/leo_balancing_tf_tm_-0.300.yaml',
-                'balancing':    'cfg/perturbed/leo_balancing_tm_-0.300.yaml',
-                'walking':      'cfg/perturbed/leo_walking_tm_-0.300.yaml'
-                }
-    elif experiment == mass_p30:
-        tasks = {
-                'balancing_tf': 'cfg/perturbed/leo_balancing_tf_tm_0.300.yaml',
-                'balancing':    'cfg/perturbed/leo_balancing_tm_0.300.yaml',
-                'walking':      'cfg/perturbed/leo_walking_tm_0.300.yaml'
-                }
+    if experiment == exp_normal:
+        tasks = get_tasks(pmt, tm=0, jf=0)
+    elif experiment == exp_mixed:
+        tasks = [get_tasks(pmt, tm=0, jf=0), get_tasks(pmt, tm=-0.6, jf=0),
+                 get_tasks(pmt, tm=+0.6, jf=0)]
 
     starting_task = 'balancing_tf'
 
@@ -88,8 +95,9 @@ def main():
 
     hp = Helper(args, root, alg, tasks, starting_task, arg_cores, use_mp=use_mp)
 
-    balancing_tf = np.array(categories)/max(categories)
-    balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
+    #balancing_tf = np.array(categories)/max(categories)
+    #balancing_tf = [int(steps_ub*(math.exp(3*x)-1)/(math.exp(3)-1)) for x in balancing_tf]
+    balancing_tf = np.array(categories) * steps_delta_tf
     balancing = np.array(categories) * steps_delta
 
     while not opt.stop() and g <= G:
@@ -109,13 +117,10 @@ def main():
                 rs = (-1, -1, steps)
             elif a == 0 and b > 0:
                 rs = (-1, b, steps-b)
-            elif a > 0 and a < b:
-                rs = (a, b-a, steps-b)
-            elif a > 0 and a >= b:
+            elif a > 0 and b == 0:
                 rs = (a, -1, steps-a)
             else:
-                print('something bad happened')
-                pdb.set_trace()
+                rs = (a, b, steps-a-b)
             resol.append(rs)
 
         # preparation
