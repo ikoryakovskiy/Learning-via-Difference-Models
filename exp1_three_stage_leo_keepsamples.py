@@ -19,7 +19,6 @@ def main():
 
     # Parameters
     runs = range(16)
-    #keep_samples = True
     exp_name = "ddpg-exp1_three_stage"
 
     tasks = {
@@ -36,16 +35,17 @@ def main():
 
     steps = 300000
     args['rb_max_size'] = steps
+    args['cl_keep_samples'] = True
     options = {'balancing_tf': '', 'balancing': '', 'walking': ''}
-    #mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, **misc)
+    mp_cfgs += do_steps_based(args, cores, name=exp_name,   steps=(-1,  -1, steps), options=options, **misc)
 
     btfsteps = 20000
     bsteps = 30000
     wsteps = steps - bsteps - btfsteps
-    #args['rb_max_size'] = steps if keep_samples else wsteps
     args['rb_max_size'] = steps
 
-    for bb in ['nnload', 'rbload', 'nnload_rbload']:
+    #for bb in ['nnload', 'rbload', 'nnload_rbload']:
+    for bb in ['nnload']:
 
         options = {'balancing_tf': '', 'balancing': bb, 'walking': 'nnload'}
         mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(btfsteps, bsteps, wsteps), options=options, **misc)
@@ -53,14 +53,8 @@ def main():
         options = {'balancing_tf': '', 'balancing': bb, 'walking': 'nnload_rbload'}
         mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(btfsteps, bsteps, wsteps), options=options, **misc)
 
-#        options = {'balancing_tf': '', 'balancing': bb, 'walking': 'nnload_rbload_re_walking_300_-1.5'}
-#        mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(btfsteps, bsteps, wsteps), options=options, **misc)
-
         options = {'balancing_tf': '', 'balancing': bb, 'walking': 'rbload'}
         mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(btfsteps, bsteps, wsteps), options=options, **misc)
-
-#        options = {'balancing_tf': '', 'balancing': bb, 'walking': 'rbload_re_walking_300_-1.5'}
-#        mp_cfgs += do_steps_based(args, cores, name=exp_name, steps=(btfsteps, bsteps, wsteps), options=options, **misc)
 
     # DBG: export configuration
     export_cfg(mp_cfgs)
